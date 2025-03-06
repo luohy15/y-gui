@@ -6,6 +6,8 @@ import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import useSWR, { SWRConfiguration } from 'swr';
 import { useTheme } from '../contexts/ThemeContext';
+import AssistantAvatar from './AssistantAvatar';
+import Logo from './Logo';
 
 export default function ChatView() {
   const { isDarkMode } = useTheme();
@@ -62,9 +64,7 @@ export default function ChatView() {
                 </svg>
               </button>
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
-                  <span className="text-white font-medium">AI</span>
-                </div>
+                <Logo />
                 <div className="ml-3">
                   <h2 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>y-gui Chat</h2>
                   <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Assistant</p>
@@ -93,12 +93,10 @@ export default function ChatView() {
                   <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>U</span>
                 </div>
               ) : (
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
-                  <span className="text-white font-medium">AI</span>
-                </div>
+                <AssistantAvatar model={msg.model} />
               )}
             </div>
-            <div className={`flex-1 space-y-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+            <div className={`max-w-full flex-1 space-y-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${
                 msg.role === 'user'
                   ? 'bg-[#4285f4] text-white ml-auto'

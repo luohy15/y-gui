@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { updateFavicon } from '../utils/favicon';
 
 interface ThemeContextType {
   isDarkMode: boolean;
@@ -15,7 +16,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   });
 
   React.useEffect(() => {
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    const theme = isDarkMode ? 'dark' : 'light';
+    localStorage.setItem('theme', theme);
+    document.documentElement.classList.remove(isDarkMode ? 'light' : 'dark');
+    document.documentElement.classList.add(theme);
+    updateFavicon();
   }, [isDarkMode]);
 
   return (

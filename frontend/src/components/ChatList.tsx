@@ -3,22 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Chat, ListChatsResult } from '@shared/types';
 import useSWR from 'swr';
 import { useTheme } from '../contexts/ThemeContext';
+import AssistantAvatar from './AssistantAvatar';
+import Logo from './Logo';
 
 interface ChatListProps {
   token: string;
   onLogout: () => void;
 }
 
-const getRandomGradient = () => {
-  const gradients = [
-    'from-blue-500 to-indigo-500',
-    'from-green-500 to-teal-500',
-    'from-pink-500 to-rose-500',
-    'from-yellow-400 to-orange-500',
-    'from-purple-500 to-indigo-500'
-  ];
-  return gradients[Math.floor(Math.random() * gradients.length)];
-};
 
 export default function ChatList({ token, onLogout }: ChatListProps) {
   const navigate = useNavigate();
@@ -65,9 +57,7 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
     >
       <div className="flex items-start space-x-4 min-w-0">
         <div className="flex-shrink-0">
-          <div className={`h-10 w-10 rounded-full bg-gradient-to-r ${getRandomGradient()} flex items-center justify-center shadow-sm`}>
-            <span className="text-white font-medium">AI</span>
-          </div>
+          <AssistantAvatar model={chat.messages.length > 1 ? chat.messages[1].model : undefined} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
@@ -130,11 +120,7 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
         <div className="max-w-full mx-4 sm:mx-6 lg:mx-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <div className="h-8 w-8 bg-[#4285f4] rounded-full flex items-center justify-center shadow-sm">
-                <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4-4-4z"></path>
-                </svg>
-              </div>
+              <Logo />
               <h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>y-gui Chat</h1>
             </div>
             <div className="flex items-center space-x-4">
