@@ -44,37 +44,6 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
     setConfirmedSearch(searchInput);
   };
 
-  const handleCreateChat = async () => {
-    const newChat: Chat = {
-      id: crypto.randomUUID(),
-      messages: [],
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    };
-
-    try {
-      const response = await fetch('/api/chats', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        credentials: 'omit',
-        body: JSON.stringify(newChat)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create chat: ${response.status}`);
-      }
-
-      const createdChat = await response.json();
-      mutate();
-      navigate(`/chat/${createdChat.id}`);
-    } catch (error) {
-      console.error('Error creating chat:', error);
-    }
-  };
-
   if (error) {
     return <div className={isDarkMode ? 'text-red-400' : 'text-red-500'}>Error loading chats</div>;
   }
@@ -83,19 +52,18 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
 
   // Split chats into pinned and recent (for now, just showing all as recent)
   const pinnedChats: Chat[] = [];
-  const recentChats = chats;
 
   const renderChatItem = (chat: Chat, isPinned = false) => (
     <div
       key={chat.id}
-      className={`chat-item block rounded-lg p-4 cursor-pointer transition-all duration-200 hover:translate-x-1 ${
+      className={`chat-item block rounded-lg cursor-pointer transition-all duration-200 hover:translate-x-1 ${
         isDarkMode
           ? 'hover:bg-gray-800 border border-transparent hover:border-gray-700'
           : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
       }`}
       onClick={() => navigate(`/chat/${chat.id}`)}
     >
-      <div className="flex items-start space-x-4">
+      <div className="flex items-start space-x-4 min-w-0">
         <div className="flex-shrink-0">
           <div className={`h-10 w-10 rounded-full bg-gradient-to-r ${getRandomGradient()} flex items-center justify-center shadow-sm`}>
             <span className="text-white font-medium">AI</span>
@@ -157,9 +125,9 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
   );
 
   return (
-    <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+    <div className={`max-w-full flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
       <header className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b`}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-4 sm:mx-6 lg:mx-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <div className="h-8 w-8 bg-[#4285f4] rounded-full flex items-center justify-center shadow-sm">
@@ -192,9 +160,9 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col h-full">
+      <main className="max-w-full mx-4 sm:mx-6 lg:mx-8 py-8 flex flex-col h-full">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-8">
-          <div className="w-full sm:max-w-lg flex space-x-2">
+          <div className="w-full sm:max-w-lg flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-2">
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -229,7 +197,7 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-6">
+        <div className="flex-1 space-y-6 min-w-0">
           {pinnedChats.length > 0 && (
             <section>
               <h2 className={`text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Pinned</h2>
@@ -251,38 +219,6 @@ export default function ChatList({ token, onLogout }: ChatListProps) {
             )}
           </section>
         </div>
-
-        {data && Math.ceil(data.total / data.limit) > 1 && (
-          <div className={`mt-4 flex items-center justify-between border-t ${
-            isDarkMode ? 'border-gray-800' : 'border-gray-100'
-          } pt-4`}>
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className={`px-3 py-1.5 text-sm rounded-md disabled:opacity-50 transition-colors ${
-                isDarkMode
-                  ? 'bg-gray-800 hover:bg-gray-700 disabled:hover:bg-gray-800'
-                  : 'bg-gray-100 hover:bg-gray-200 disabled:hover:bg-gray-100'
-              }`}
-            >
-              Previous
-            </button>
-            <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} select-none`}>
-              Page {currentPage} of {Math.ceil(data.total / data.limit)}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(Math.ceil(data.total / data.limit), p + 1))}
-              disabled={currentPage >= Math.ceil(data.total / data.limit)}
-              className={`px-3 py-1.5 text-sm rounded-md disabled:opacity-50 transition-colors ${
-                isDarkMode
-                  ? 'bg-gray-800 hover:bg-gray-700 disabled:hover:bg-gray-800'
-                  : 'bg-gray-100 hover:bg-gray-200 disabled:hover:bg-gray-100'
-              }`}
-            >
-              Next
-            </button>
-          </div>
-        )}
       </main>
     </div>
   );

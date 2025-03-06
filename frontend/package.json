@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "test": "vitest"
   },
@@ -12,7 +12,7 @@
     "react-dom": "^18.2.0",
     "react-markdown": "^10.0.1",
     "react-router-dom": "^7.2.0",
-    "remark-gfm": "^4.0.1",
+    "rehype-highlight": "^7.0.2",
     "swr": "^2.2.5"
   },
   "devDependencies": {
