@@ -5,9 +5,14 @@ export interface Chat {
   update_time: string;
 }
 
+export interface ContentBlock {
+  type: 'text';
+  text: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | ContentBlock[];
   timestamp: string;
   unix_timestamp: number;
   model?: string;
@@ -15,9 +20,22 @@ export interface ChatMessage {
   reasoning_content?: string;
 }
 
+export interface ListChatsOptions {
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ListChatsResult {
+  chats: Chat[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface StorageRepository {
   getChat(id: string): Promise<Chat | null>;
-  listChats(): Promise<Chat[]>;
+  listChats(options?: ListChatsOptions): Promise<ListChatsResult>;
   saveChat(chat: Chat): Promise<void>;
   deleteChat(id: string): Promise<void>;
 }

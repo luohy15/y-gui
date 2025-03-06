@@ -10,6 +10,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.0.1",
+    "remark-gfm": "^4.0.1",
     "swr": "^2.2.5"
   },
   "devDependencies": {
