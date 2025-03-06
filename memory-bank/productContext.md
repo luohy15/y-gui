@@ -15,6 +15,8 @@ Users need a web-based interface to:
 - Smooth message loading and sending
 - Real-time updates and responses
 - Easy navigation between conversations
+- Support for text, voice, image and video messages
+- Support realtime voice & video calls
 
 ### Data Management
 - Quick access to chat history

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#1a1a1a]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>y-gui Chats</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles matching the blog */
+        .btn-primary {
+            background-color: #4285f4;
+            transition: all 0.2s ease;
+            letter-spacing: 0.025em;
+        }
+        .btn-primary:hover {
+            background-color: #3b78e7;
+            transform: translateY(-1px);
+        }
+        .input-primary {
+            border: 1px solid #333;
+            background-color: #1a1a1a;
+            transition: all 0.2s ease;
+            letter-spacing: 0.025em;
+        }
+        .input-primary:focus {
+            border-color: #4285f4;
+            box-shadow: none;
+        }
+        /* Clean typography */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            letter-spacing: 0.025em;
+        }
+        /* Chat item hover effect */
+        .chat-item {
+            transition: all 0.2s ease;
+        }
+        .chat-item:hover {
+            background-color: #262626;
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+<body class="h-full bg-[#1a1a1a] font-sans text-white">
+    <div class="min-h-full">
+        <!-- Header -->
+        <header class="bg-[#1a1a1a] border-b border-gray-800">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="h-8 w-8 bg-[#4285f4] rounded-full flex items-center justify-center">
+                            <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4-4-4z"></path>
+                            </svg>
+                        </div>
+                        <h1 class="ml-3 text-lg font-light text-white">y-gui Chat</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="settings.html" class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800 transition-colors">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Search and Action Buttons -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-8">
+                <div class="w-full sm:max-w-lg flex space-x-2">
+                    <div class="flex-1 relative">
+                        <input type="text" class="input-primary w-full pl-10 pr-4 py-2 rounded-md text-white placeholder-gray-500 focus:outline-none text-sm" placeholder="Search chats...">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <button class="btn-primary flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium text-white focus:outline-none">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18l9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button class="btn-primary w-full sm:w-auto flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium text-white focus:outline-none">
+                    <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    New Chat
+                </button>
+            </div>
+
+            <!-- Chat List -->
+            <div class="space-y-6">
+                <!-- Pinned Chats -->
+                <section>
+                    <h2 class="text-lg font-light text-white mb-4">Pinned</h2>
+                    <div class="space-y-2">
+                        <a href="chat-detail.html" class="chat-item block rounded-lg p-4">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
+                                        <span class="text-white font-medium">AI</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-white truncate">Important Project Notes</p>
+                                        <div class="flex items-center">
+                                            <svg class="h-4 w-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                            </svg>
+                                            <span class="text-xs text-gray-400">2h ago</span>
+                                        </div>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-400 truncate">Key points and decisions from our discussion...</p>
+                                    <div class="mt-2 flex items-center">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-900 text-blue-200">GPT-4</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </section>
+
+                <!-- Recent Chats -->
+                <section>
+                    <h2 class="text-lg font-light text-white mb-4">Recent</h2>
+                    <div class="space-y-2">
+                        <!-- Chat Item 1 -->
+                        <a href="chat-detail.html" class="chat-item block rounded-lg p-4">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
+                                        <span class="text-white font-medium">AI</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-white truncate">Code Review Discussion</p>
+                                        <span class="text-xs text-gray-400">5m ago</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-400 truncate">Here are my suggestions for improving the authentication system...</p>
+                                    <div class="mt-2 flex items-center">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-900 text-purple-200">Claude</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- Chat Item 2 -->
+                        <a href="chat-detail.html" class="chat-item block rounded-lg p-4">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center">
+                                        <span class="text-white font-medium">AI</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-white truncate">API Documentation</p>
+                                        <span class="text-xs text-gray-400">1h ago</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-400 truncate">Let's document the new endpoints we just created...</p>
+                                    <div class="mt-2 flex items-center">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-900 text-blue-200">GPT-4</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- Chat Item 3 -->
+                        <a href="chat-detail.html" class="chat-item block rounded-lg p-4">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center">
+                                        <span class="text-white font-medium">AI</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-white truncate">UI Component Design</p>
+                                        <span class="text-xs text-gray-400">3h ago</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-400 truncate">Here's a prototype for the new dashboard layout...</p>
+                                    <div class="mt-2 flex items-center">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-900 text-purple-200">Claude</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Theme toggle -->
+    <div class="fixed top-6 right-6">
+        <a href="light-chat-list.html" class="inline-flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 016 0z"></path>
+            </svg>
+        </a>
+    </div>
+</body>
+</html>

@@ -15,9 +15,8 @@ export interface ChatMessage {
   reasoning_content?: string;
 }
 
-export interface StorageRepository {
+export interface ChatRepository {
   getChat(id: string): Promise<Chat | null>;
   listChats(): Promise<Chat[]>;
   saveChat(chat: Chat): Promise<void>;
-  deleteChat(id: string): Promise<void>;
 }

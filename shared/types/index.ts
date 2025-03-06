@@ -33,9 +33,8 @@ export interface ListChatsResult {
   limit: number;
 }
 
-export interface StorageRepository {
+export interface ChatRepository {
   getChat(id: string): Promise<Chat | null>;
   listChats(options?: ListChatsOptions): Promise<ListChatsResult>;
   saveChat(chat: Chat): Promise<void>;
-  deleteChat(id: string): Promise<void>;
 }

@@ -1,5 +1,5 @@
 import { Chat } from '../../../shared/types';
-import { KVStorageRepository } from '../repository/KVStorageRepository';
+import { KVR2ChatRepository } from '../repository/kv-r2-repository';
 import { corsHeaders } from '../middleware/cors';
 import { validateAuth } from '../utils/auth';
 
@@ -19,7 +19,7 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
     });
   }
 
-  const storage = new KVStorageRepository(env.CHAT_KV, env.CHAT_R2);
+  const storage = new KVR2ChatRepository(env.CHAT_KV, env.CHAT_R2);
   const url = new URL(request.url);
   const path = url.pathname;
 
@@ -77,23 +77,6 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
           'Content-Type': 'application/json',
           ...corsHeaders
         }
-      });
-    }
-
-    // Delete chat
-    if (path.startsWith('/api/chats/') && request.method === 'DELETE') {
-      const id = path.split('/').pop();
-      if (!id) {
-        return new Response('Invalid chat ID', { 
-          status: 400,
-          headers: corsHeaders
-        });
-      }
-
-      await storage.deleteChat(id);
-      return new Response(null, { 
-        status: 204,
-        headers: corsHeaders
       });
     }
 

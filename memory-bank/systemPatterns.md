@@ -26,7 +26,7 @@ flowchart TD
 ## Design Patterns
 
 ### Repository Pattern
-- Implemented in KVStorageRepository
+- Implemented in KVChatRepository
 - Handles data operations with Cloudflare KV and R2
 - Provides consistent interface for data access
 - Manages chat data persistence and retrieval

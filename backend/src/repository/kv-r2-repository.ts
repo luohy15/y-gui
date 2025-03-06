@@ -1,19 +1,37 @@
-import { Chat, StorageRepository, ListChatsOptions, ListChatsResult } from '../../../shared/types';
+import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../../shared/types';
 
-export class KVStorageRepository implements StorageRepository {
+export class KVR2ChatRepository implements ChatRepository {
   constructor(private kv: KVNamespace, private r2: R2Bucket) {}
 
   async getChat(id: string) {
-    const chat = await this.kv.get(`chat:${id}`, 'json');
-    return chat as Chat | null;
+    // First try KV storage
+    const kvChats = await this.getKVChats();
+    const kvChat = kvChats.find(chat => chat.id === id);
+    if (kvChat) {
+      return kvChat;
+    }
+
+    // If not found in KV, try R2 storage
+    const r2Chats = await this.getR2Chats();
+    return r2Chats.find(chat => chat.id === id) || null;
   }
 
   private async getKVChats(): Promise<Chat[]> {
-    const list = await this.kv.list({ prefix: 'chat:' });
-    const chats = await Promise.all(
-      list.keys.map(key => this.kv.get(key.name, 'json'))
-    );
-    return chats.filter((chat): chat is Chat => chat !== null);
+    const content = await this.kv.get('chats', 'text');
+    if (!content) return [];
+    
+    return content
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        try {
+          return JSON.parse(line);
+        } catch (error) {
+          console.error('Error parsing chat from KV:', error);
+          return null;
+        }
+      })
+      .filter((chat): chat is Chat => chat !== null);
   }
 
   private async getR2Chats(): Promise<Chat[]> {
@@ -134,48 +152,20 @@ export class KVStorageRepository implements StorageRepository {
   }
 
   async saveChat(chat: Chat) {
-    await this.kv.put(`chat:${chat.id}`, JSON.stringify(chat));
+    // Get existing chats
+    const existingChats = await this.getKVChats();
     
-    // Backup to R2 in chat.jsonl format
-    try {
-      // Get existing chats
-      const existingChats = await this.getR2Chats();
-      
-      // Update or add the new chat
-      const chatIndex = existingChats.findIndex(c => c.id === chat.id);
-      if (chatIndex !== -1) {
-        existingChats[chatIndex] = chat;
-      } else {
-        existingChats.push(chat);
-      }
-      
-      // Convert to JSONL format
-      const jsonlContent = existingChats.map(c => JSON.stringify(c)).join('\n');
-      
-      // Save back to R2
-      await this.r2.put('chat1.jsonl', jsonlContent);
-    } catch (error) {
-      console.error('Error saving to R2:', error);
-      // Continue even if R2 backup fails - we still have the chat in KV
+    // Update or add the new chat
+    const chatIndex = existingChats.findIndex(c => c.id === chat.id);
+    if (chatIndex !== -1) {
+      existingChats[chatIndex] = chat;
+    } else {
+      existingChats.push(chat);
     }
+    
+    // Convert to JSONL format and save back to KV
+    const jsonlContent = existingChats.map(c => JSON.stringify(c)).join('\n');
+    await this.kv.put('chats', jsonlContent);
   }
 
-  async deleteChat(id: string) {
-    await this.kv.delete(`chat:${id}`);
-    
-    // Remove from R2 chat.jsonl
-    try {
-      const existingChats = await this.getR2Chats();
-      const filteredChats = existingChats.filter(chat => chat.id !== id);
-      
-      if (filteredChats.length < existingChats.length) {
-        // Chat was found and filtered out, update the file
-        const jsonlContent = filteredChats.map(c => JSON.stringify(c)).join('\n');
-        await this.r2.put('chat1.jsonl', jsonlContent);
-      }
-    } catch (error) {
-      console.error('Error updating R2 after deletion:', error);
-      // Continue even if R2 update fails - we still deleted from KV
-    }
-  }
 }
