@@ -1,37 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import useSWR from 'swr';
+import { Bot, McpServer } from '../../../shared/types';
 
-interface Bot {
-  name: string;
-  model: string;
-  base_url: string;
-  api_key: string;
-  print_speed: number;
-  mcp_servers?: string[];
-  openrouter_config?: Record<string, any>;
-  api_type?: string;
-  custom_api_path?: string;
-  max_tokens?: number;
-  reasoning_effort?: string;
-}
-
-interface McpServer {
-  name: string;
-  command: string;
-  args: string[];
-  env: Record<string, string>;
-}
+const fetcher = (url: string) =>
+  fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+    }
+  }).then(res => {
+    if (!res.ok) throw new Error('Failed to fetch');
+    return res.json();
+  });
 
 interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ }) => {
   const navigate = useNavigate();
-  const { isDarkMode, setIsDarkMode } = useTheme();
+  const { isDarkMode, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'general'|'bots'|'mcp-servers'>('general');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch configurations
+  const { data: bots, error: botsError, isLoading: botsLoading } = useSWR<Bot[]>('/api/config/bots', fetcher);
+  const { data: mcpServers, error: mcpError, isLoading: mcpLoading } = useSWR<McpServer[]>('/api/config/mcp-servers', fetcher);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -45,57 +40,6 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuRef]);
-
-  // Sample data - in real app this would come from a context or props
-  const bots: Bot[] = [
-    {
-      name: "default",
-      base_url: "https://gateway.ai.cloudflare.com/v1/0e58137b22362ba951f911c38b33f653/luohy15/openrouter",
-      api_key: "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",
-      model: "anthropic/claude-3.7-sonnet:beta",
-      print_speed: 100,
-      openrouter_config: { provider: { sort: "throughput" } }
-    },
-    {
-      name: "web_search",
-      base_url: "https://gateway.ai.cloudflare.com/v1/0e58137b22362ba951f911c38b33f653/luohy15/openrouter",
-      api_key: "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",
-      model: "anthropic/claude-3.7-sonnet:beta",
-      print_speed: 100,
-      openrouter_config: { provider: { sort: "throughput" } },
-      mcp_servers: ["tavily"]
-    },
-    {
-      name: "cli",
-      base_url: "https://gateway.ai.cloudflare.com/v1/0e58137b22362ba951f911c38b33f653/luohy15/openrouter",
-      api_key: "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",
-      model: "anthropic/claude-3.7-sonnet:beta",
-      print_speed: 100,
-      openrouter_config: { provider: { sort: "throughput" } },
-      mcp_servers: ["execute_command"]
-    }
-  ];
-
-  const mcpServers: McpServer[] = [
-    {
-      name: "todo",
-      command: "uvx",
-      args: ["mcp-todo"],
-      env: {}
-    },
-    {
-      name: "fetch",
-      command: "uvx",
-      args: ["mcp-server-fetch"],
-      env: {}
-    },
-    {
-      name: "tavily",
-      command: "npx",
-      args: ["-y", "tavily-mcp"],
-      env: { "TAVILY_API_KEY": "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" }
-    }
-  ];
 
   return (
     <div className={`max-w-full flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -262,7 +206,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                         <input
                           type="checkbox"
                           checked={isDarkMode}
-                          onChange={(e) => setIsDarkMode(e.target.checked)}
+                          onChange={(e) => setTheme(e.target.checked ? 'dark' : 'light')}
                           className="sr-only peer"
                         />
                         <div className={`w-11 h-6 ${isDarkMode ? 'bg-blue-600' : 'bg-gray-200'} rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
@@ -287,7 +231,22 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
               <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-6 text-sm md:text-base`}>Manage your bot configurations</p>
 
               <div className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'} border rounded-lg overflow-hidden`}>
-                {bots.map((bot, index) => (
+                {botsLoading ? (
+                  <div className="p-4 text-center">
+                    <div className={`animate-pulse ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading bot configurations...</div>
+                  </div>
+                ) : botsError ? (
+                  <div className="p-4 text-center">
+                    <div className="text-red-500">Error loading bot configurations</div>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-2 text-sm text-blue-500 hover:underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : bots && bots.length > 0 ? (
+                  bots.map((bot, index) => (
                   <div key={bot.name} className={`${index !== bots.length - 1 ? isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200' : ''} p-4`}>
                     <div className="flex justify-between items-center">
                       <div>
@@ -303,7 +262,12 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="p-4 text-center">
+                    <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No bot configurations found</div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -320,7 +284,22 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
               <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-6 text-sm md:text-base`}>Manage your MCP server configurations</p>
 
               <div className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'} border rounded-lg overflow-hidden`}>
-                {mcpServers.map((server, index) => (
+                {mcpLoading ? (
+                  <div className="p-4 text-center">
+                    <div className={`animate-pulse ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading MCP server configurations...</div>
+                  </div>
+                ) : mcpError ? (
+                  <div className="p-4 text-center">
+                    <div className="text-red-500">Error loading MCP server configurations</div>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-2 text-sm text-blue-500 hover:underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : mcpServers && mcpServers.length > 0 ? (
+                  mcpServers.map((server, index) => (
                   <div key={server.name} className={`${index !== mcpServers.length - 1 ? isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200' : ''} p-4`}>
                     <div className="flex justify-between items-center">
                       <div>
@@ -336,7 +315,12 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="p-4 text-center">
+                    <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No MCP server configurations found</div>
+                  </div>
+                )}
               </div>
             </div>
           )}

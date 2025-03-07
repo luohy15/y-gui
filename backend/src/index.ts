@@ -1,6 +1,7 @@
 import { handleCors } from './middleware/cors';
 import { handleAuthRequest } from './api/auth';
 import { handleChatsRequest } from './api/chats';
+import { handleConfigRequest } from './api/config';
 
 interface Env {
   CHAT_KV: KVNamespace;
@@ -32,6 +33,11 @@ export default {
         // Handle chat endpoints
         if (path.startsWith('/api/chats')) {
           return handleChatsRequest(request, env);
+        }
+
+        // Handle config endpoints
+        if (path.startsWith('/api/config')) {
+          return handleConfigRequest(request, env);
         }
 
         return new Response('Not Found', { 

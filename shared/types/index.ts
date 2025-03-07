@@ -38,3 +38,29 @@ export interface ChatRepository {
   listChats(options?: ListChatsOptions): Promise<ListChatsResult>;
   saveChat(chat: Chat): Promise<void>;
 }
+
+export interface Bot {
+  name: string;
+  model: string;
+  base_url: string;
+  api_key: string;
+  print_speed: number;
+  mcp_servers?: string[];
+  openrouter_config?: Record<string, any>;
+  api_type?: string;
+  custom_api_path?: string;
+  max_tokens?: number;
+  reasoning_effort?: string;
+}
+
+export interface McpServer {
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+export interface ConfigRepository {
+  getBots(): Promise<Bot[]>;
+  getMcpServers(): Promise<McpServer[]>;
+}

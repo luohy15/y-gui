@@ -13,6 +13,9 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 7. Bot configuration UI implemented in Settings component
 8. MCP server configuration UI implemented in Settings component
 9. Chat interface with message display and metadata
+10. Bot and MCP server configuration fetching from Cloudflare R2
+11. API endpoints for configuration management
+12. JSONL format for configuration storage
 
 ## Active Decisions
 
@@ -58,8 +61,8 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 ## Next Steps
 
 ### Immediate Tasks
-1. Implement bot configuration and MCP server fetching(from cloudflare r2)
-2. Implementing chat interface, Using bot to send messages
+1. Implement chat interface for sending messages
+2. Implement bot and MCP server configuration editing
 
 ### Future Tasks
 1. Implement search functionality

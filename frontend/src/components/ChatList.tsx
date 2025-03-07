@@ -20,10 +20,18 @@ export default function ChatList({ }: ChatListProps) {
 
   const { data, error, mutate } = useSWR<ListChatsResult>(
     `/api/chats?search=${encodeURIComponent(confirmedSearch)}&page=${currentPage}&limit=${limit}`,
+    (url) => fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      }
+    }).then(res => {
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    }),
     {
       onError: (err) => {
         if (err.status === 401) {
-					console.log('Unauthorized');
+          console.log('Unauthorized');
         }
       }
     }

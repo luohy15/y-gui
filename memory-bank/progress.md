@@ -59,7 +59,7 @@
 ### Configuration Management
 - [x] Bot configuration display
 - [x] MCP server configuration display
-- [ ] Fetching configurations from Cloudflare R2
+- [x] Fetching configurations from Cloudflare R2
 - [ ] Bot configuration editing
 - [ ] MCP server configuration editing
 - [ ] Adding new bots and MCP servers
@@ -93,9 +93,9 @@
 11. Theme switching (dark/light mode)
 
 ### In Progress
-1. Bot and MCP server configuration fetching from Cloudflare R2
-2. Chat interface implementation for sending messages
-3. Authentication system
+1. Chat interface implementation for sending messages
+2. Authentication system
+3. Bot configuration editing
 
 ### Planned
 1. Bot and MCP server configuration editing
@@ -124,8 +124,8 @@
 ## Next Milestones
 
 ### Short Term
-1. Implement bot and MCP server configuration fetching from Cloudflare R2
-2. Complete chat interface for sending messages
+1. Complete chat interface for sending messages
+2. Implement bot and MCP server configuration editing
 3. Implement loading states
 4. Add error handling
 5. Optimize storage access
