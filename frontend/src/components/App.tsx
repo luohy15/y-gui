@@ -5,6 +5,7 @@ import ChatList from './ChatList';
 import ChatView from './ChatView';
 import Login from './Login';
 import { Settings } from './Settings';
+import Header from './Header';
 import { ThemeProvider } from '../contexts/ThemeContext';
 
 export default function App() {
@@ -28,8 +29,9 @@ export default function App() {
         <Login onLogin={handleLogin} />
       ) : (
         <BrowserRouter>
+          <Header onLogout={handleLogout} />
           <Routes>
-            <Route path="/" element={<ChatList onLogout={handleLogout} token={token} />} />
+            <Route path="/" element={<ChatList />} />
             <Route path="/chat/:id" element={<ChatView />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

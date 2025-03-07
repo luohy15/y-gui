@@ -56,12 +56,17 @@ flowchart TD
 flowchart LR
     App[App.tsx] --> ChatList[ChatList.tsx]
     App --> ChatView[ChatView.tsx]
-    ChatView --> MessageList[MessageList]
+    App --> Settings[Settings.tsx]
+    ChatView --> MessageDisplay[Message Display]
     ChatView --> InputArea[InputArea]
+    Settings --> BotConfig[Bot Configuration]
+    Settings --> McpConfig[MCP Server Configuration]
+    Settings --> ThemeToggle[Theme Toggle]
 
     subgraph "State Management"
         SWR[SWR Cache] --> API[API Client]
         LocalState[React State] --> UI[UI Components]
+        ThemeContext[Theme Context] --> UI
     end
 ```
 
@@ -72,10 +77,16 @@ flowchart LR
     Auth --> Router[API Router]
     Router --> Storage[Storage Layer]
     Router --> Provider[Provider Layer]
+    Router --> Config[Configuration Layer]
 
     subgraph "Storage"
         Storage --> KV[KV Operations]
         Storage --> R2[R2 Operations]
+    end
+
+    subgraph "Configuration"
+        Config --> BotConfig[Bot Configurations]
+        Config --> McpConfig[MCP Server Configurations]
     end
 ```
 
@@ -86,6 +97,8 @@ flowchart LR
 - Tailwind CSS for styling
 - SWR for data management
 - Component-based architecture
+- Context API for theme management
+- Configuration-driven bot and MCP server management
 
 ### Backend Structure
 - Cloudflare Workers

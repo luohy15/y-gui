@@ -7,6 +7,8 @@
 - TypeScript
 - Tailwind CSS
 - SWR for data fetching
+- React Router for navigation
+- React Context API for theme management
 - Web APIs (localStorage, Fetch)
 
 ### Backend Technologies
@@ -45,20 +47,42 @@ Based on package.json:
 ### Project Structure
 ```
 y-gui/
-├── src/
-│   ├── components/     # React components
-│   │   ├── App.tsx
-│   │   ├── ChatList.tsx
-│   │   └── ChatView.tsx
-│   ├── worker/        # Cloudflare Worker
-│   │   └── index.ts
-│   ├── index.html     # Entry HTML
-│   ├── index.tsx      # React entry
-│   ├── styles.css     # Global styles
-│   └── types.ts       # TypeScript types
-├── test/              # Test files
-├── wrangler.toml      # Cloudflare config
-└── vite.config.ts     # Vite config
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   │   ├── App.tsx
+│   │   │   ├── ChatList.tsx
+│   │   │   ├── ChatView.tsx
+│   │   │   ├── Settings.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── Logo.tsx
+│   │   │   └── AssistantAvatar.tsx
+│   │   ├── contexts/      # React contexts
+│   │   │   └── ThemeContext.tsx
+│   │   ├── utils/         # Utility functions
+│   │   ├── index.html     # Entry HTML
+│   │   ├── index.tsx      # React entry
+│   │   ├── styles.css     # Global styles
+│   │   └── types.ts       # TypeScript types
+│   ├── package.json       # Frontend dependencies
+│   ├── tsconfig.json      # TypeScript config
+│   ├── vite.config.ts     # Vite config
+│   └── tailwind.config.js # Tailwind config
+├── backend/
+│   ├── src/
+│   │   ├── api/           # API endpoints
+│   │   ├── middleware/    # Middleware
+│   │   ├── repository/    # Data access
+│   │   ├── utils/         # Utilities
+│   │   └── index.ts       # Worker entry
+│   ├── package.json       # Backend dependencies
+│   └── tsconfig.json      # TypeScript config
+├── shared/
+│   └── types/             # Shared type definitions
+├── test/                  # Test files
+├── wrangler.toml          # Cloudflare config
+└── package.json           # Root dependencies
 ```
 
 ## Technical Constraints

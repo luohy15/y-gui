@@ -57,8 +57,22 @@ Users need a web-based interface to:
 ### Chat Features
 - Real-time message sending
 - Rich message display
-- Metadata visualization
+- Metadata visualization (model, provider, timestamps)
 - Chat history navigation
+- Message reasoning display
+
+### Bot Configuration Features
+- Multiple bot configuration support
+- Model selection
+- API endpoint configuration
+- MCP server association
+- Print speed customization
+
+### MCP Server Configuration Features
+- Multiple MCP server support
+- Command and arguments configuration
+- Environment variable management
+- Server status monitoring
 
 ### Authentication Features
 - Secret key validation
@@ -69,6 +83,7 @@ Users need a web-based interface to:
 ### Interface Features
 - Responsive design
 - Modern UI components
+- Dark/light theme support
 - Loading states
 - Error handling
 - Navigation controls

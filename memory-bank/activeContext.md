@@ -1,7 +1,7 @@
 # Active Context: y-gui
 
 ## Current Focus
-Implementing a web-based GUI for chat interactions, with data stored in Cloudflare KV and R2. The focus is on creating a secure, responsive interface that provides seamless access to chat functionality.
+Enhancing the web-based GUI for chat interactions with bot configuration and MCP server management. The focus is on creating a secure, responsive interface that provides seamless access to chat functionality with configurable AI providers and MCP servers.
 
 ## Recent Changes
 1. Project structure established with React, TypeScript, and Cloudflare Workers
@@ -10,6 +10,9 @@ Implementing a web-based GUI for chat interactions, with data stored in Cloudfla
 4. Initial API endpoints for chat operations
 5. SWR integration for data fetching
 6. Tailwind CSS setup for styling
+7. Bot configuration UI implemented in Settings component
+8. MCP server configuration UI implemented in Settings component
+9. Chat interface with message display and metadata
 
 ## Active Decisions
 
@@ -26,6 +29,7 @@ Implementing a web-based GUI for chat interactions, with data stored in Cloudfla
 - API-first development
 - Edge computing with Workers
 - Progressive enhancement
+- Configuration-driven bot and MCP server management
 
 ## Current Considerations
 
@@ -41,6 +45,8 @@ Implementing a web-based GUI for chat interactions, with data stored in Cloudfla
 - Error handling
 - Real-time updates
 - Chat interactions
+- Bot configuration management
+- MCP server configuration
 
 ### Storage
 - KV for active chats
@@ -52,17 +58,14 @@ Implementing a web-based GUI for chat interactions, with data stored in Cloudfla
 ## Next Steps
 
 ### Immediate Tasks
-1. Implement authentication system
-2. Enhance chat components
-3. Add AI provider integration
-4. Improve error handling
-5. Add loading states
+1. Implement bot configuration and MCP server fetching(from cloudflare r2)
+2. Implementing chat interface, Using bot to send messages
 
 ### Future Tasks
 1. Implement search functionality
 2. Add chat filtering
 3. Enhance UI/UX
-4. Add additional features
+4. Add additional features like voice and video support
 5. Optimize performance
 
 ## Open Questions
@@ -71,6 +74,7 @@ Implementing a web-based GUI for chat interactions, with data stored in Cloudfla
 3. Error handling strategies
 4. Performance optimization approaches
 5. Future feature priorities
+6. Best approach for managing bot and MCP server configurations
 
 ## Current Status
-Initial project setup complete with basic functionality. Focus on implementing authentication and enhancing chat interactions. Core components and worker implementation in place, moving towards a fully functional web interface.
+Basic bot and MCP configuration display implemented. Chat interface functional with message display and metadata. Settings component allows viewing bot and MCP server configurations. Next steps include implementing editing capabilities for configurations and completing the authentication system.
