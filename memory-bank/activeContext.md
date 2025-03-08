@@ -5,7 +5,7 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 
 ## Recent Changes
 1. Project structure established with React, TypeScript, and Cloudflare Workers
-2. Basic components created (App, ChatList, ChatView)
+2. Basic components created (App, Home, ChatView)
 3. Cloudflare Worker implementation for KV/R2 access
 4. Initial API endpoints for chat operations
 5. SWR integration for data fetching
@@ -16,6 +16,8 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 10. Bot and MCP server configuration fetching from Cloudflare R2
 11. API endpoints for configuration management
 12. JSONL format for configuration storage
+13. Basic chat conversation function
+14. Message sending functionality implemented
 
 ## Active Decisions
 
@@ -61,8 +63,11 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 ## Next Steps
 
 ### Immediate Tasks
-1. Implement chat interface for sending messages
-2. Implement bot and MCP server configuration editing
+1. Add Home Page and refactor chat history search
+2. Add chat catalog for multi round messages
+3. Implement bot and MCP server configuration editing
+4. Enhance error handling for message sending
+5. Add loading states for message sending
 
 ### Future Tasks
 1. Implement search functionality
@@ -80,4 +85,4 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 6. Best approach for managing bot and MCP server configurations
 
 ## Current Status
-Basic bot and MCP configuration display implemented. Chat interface functional with message display and metadata. Settings component allows viewing bot and MCP server configurations. Next steps include implementing editing capabilities for configurations and completing the authentication system.
+Basic bot and MCP configuration display implemented. Chat interface fully functional with message display, metadata, and message sending capabilities. Settings component allows viewing bot and MCP server configurations. Basic chat sending function is now complete. Next steps include implementing editing capabilities for configurations, enhancing the home page, and completing the authentication system.

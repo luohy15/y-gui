@@ -56,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   };
 
   return (
-    <header className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b`}>
+    <header className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b sticky top-0 z-50`}>
       <div className="max-w-full mx-4 sm:mx-6 lg:mx-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">

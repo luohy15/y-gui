@@ -5,11 +5,11 @@ import useSWR from 'swr';
 import { useTheme } from '../contexts/ThemeContext';
 import AssistantAvatar from './AssistantAvatar';
 
-interface ChatListProps {
+interface HomeProps {
 }
 
 
-export default function ChatList({ }: ChatListProps) {
+export default function Home({ }: HomeProps) {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
   const [searchInput, setSearchInput] = React.useState('');

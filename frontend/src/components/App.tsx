@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Chat } from '@shared/types';
-import ChatList from './ChatList';
+import Home from './Home';
 import ChatView from './ChatView';
 import Login from './Login';
 import { Settings } from './Settings';
@@ -29,13 +28,17 @@ export default function App() {
         <Login onLogin={handleLogin} />
       ) : (
         <BrowserRouter>
-          <Header onLogout={handleLogout} />
-          <Routes>
-            <Route path="/" element={<ChatList />} />
-            <Route path="/chat/:id" element={<ChatView />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+					<div className='h-screen flex flex-col'>
+          	<Header onLogout={handleLogout} />
+						<div className='flex-1 overflow-auto'>
+							<Routes>
+								<Route path="/" element={<Home />} />
+								<Route path="/chat/:id" element={<ChatView />} />
+								<Route path="/settings" element={<Settings />} />
+								<Route path="*" element={<Navigate to="/" replace />} />
+							</Routes>
+						</div>
+					</div>
         </BrowserRouter>
       )}
     </ThemeProvider>

@@ -47,7 +47,7 @@
 - [x] Message metadata display
 - [ ] Loading states
 - [ ] Error handling
-- [ ] Message sending functionality
+- [x] Message sending functionality
 
 ### UI Improvements
 - [x] Responsive design refinements
@@ -91,11 +91,12 @@
 9. MCP server configuration display UI
 10. Chat message display with metadata
 11. Theme switching (dark/light mode)
+12. Basic chat sending functionality
 
 ### In Progress
-1. Chat interface implementation for sending messages
-2. Authentication system
-3. Bot configuration editing
+1. Authentication system
+2. Bot configuration editing
+3. Home page and chat history search
 
 ### Planned
 1. Bot and MCP server configuration editing
@@ -124,10 +125,10 @@
 ## Next Milestones
 
 ### Short Term
-1. Complete chat interface for sending messages
-2. Implement bot and MCP server configuration editing
+1. Implement bot and MCP server configuration editing
+2. Add chat catalog for multi-round messages
 3. Implement loading states
-4. Add error handling
+4. Add error handling for message sending
 5. Optimize storage access
 
 ### Medium Term

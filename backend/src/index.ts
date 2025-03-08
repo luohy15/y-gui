@@ -1,6 +1,6 @@
 import { handleCors } from './middleware/cors';
 import { handleAuthRequest } from './api/auth';
-import { handleChatsRequest } from './api/chats';
+import { handleChatsRequest } from './api/chat';
 import { handleConfigRequest } from './api/config';
 
 interface Env {
@@ -31,7 +31,7 @@ export default {
         }
 
         // Handle chat endpoints
-        if (path.startsWith('/api/chats')) {
+        if (path.startsWith('/api/chats') || path.startsWith('/api/chat/')) {
           return handleChatsRequest(request, env);
         }
 

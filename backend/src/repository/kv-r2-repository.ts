@@ -98,9 +98,9 @@ export class KVR2ChatRepository implements ChatRepository {
     // Merge chats (prioritize KV for duplicates)
     const mergedChats = this.mergeChats(kvChats, r2Chats);
     
-    // Sort by create_time in descending order
+    // Sort by update_time in descending order
     const sortedChats = mergedChats.sort((a, b) => 
-      new Date(b.create_time).getTime() - new Date(a.create_time).getTime()
+      new Date(b.update_time).getTime() - new Date(a.update_time).getTime()
     );
     
     // Apply search filter if provided (case-insensitive on message content)

@@ -54,7 +54,7 @@ flowchart TD
 ### Frontend Architecture
 ```mermaid
 flowchart LR
-    App[App.tsx] --> ChatList[ChatList.tsx]
+    App[App.tsx] --> Home[Home.tsx]
     App --> ChatView[ChatView.tsx]
     App --> Settings[Settings.tsx]
     ChatView --> MessageDisplay[Message Display]

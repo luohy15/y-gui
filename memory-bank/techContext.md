@@ -43,6 +43,7 @@ Based on package.json:
 - Cloudflare account
 - Wrangler CLI
 - Git
+- HTTP Proxy (127.0.0.1:7890 for development)
 
 ### Project Structure
 ```
@@ -51,7 +52,7 @@ y-gui/
 │   ├── src/
 │   │   ├── components/     # React components
 │   │   │   ├── App.tsx
-│   │   │   ├── ChatList.tsx
+│   │   │   ├── Home.tsx
 │   │   │   ├── ChatView.tsx
 │   │   │   ├── Settings.tsx
 │   │   │   ├── Header.tsx
@@ -137,6 +138,21 @@ y-gui/
 - PostCSS/Tailwind
 - Test setup
 - Development proxy
+- HTTP proxy configuration (127.0.0.1:7890)
+
+### Development Scripts
+- `npm run dev`: Standard development server
+- `npm run dev:proxy`: Development server with HTTP proxy enabled (127.0.0.1:7890)
+- `npm run build`: Build the project
+- `npm run deploy`: Deploy to Cloudflare Workers
+- `npm run test`: Run tests
+
+### HTTP Proxy Configuration
+- Implemented in `utils/proxy.ts`
+- Uses a custom fetch wrapper to route external requests through the proxy
+- Configured to use 127.0.0.1:7890 as the proxy server
+- Only proxies external requests (not localhost or 127.0.0.1)
+- Adds appropriate headers for proxy forwarding
 
 ## Development Practices
 

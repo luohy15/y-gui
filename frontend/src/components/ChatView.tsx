@@ -1,13 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Chat, ChatMessage } from '@shared/types';
-import ReactMarkdown from 'react-markdown';
-import rehypeHighlight from 'rehype-highlight';
-import 'highlight.js/styles/github-dark.css';
-import useSWR, { SWRConfiguration } from 'swr';
+import { Chat, ChatMessage, Bot } from '@shared/types';
+import MessageInput from './MessageInput';
+import useSWR, { SWRConfiguration, mutate } from 'swr';
 import { useTheme } from '../contexts/ThemeContext';
 import AssistantAvatar from './AssistantAvatar';
 import Logo from './Logo';
+import CompactMarkdown from './Markdown';
 
 export default function ChatView() {
   const { isDarkMode } = useTheme();
@@ -20,6 +19,14 @@ export default function ChatView() {
     refreshInterval: 0, // Disable auto refresh
     dedupingInterval: 2000, // Dedupe requests within 2 seconds
   };
+
+  // State for message input
+  const [message, setMessage] = useState('');
+  const [selectedBot, setSelectedBot] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch available bots
+  const { data: bots } = useSWR<Bot[]>('/api/config/bots');
 
   const { data: chat, error } = useSWR<Chat>(
     id ? `/api/chats/${id}` : null,
@@ -35,11 +42,171 @@ export default function ChatView() {
     }));
   };
 
+  // Handle sending a message
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!message.trim() || !selectedBot || !id) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Clear the input immediately to improve UX
+      const messageContent = message;
+      setMessage('');
+
+      // Add user message and empty assistant message to chat immediately
+      await mutate(
+        `/api/chats/${id}`,
+        (cachedChat: Chat | null | undefined) => {
+          if (!cachedChat) return cachedChat;
+
+          // Create a deep copy of the chat
+          const updatedChat = JSON.parse(JSON.stringify(cachedChat));
+
+          // Create user message
+          const userMessage: ChatMessage = {
+            role: 'user',
+            content: messageContent,
+            timestamp: new Date().toISOString(),
+            unix_timestamp: Math.floor(Date.now() / 1000)
+          };
+
+          // Create empty assistant message
+          const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toISOString(),
+            unix_timestamp: Math.floor(Date.now() / 1000)
+          };
+
+          // Add messages to chat
+          updatedChat.messages.push(userMessage);
+          updatedChat.messages.push(assistantMessage);
+          updatedChat.update_time = new Date().toISOString();
+
+          return updatedChat;
+        },
+        false
+      );
+
+      // Make the API request
+      const response = await fetch(`/api/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          content: messageContent,
+          botName: selectedBot,
+          chatId: id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error sending message: ${response.statusText}`);
+      }
+
+      // Check if the response is a stream
+      if (response.headers.get('Content-Type')?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (!reader) {
+          throw new Error('Response body is not readable');
+        }
+
+        // Process the stream
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          // Decode the chunk
+          const chunk = decoder.decode(value, { stream: true });
+
+          // Process SSE format
+          const lines = chunk.split('\n\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+
+              try {
+                // Parse the JSON data
+                const parsedData = JSON.parse(data);
+
+                // Handle the new SSE data format
+                if (parsedData.choices && parsedData.choices[0]?.delta?.content) {
+                  // Get the current chat from cache
+                  const currentChat = await mutate(
+                    `/api/chats/${id}`,
+                    (cachedChat: Chat | null | undefined) => {
+                      if (!cachedChat) return cachedChat;
+
+                      // Create a deep copy of the chat
+                      const updatedChat = JSON.parse(JSON.stringify(cachedChat));
+
+                      // Get the last message (which should be the assistant's message)
+                      const lastMessage = updatedChat.messages[updatedChat.messages.length - 1];
+
+                      // Update the content
+                      if (lastMessage && lastMessage.role === 'assistant') {
+                        // If content is a string, append to it
+                        if (typeof lastMessage.content === 'string') {
+                          lastMessage.content += parsedData.choices[0].delta.content;
+                        }
+
+                        // Update model and provider if not already set
+                        if (parsedData.model && !lastMessage.model) {
+                          lastMessage.model = parsedData.model;
+                        }
+
+                        if (parsedData.provider && !lastMessage.provider) {
+                          lastMessage.provider = parsedData.provider;
+                        }
+                      }
+
+                      return updatedChat;
+                    },
+                    false
+                  );
+                }
+              } catch (e) {
+                console.error('Error parsing SSE data:', e);
+              }
+            }
+          }
+        }
+      } else {
+        // Handle non-streaming response (fallback)
+        const updatedChat = await response.json();
+        mutate(`/api/chats/${id}`, updatedChat, false);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Handle error (could show a toast notification)
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   React.useEffect(() => {
     if (error?.status === 404) {
       navigate('/');
     }
   }, [error, navigate]);
+
+  // Scroll to bottom when messages change
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chat?.messages]);
 
   if (!chat) {
     return (
@@ -50,37 +217,7 @@ export default function ChatView() {
   }
 
   return (
-    <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
-      <header className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b`}>
-        <div className="max-w-full mx-4 sm:mx-6 lg:mx-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/')}
-                className={`${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-600'} mr-4`}
-              >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-              </button>
-              <div className="flex items-center">
-                <Logo />
-                <div className="ml-3">
-                  <h2 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>y-gui Chat</h2>
-                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Assistant</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className={`${isDarkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} p-1 rounded-full`}>
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className={`flex flex-col ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
       <div className={`flex-1 px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto`}>
         {chat.messages.map((msg, index) => (
           <div
@@ -159,23 +296,26 @@ export default function ChatView() {
                     )}
                   </div>
                 )}
-                <div className={`prose prose-sm overflow-hidden max-w-full ${
-                  msg.role === 'user'
-                    ? 'prose-invert'
-                    : 'prose-gray'
-                }`}>
-                  <ReactMarkdown
-                    rehypePlugins={[rehypeHighlight]}
-                  >
-                  {typeof msg.content === 'string' ? msg.content : ''}
-                  </ReactMarkdown>
-                </div>
+                <CompactMarkdown
+                  content={typeof msg.content === 'string' ? msg.content : ''}
+                  className={msg.role === 'user' ? 'prose-invert' : 'prose-gray'}
+                />
               </div>
             </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
+				<div className="pb-12"></div>
       </div>
-    </div>
+      <MessageInput
+        message={message}
+        setMessage={setMessage}
+        selectedBot={selectedBot}
+        setSelectedBot={setSelectedBot}
+        isLoading={isLoading}
+        handleSubmit={handleSubmit}
+        bots={bots || []}
+			/>
+		</div>
   );
 }
