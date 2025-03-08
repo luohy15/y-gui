@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Chat, ListChatsResult } from '@shared/types';
+import { Bot, Chat, ListChatsResult } from '@shared/types';
 import useSWR from 'swr';
 import { useTheme } from '../contexts/ThemeContext';
 import AssistantAvatar from './AssistantAvatar';
+import MessageInput from './MessageInput';
 
 interface HomeProps {
 }
@@ -14,13 +15,80 @@ export default function Home({ }: HomeProps) {
   const { isDarkMode } = useTheme();
   const [searchInput, setSearchInput] = React.useState('');
   const [confirmedSearch, setConfirmedSearch] = React.useState('');
-  const limit = 10;
+  const limit = 5;
+
+  // New chat creation states
+  const [newMessage, setNewMessage] = React.useState('');
+  const [selectedBot, setSelectedBot] = React.useState('');
+  const [isCreatingChat, setIsCreatingChat] = React.useState(false);
+  const [isNavigatingToNewChat, setIsNavigatingToNewChat] = React.useState(false);
+  const [isProcessingMessage, setIsProcessingMessage] = React.useState(false);
 
   const [currentPage, setCurrentPage] = React.useState(1);
 
+
+  // Handle creating a new chat with a message
+  const handleNewChatWithMessage = async (content: string, botName: string) => {
+    if (!content.trim() || !botName) return;
+
+    setIsCreatingChat(true);
+
+    try {
+      // First, create a new chat ID
+      const idResponse = await fetch('/api/chat/id', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+
+      if (!idResponse.ok) {
+        throw new Error('Failed to get new chat ID');
+      }
+
+      const { id } = await idResponse.json();
+
+      // Navigate to the new chat page
+      navigate(`/chat/${id}`);
+
+      // After navigation, send the message to the chat completions endpoint
+      setIsProcessingMessage(true);
+
+      // We'll call the completions API after navigation
+      // This will be handled by the ChatView component's useEffect
+      // when it detects a new chat with no messages
+
+      // Make the API request to send the initial message
+      const response = await fetch(`/api/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          content,
+          botName,
+          chatId: id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error sending message: ${response.statusText}`);
+      }
+
+      // Refresh the chat list
+      mutate();
+    } catch (error) {
+      console.error('Error creating chat with message:', error);
+    } finally {
+      setIsCreatingChat(false);
+      setIsProcessingMessage(false);
+      setNewMessage('');
+    }
+  };
+
   const { data, error, mutate } = useSWR<ListChatsResult>(
     `/api/chats?search=${encodeURIComponent(confirmedSearch)}&page=${currentPage}&limit=${limit}`,
-    (url) => fetch(url, {
+    (url: string) => fetch(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`
       }
@@ -29,7 +97,7 @@ export default function Home({ }: HomeProps) {
       return res.json();
     }),
     {
-      onError: (err) => {
+      onError: (err: any) => {
         if (err.status === 401) {
           console.log('Unauthorized');
         }
@@ -122,6 +190,23 @@ export default function Home({ }: HomeProps) {
   return (
     <div className={`max-w-full flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
       <main className="max-w-full mx-4 sm:mx-6 lg:mx-8 py-8 flex flex-col h-full">
+        {/* New Chat Input */}
+        <div className={`mb-8 w-full max-w-3xl mx-auto ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <MessageInput
+            message={newMessage}
+            setMessage={setNewMessage}
+            selectedBot={selectedBot}
+            setSelectedBot={setSelectedBot}
+            isLoading={isCreatingChat || isProcessingMessage}
+            handleSubmit={async () => Promise.resolve()} // Not used since we're using onSendMessage
+            onSendMessage={handleNewChatWithMessage}
+            isFixed={false} // Don't fix this input to the bottom of the screen
+          />
+        </div>
+
+				<h2 className={`text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Recent</h2>
+
+        {/* Search Area */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-8">
           <div className="w-full sm:max-w-lg flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-2">
             <div className="flex-1 relative">
@@ -169,7 +254,6 @@ export default function Home({ }: HomeProps) {
           )}
 
           <section>
-            <h2 className={`text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Recent</h2>
             <div className="space-y-2">
               {chats.map(chat => renderChatItem(chat))}
             </div>

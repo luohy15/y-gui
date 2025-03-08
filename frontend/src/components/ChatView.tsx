@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Chat, ChatMessage, Bot } from '@shared/types';
 import MessageInput from './MessageInput';
@@ -24,9 +24,80 @@ export default function ChatView() {
   const [message, setMessage] = useState('');
   const [selectedBot, setSelectedBot] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
 
-  // Fetch available bots
-  const { data: bots } = useSWR<Bot[]>('/api/config/bots');
+  // StreamBuffer for character-by-character printing
+  const [printSpeed, setPrintSpeed] = useState<number>(100); // Default speed: 100 chars per second
+  const streamBufferRef = React.useRef<{
+    buffer: string;
+    maxCharsPerSecond: number;
+    lastUpdateTime: number;
+    lastPosition: number;
+
+    addContent: (content: string) => void;
+    getNextChunk: () => string;
+    hasMoreContent: () => boolean;
+  }>({
+    buffer: "",
+    maxCharsPerSecond: 50,
+    lastUpdateTime: Date.now(),
+    lastPosition: 0,
+
+    addContent(content: string) {
+      this.buffer += content;
+    },
+
+    getNextChunk() {
+      const currentTime = Date.now();
+      const timeDiff = (currentTime - this.lastUpdateTime) / 1000; // Convert to seconds
+      const maxChars = Math.floor(this.maxCharsPerSecond * timeDiff);
+
+      if (maxChars > 0) {
+        const chunk = this.buffer.substring(this.lastPosition, this.lastPosition + maxChars);
+        this.lastPosition += chunk.length;
+        this.lastUpdateTime = currentTime;
+        return chunk;
+      }
+      return "";
+    },
+
+    hasMoreContent() {
+      return this.lastPosition < this.buffer.length;
+    }
+  });
+
+  // Common method to add messages to chat
+  const addMessageToChat = async (
+    messageContent: string,
+    role: 'user' | 'assistant',
+    additionalProps: Partial<ChatMessage> = {}
+  ) => {
+    await mutate(
+      `/api/chats/${id}`,
+      (cachedChat: Chat | null | undefined) => {
+        if (!cachedChat) return cachedChat;
+
+        // Create a deep copy of the chat
+        const updatedChat = JSON.parse(JSON.stringify(cachedChat));
+
+        // Create message with common and role-specific properties
+        const message: ChatMessage = {
+          role: role,
+          content: messageContent,
+          timestamp: new Date().toISOString(),
+          unix_timestamp: Math.floor(Date.now() / 1000),
+          ...additionalProps
+        };
+
+        // Add message to chat
+        updatedChat.messages.push(message);
+        updatedChat.update_time = new Date().toISOString();
+
+        return updatedChat;
+      },
+      false
+    );
+  };
 
   const { data: chat, error } = useSWR<Chat>(
     id ? `/api/chats/${id}` : null,
@@ -41,6 +112,69 @@ export default function ChatView() {
       [messageId]: !prev[messageId]
     }));
   };
+
+  // Function to update the streaming text in the last message
+  const updateStreamingText = (text: string) => {
+    mutate(
+      `/api/chats/${id}`,
+      (cachedChat: Chat | null | undefined) => {
+        if (!cachedChat) return cachedChat;
+
+        // Create a deep copy of the chat
+        const updatedChat = JSON.parse(JSON.stringify(cachedChat));
+
+        // Get the last message (which should be the assistant's message)
+        const lastMessage = updatedChat.messages[updatedChat.messages.length - 1];
+
+        // Only update if it's an assistant message
+        if (lastMessage && lastMessage.role === 'assistant') {
+          lastMessage.content = (lastMessage.content || '') + text;
+        }
+
+        return updatedChat;
+      },
+      false
+    );
+  };
+
+  // StreamBuffer effect with small delay when no content
+  React.useEffect(() => {
+    if (!id) return;
+
+    // Update the streamBuffer's max chars per second when printSpeed changes
+    streamBufferRef.current.maxCharsPerSecond = printSpeed;
+
+    let isRunning = true;
+    let collectionTaskDone = false;
+
+    const updateDisplay = async () => {
+      while (isRunning) {
+        if (collectionTaskDone) {
+          break;
+        }
+
+        const chunk = streamBufferRef.current.getNextChunk();
+        if (chunk) {
+          updateStreamingText(chunk);
+        } else {
+          // Small delay only when no content to display
+          await new Promise(resolve => setTimeout(resolve, 50)); // 0.05 seconds
+        }
+
+        // Check if we've processed all content and streaming is complete
+        if (!streamBufferRef.current.hasMoreContent() && !isStreaming) {
+          collectionTaskDone = true;
+        }
+      }
+    };
+
+    // Start the update loop
+    updateDisplay();
+
+    return () => {
+      isRunning = false; // Stop the loop when component unmounts
+    };
+  }, [id, printSpeed, isStreaming]);
 
   // Handle sending a message
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,40 +191,10 @@ export default function ChatView() {
       const messageContent = message;
       setMessage('');
 
-      // Add user message and empty assistant message to chat immediately
-      await mutate(
-        `/api/chats/${id}`,
-        (cachedChat: Chat | null | undefined) => {
-          if (!cachedChat) return cachedChat;
-
-          // Create a deep copy of the chat
-          const updatedChat = JSON.parse(JSON.stringify(cachedChat));
-
-          // Create user message
-          const userMessage: ChatMessage = {
-            role: 'user',
-            content: messageContent,
-            timestamp: new Date().toISOString(),
-            unix_timestamp: Math.floor(Date.now() / 1000)
-          };
-
-          // Create empty assistant message
-          const assistantMessage: ChatMessage = {
-            role: 'assistant',
-            content: '',
-            timestamp: new Date().toISOString(),
-            unix_timestamp: Math.floor(Date.now() / 1000)
-          };
-
-          // Add messages to chat
-          updatedChat.messages.push(userMessage);
-          updatedChat.messages.push(assistantMessage);
-          updatedChat.update_time = new Date().toISOString();
-
-          return updatedChat;
-        },
-        false
-      );
+      // Add user message to chat immediately
+      await addMessageToChat(messageContent, 'user');
+			// Add assistant message to chat immediately
+      await addMessageToChat('', 'assistant');
 
       // Make the API request
       const response = await fetch(`/api/chat/completions`, {
@@ -120,6 +224,11 @@ export default function ChatView() {
           throw new Error('Response body is not readable');
         }
 
+				setIsStreaming(true);
+
+        // Create a buffer to accumulate incomplete chunks
+        let buffer = '';
+
         // Process the stream
         while (true) {
           const { done, value } = await reader.read();
@@ -128,15 +237,23 @@ export default function ChatView() {
             break;
           }
 
-          // Decode the chunk
-          const chunk = decoder.decode(value, { stream: true });
+          // Decode the chunk and append to buffer
+          buffer += decoder.decode(value, { stream: true });
 
-          // Process SSE format
-          const lines = chunk.split('\n\n');
+          // Process SSE format - split by event delimiter
+          const lines = buffer.split('\n\n');
 
-          for (const line of lines) {
+          // Process all complete events (all except the last one which might be incomplete)
+          for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i];
             if (line.startsWith('data: ')) {
               const data = line.slice(6);
+
+              if (data === '[DONE]') {
+                console.log('Received [DONE], stopping stream processing');
+                reader.cancel(); // Cancel the stream reading
+                break;
+              }
 
               try {
                 // Parse the JSON data
@@ -144,56 +261,31 @@ export default function ChatView() {
 
                 // Handle the new SSE data format
                 if (parsedData.choices && parsedData.choices[0]?.delta?.content) {
-                  // Get the current chat from cache
-                  const currentChat = await mutate(
-                    `/api/chats/${id}`,
-                    (cachedChat: Chat | null | undefined) => {
-                      if (!cachedChat) return cachedChat;
-
-                      // Create a deep copy of the chat
-                      const updatedChat = JSON.parse(JSON.stringify(cachedChat));
-
-                      // Get the last message (which should be the assistant's message)
-                      const lastMessage = updatedChat.messages[updatedChat.messages.length - 1];
-
-                      // Update the content
-                      if (lastMessage && lastMessage.role === 'assistant') {
-                        // If content is a string, append to it
-                        if (typeof lastMessage.content === 'string') {
-                          lastMessage.content += parsedData.choices[0].delta.content;
-                        }
-
-                        // Update model and provider if not already set
-                        if (parsedData.model && !lastMessage.model) {
-                          lastMessage.model = parsedData.model;
-                        }
-
-                        if (parsedData.provider && !lastMessage.provider) {
-                          lastMessage.provider = parsedData.provider;
-                        }
-                      }
-
-                      return updatedChat;
-                    },
-                    false
-                  );
+                  // Add content to the stream buffer
+                  streamBufferRef.current.addContent(parsedData.choices[0].delta.content);
                 }
               } catch (e) {
                 console.error('Error parsing SSE data:', e);
+                console.log('data:', data);
               }
             }
           }
+
+          // Keep the last (potentially incomplete) part for the next iteration
+          buffer = lines[lines.length - 1];
         }
+
       } else {
-        // Handle non-streaming response (fallback)
+				// Handle non-streaming response (fallback)
         const updatedChat = await response.json();
         mutate(`/api/chats/${id}`, updatedChat, false);
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+			console.error('Error sending message:', error);
       // Handle error (could show a toast notification)
     } finally {
-      setIsLoading(false);
+			setIsStreaming(false);
+			setIsLoading(false);
     }
   };
 
@@ -314,8 +406,8 @@ export default function ChatView() {
         setSelectedBot={setSelectedBot}
         isLoading={isLoading}
         handleSubmit={handleSubmit}
-        bots={bots || []}
-			/>
+        isFixed={true} // Keep this input fixed at the bottom of the screen
+      />
 		</div>
   );
 }

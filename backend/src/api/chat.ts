@@ -73,8 +73,34 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
     // Create chat
     if (path === '/api/chats' && request.method === 'POST') {
       const chatData = await request.json() as Chat;
-      await storage.saveChat(chatData);
-      return new Response(JSON.stringify(chatData), {
+      const resultChat = await storage.saveChat(chatData);
+      return new Response(JSON.stringify(resultChat), {
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
+    }
+
+    // Get a new unique chat ID
+    if (path === '/api/chat/id' && request.method === 'GET') {
+      // Generate a new ID
+      let newId = '';
+      let exists = true;
+      
+      // Keep generating IDs until we find one that doesn't exist
+      while (exists) {
+        newId = Array.from(crypto.getRandomValues(new Uint8Array(3)))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+          .substring(0, 6);
+        
+        // Check if this ID already exists
+        const chat = await storage.getChat(newId);
+        exists = chat !== null;
+      }
+      
+      return new Response(JSON.stringify({ id: newId }), {
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -100,17 +126,10 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
         });
       }
       
-      // Get the chat
-      const chat = await storage.getChat(chatId);
-      if (!chat) {
-        return new Response('Chat not found', { 
-          status: 404,
-          headers: corsHeaders
-        });
-      }
+      // Get or create the chat
+      const chat = await storage.getOrCreateChat(chatId);
       
       // Validate request data
-      
       if (!content) {
         return new Response('Message content is required', { 
           status: 400,
@@ -209,6 +228,8 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
             // Final update to the chat in storage
             chat.update_time = new Date().toISOString();
             await storage.saveChat(chat);
+
+            await writer.write(encoder.encode(`data: [DONE]\n\n`));
             
             // Close the writer
             await writer.close();

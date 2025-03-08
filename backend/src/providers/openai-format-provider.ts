@@ -228,10 +228,6 @@ export class OpenAIFormatProvider implements AIProvider {
         return delta.content;
       }
     } 
-    // Handle Claude/Anthropic format
-    else if (event.content) {
-      return event.content;
-    }
     
     return null;
   }

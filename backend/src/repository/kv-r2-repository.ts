@@ -3,6 +3,27 @@ import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../.
 export class KVR2ChatRepository implements ChatRepository {
   constructor(private kv: KVNamespace, private r2: R2Bucket) {}
 
+  async getOrCreateChat(id: string): Promise<Chat> {
+    // Try to get an existing chat
+    const existingChat = await this.getChat(id);
+    
+    // If it exists, return it
+    if (existingChat) {
+      return existingChat;
+    }
+    
+    // Otherwise, create a new empty chat with the given ID
+    const newChat: Chat = {
+      id,
+      messages: [],
+      create_time: new Date().toISOString(),
+      update_time: new Date().toISOString()
+    };
+    
+    // We don't save the chat yet - we'll let the first message do that
+    return newChat;
+  }
+
   async getChat(id: string) {
     // First try KV storage
     const kvChats = await this.getKVChats();
@@ -151,7 +172,7 @@ export class KVR2ChatRepository implements ChatRepository {
     };
   }
 
-  async saveChat(chat: Chat) {
+  async saveChat(chat: Chat): Promise<Chat> {
     // Get existing chats
     const existingChats = await this.getKVChats();
     
@@ -160,12 +181,21 @@ export class KVR2ChatRepository implements ChatRepository {
     if (chatIndex !== -1) {
       existingChats[chatIndex] = chat;
     } else {
+      // if chat.id is empty, generate a 6 character random hexadecimal id (similar to Python's uuid.uuid4().hex[:6])
+      if (!chat.id) {
+        chat.id = Array.from(crypto.getRandomValues(new Uint8Array(3)))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+          .substring(0, 6);
+      }
       existingChats.push(chat);
     }
     
     // Convert to JSONL format and save back to KV
     const jsonlContent = existingChats.map(c => JSON.stringify(c)).join('\n');
     await this.kv.put('chats', jsonlContent);
+    // return chat with id
+    return chat;
   }
 
 }

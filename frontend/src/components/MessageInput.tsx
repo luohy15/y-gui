@@ -1,6 +1,7 @@
 import React, { KeyboardEvent, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Bot } from '@shared/types';
+import useSWR from 'swr';
 
 interface MessageInputProps {
   message: string;
@@ -9,8 +10,8 @@ interface MessageInputProps {
   setSelectedBot: React.Dispatch<React.SetStateAction<string>>;
   isLoading: boolean;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
-  bots: Bot[];
   onSendMessage?: (content: string, botName: string) => void;
+  isFixed?: boolean; // Controls whether the input is fixed at the bottom of the screen
 }
 
 export default function MessageInput({
@@ -20,10 +21,25 @@ export default function MessageInput({
   setSelectedBot,
   isLoading,
   handleSubmit,
-  bots,
-  onSendMessage
+  onSendMessage,
+  isFixed = true // Default to fixed position for backward compatibility
 }: MessageInputProps) {
   const { isDarkMode } = useTheme();
+
+  // Fetch bots data internally
+  const { data: botsData } = useSWR<Bot[]>(
+    '/api/config/bots',
+    (url: string) => fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      }
+    }).then(res => {
+      if (!res.ok) throw new Error('Failed to fetch bots');
+      return res.json();
+    })
+  );
+
+  const bots = botsData || [];
 
   // Set default bot to first in the array if not already selected
   React.useEffect(() => {
@@ -64,7 +80,7 @@ export default function MessageInput({
   const [showBotDropdown, setShowBotDropdown] = useState(false);
 
   return (
-    <div className={`fixed bottom-6 left-0 right-0 z-10 flex justify-center px-4`}>
+    <div className={`${isFixed ? 'fixed bottom-6 left-0 right-0' : ''} z-10 flex justify-center px-4`}>
       <form onSubmit={onSubmit} className="w-full max-w-3xl">
         <div className={`relative flex items-center rounded-full shadow-lg ${
           isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
