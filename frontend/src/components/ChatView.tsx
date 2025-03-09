@@ -114,7 +114,7 @@ export default function ChatView() {
   };
 
   // Function to update the streaming text in the last message
-  const updateStreamingText = (text: string) => {
+  const updateMessage = (text: string, model: string | null, provider: string | null) => {
     mutate(
       `/api/chats/${id}`,
       (cachedChat: Chat | null | undefined) => {
@@ -127,9 +127,18 @@ export default function ChatView() {
         const lastMessage = updatedChat.messages[updatedChat.messages.length - 1];
 
         // Only update if it's an assistant message
-        if (lastMessage && lastMessage.role === 'assistant') {
+        if (lastMessage && lastMessage.role === 'assistant' && text) {
           lastMessage.content = (lastMessage.content || '') + text;
         }
+
+				// Update model and provider if needed
+				if (model && !lastMessage.model) {
+					lastMessage.model = model;
+				}
+
+				if (provider && !lastMessage.provider) {
+					lastMessage.provider = provider;
+				}
 
         return updatedChat;
       },
@@ -155,7 +164,7 @@ export default function ChatView() {
 
         const chunk = streamBufferRef.current.getNextChunk();
         if (chunk) {
-          updateStreamingText(chunk);
+          updateMessage(chunk, null, null);
         } else {
           // Small delay only when no content to display
           await new Promise(resolve => setTimeout(resolve, 50)); // 0.05 seconds
@@ -176,26 +185,43 @@ export default function ChatView() {
     };
   }, [id, printSpeed, isStreaming]);
 
-  // Handle sending a message
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Check for new chat data in localStorage or handle existing chat with no assistant response
+  useEffect(() => {
+    if (!chat || !id || isLoading || isStreaming) return;
 
-    if (!message.trim() || !selectedBot || !id) {
-      return;
-    }
+    // Only proceed if we're not already loading or streaming
+    (async () => {
+      // Check if this is a new chat from Home component
+      const storedMessage = localStorage.getItem(`newChat_${id}_message`);
+      const storedBot = localStorage.getItem(`newChat_${id}_bot`);
 
-    setIsLoading(true);
+      if (storedMessage && storedBot && chat.messages.length === 0) {
+        // Set the selected bot
+        setSelectedBot(storedBot);
+
+        // Add user message to chat
+        await addMessageToChat(storedMessage, 'user');
+
+        // Add empty assistant message to start streaming into
+        await addMessageToChat('', 'assistant');
+
+        // Start streaming the response
+        streamResponse(storedMessage, storedBot);
+
+        // Clear localStorage
+        localStorage.removeItem(`newChat_${id}_message`);
+        localStorage.removeItem(`newChat_${id}_bot`);
+      }
+    })();
+  }, [chat, id, isLoading, isStreaming]);
+
+  // Function to stream response from API
+  const streamResponse = async (messageContent: string, botName: string) => {
+    if (!id) return;
+
+    setIsStreaming(true);
 
     try {
-      // Clear the input immediately to improve UX
-      const messageContent = message;
-      setMessage('');
-
-      // Add user message to chat immediately
-      await addMessageToChat(messageContent, 'user');
-			// Add assistant message to chat immediately
-      await addMessageToChat('', 'assistant');
-
       // Make the API request
       const response = await fetch(`/api/chat/completions`, {
         method: 'POST',
@@ -205,7 +231,7 @@ export default function ChatView() {
         },
         body: JSON.stringify({
           content: messageContent,
-          botName: selectedBot,
+          botName: botName,
           chatId: id
         })
       });
@@ -223,8 +249,6 @@ export default function ChatView() {
         if (!reader) {
           throw new Error('Response body is not readable');
         }
-
-				setIsStreaming(true);
 
         // Create a buffer to accumulate incomplete chunks
         let buffer = '';
@@ -264,6 +288,11 @@ export default function ChatView() {
                   // Add content to the stream buffer
                   streamBufferRef.current.addContent(parsedData.choices[0].delta.content);
                 }
+
+								// Set model and provider info if not already set
+								const model = parsedData.model;
+								const provider = parsedData.provider;
+								updateMessage('', model, provider);
               } catch (e) {
                 console.error('Error parsing SSE data:', e);
                 console.log('data:', data);
@@ -274,18 +303,45 @@ export default function ChatView() {
           // Keep the last (potentially incomplete) part for the next iteration
           buffer = lines[lines.length - 1];
         }
-
       } else {
-				// Handle non-streaming response (fallback)
+        // Handle non-streaming response (fallback)
         const updatedChat = await response.json();
         mutate(`/api/chats/${id}`, updatedChat, false);
       }
     } catch (error) {
-			console.error('Error sending message:', error);
+      console.error('Error streaming response:', error);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  // Handle sending a message
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!message.trim() || !selectedBot || !id) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Clear the input immediately to improve UX
+      const messageContent = message;
+      setMessage('');
+
+      // Add user message to chat immediately
+      await addMessageToChat(messageContent, 'user');
+      // Add assistant message to chat immediately
+      await addMessageToChat('', 'assistant');
+
+      // Stream the response using our streamResponse function
+      await streamResponse(messageContent, selectedBot);
+    } catch (error) {
+      console.error('Error sending message:', error);
       // Handle error (could show a toast notification)
     } finally {
-			setIsStreaming(false);
-			setIsLoading(false);
+      setIsLoading(false);
     }
   };
 

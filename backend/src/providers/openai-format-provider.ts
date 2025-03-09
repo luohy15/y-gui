@@ -1,4 +1,4 @@
-import { AIProvider } from './provider-interface';
+import { AIProvider, ProviderResponseData } from './provider-interface';
 import { Bot, Chat, ChatMessage, ContentBlock } from '../../../shared/types';
 
 // Define interfaces for message content blocks
@@ -119,12 +119,12 @@ export class OpenAIFormatProvider implements AIProvider {
    * @param messages List of chat messages
    * @param chat Optional chat object
    * @param systemPrompt Optional system prompt
-   * @returns An AsyncGenerator yielding content fragments
+   * @returns An AsyncGenerator yielding content fragments and provider info
    */
   async *callChatCompletions(
     chat?: Chat, 
     systemPrompt?: string
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<ProviderResponseData, void, unknown> {
     // Prepare messages with system prompt
     const preparedMessages = this.prepareMessagesForCompletion(chat?.messages, systemPrompt);
     
@@ -192,16 +192,16 @@ export class OpenAIFormatProvider implements AIProvider {
         if (event.startsWith('data:')) {
           const data = event.replace('data:', '').trim();
           if (data === '[DONE]') {
-            console.log('收到 [DONE]，停止处理');
+            // console.log('收到 [DONE]，停止处理');
             reader.cancel(); // 取消流读取
             return;
           } else {
-            console.log('收到数据:', data);
+            // console.log('收到数据:', data);
             try {
               const jsonData = JSON.parse(data);
-              const extractData = this.extractContentFromEvent(jsonData);
-              if (extractData) {
-                yield extractData;
+              const responseData = this.extractContentFromEvent(jsonData);
+              if (responseData) {
+                yield responseData;
               }
             } catch (error) {
               console.error('解析 JSON 数据时出错:', error);
@@ -216,16 +216,20 @@ export class OpenAIFormatProvider implements AIProvider {
   }
   
   /**
-   * Extract content from a parsed event
+   * Extract content and provider info from a parsed event
    * @param event The parsed event object
-   * @returns The extracted content string or null
+   * @returns The extracted provider response data or null
    */
-  private extractContentFromEvent(event: any): string | null {
+  private extractContentFromEvent(event: any): ProviderResponseData | null {
     // Handle OpenAI format
     if (event.choices && event.choices[0]) {
       const delta = event.choices[0].delta;
       if (delta && delta.content) {
-        return delta.content;
+        return {
+          content: delta.content,
+          provider: event.provider,
+          model: event.model
+        };
       }
     } 
     

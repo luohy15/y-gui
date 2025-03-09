@@ -54,16 +54,10 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
         });
       }
 
-      const chat = await storage.getChat(id);
-      if (!chat) {
-        return new Response('Chat not found', { 
-          status: 404,
-          headers: corsHeaders
-        });
-      }
+      const chat = await storage.getOrCreateChat(id);
 
       return new Response(JSON.stringify(chat), {
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
         }
@@ -195,6 +189,8 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
         const encoder = new TextEncoder();
         
         let accumulatedContent = '';
+        let lastProvider: string | undefined;
+        let lastModel: string | undefined;
         
         // Process the generator
         (async () => {
@@ -202,17 +198,25 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
             // Use for await...of to consume the generator
             for await (const contentDelta of responseGenerator) {
               // Accumulate content
-              accumulatedContent += contentDelta;
+              accumulatedContent += contentDelta.content;
+              
+              // Store provider and model information if available
+              if (contentDelta.provider) {
+                lastProvider = contentDelta.provider;
+              }
+              if (contentDelta.model) {
+                lastModel = contentDelta.model;
+              }
               
               // Create a response chunk with only the necessary data
               const responseChunk = {
                 choices: [{
                   delta: {
-                    content: contentDelta,
+                    content: contentDelta.content,
                   }
                 }],
-                model: bot.model,
-                provider: bot.name
+                model: contentDelta.model || bot.model,
+                provider: contentDelta.provider || bot.name
               };
               
               // Write the chunk to the output stream
@@ -221,6 +225,14 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
 
             // Update the assistant message in the chat
             assistantMessage.content = accumulatedContent;
+            
+            // Update provider and model if they were provided in the response
+            if (lastProvider) {
+              assistantMessage.provider = lastProvider;
+            }
+            if (lastModel) {
+              assistantMessage.model = lastModel;
+            }
 
             // Add assistant message to chat
             chat.messages.push(assistantMessage);

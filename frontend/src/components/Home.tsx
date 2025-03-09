@@ -50,30 +50,11 @@ export default function Home({ }: HomeProps) {
       // Navigate to the new chat page
       navigate(`/chat/${id}`);
 
-      // After navigation, send the message to the chat completions endpoint
-      setIsProcessingMessage(true);
+      // Store the message and bot in localStorage so ChatView can use it
+      localStorage.setItem(`newChat_${id}_message`, content);
+      localStorage.setItem(`newChat_${id}_bot`, botName);
 
-      // We'll call the completions API after navigation
-      // This will be handled by the ChatView component's useEffect
-      // when it detects a new chat with no messages
-
-      // Make the API request to send the initial message
-      const response = await fetch(`/api/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          content,
-          botName,
-          chatId: id
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error sending message: ${response.statusText}`);
-      }
+      // The ChatView component will detect this and handle the streaming
 
       // Refresh the chat list
       mutate();
