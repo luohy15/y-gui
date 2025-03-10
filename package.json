@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1"
   }
 }

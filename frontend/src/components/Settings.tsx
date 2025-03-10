@@ -305,7 +305,8 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                       <div>
                         <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{server.name}</h3>
                         <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <span>{server.command} {server.args.join(' ')}</span>
+                          {server.command && <div>{server.command} {server.args?.join(' ')}</div>}
+                          {server.url && <div>URL: {server.url}</div>}
                         </div>
                       </div>
                       <button className={`p-2 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}>

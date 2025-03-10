@@ -55,9 +55,11 @@ export interface Bot {
 
 export interface McpServer {
   name: string;
-  command: string;
-  args: string[];
-  env: Record<string, string>;
+  command: string | null;
+  args: string[] | null;
+  env: Record<string, string> | null;
+  url: string | null;           // URL for the server
+  token?: string | null;        // Optional token for authentication
 }
 
 export interface ConfigRepository {

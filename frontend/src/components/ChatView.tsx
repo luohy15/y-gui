@@ -27,7 +27,7 @@ export default function ChatView() {
   const [isStreaming, setIsStreaming] = useState(false);
 
   // StreamBuffer for character-by-character printing
-  const [printSpeed, setPrintSpeed] = useState<number>(100); // Default speed: 100 chars per second
+  const [printSpeed, setPrintSpeed] = useState<number>(1000); // Default speed: 100 chars per second
   const streamBufferRef = React.useRef<{
     buffer: string;
     maxCharsPerSecond: number;
@@ -111,6 +111,37 @@ export default function ChatView() {
       ...prev,
       [messageId]: !prev[messageId]
     }));
+  };
+
+  // Function to handle tool execution confirmation
+  const handleToolConfirmation = async (toolId: string, confirmed: boolean) => {
+    if (!id) return;
+
+    try {
+      const response = await fetch('/api/tool/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          chatId: id,
+          toolId,
+          confirmed
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error confirming tool execution: ${response.statusText}`);
+      }
+
+      // After confirmation, continue with the chat
+      // This will be handled by the backend to continue the conversation
+      // We'll refresh the chat data to get the updated messages
+      mutate(`/api/chats/${id}`);
+    } catch (error) {
+      console.error('Error handling tool confirmation:', error);
+    }
   };
 
   // Function to update the streaming text in the last message
@@ -293,6 +324,11 @@ export default function ChatView() {
 								const model = parsedData.model;
 								const provider = parsedData.provider;
 								updateMessage('', model, provider);
+
+								// Add new assistant message when tool_execution is pending
+								if (parsedData.tool_execution && parsedData.tool_execution.status === 'pending_confirmation') {
+									await addMessageToChat(JSON.stringify(parsedData), 'assistant');
+								}
               } catch (e) {
                 console.error('Error parsing SSE data:', e);
                 console.log('data:', data);
@@ -444,10 +480,56 @@ export default function ChatView() {
                     )}
                   </div>
                 )}
-                <CompactMarkdown
-                  content={typeof msg.content === 'string' ? msg.content : ''}
-                  className={msg.role === 'user' ? 'prose-invert' : 'prose-gray'}
-                />
+                {/* Check if the message content is a tool execution request */}
+                {msg.role === 'assistant' && typeof msg.content === 'string' && msg.content.includes('"tool_execution"') && (() => {
+                  try {
+                    const toolExecution = JSON.parse(msg.content);
+                    if (toolExecution.tool_execution && toolExecution.tool_execution.status === 'pending_confirmation') {
+                      const { tool_id, server, tool, arguments: args } = toolExecution.tool_execution;
+                      return (
+                        <div className="mt-2">
+                          <div className={`p-3 rounded-md ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                            <div className="font-medium mb-2">Tool Execution Request</div>
+                            <div className="mb-2">
+                              <span className="font-medium">Server:</span> {server}
+                            </div>
+                            <div className="mb-2">
+                              <span className="font-medium">Tool:</span> {tool}
+                            </div>
+                            <div className="mb-2">
+                              <span className="font-medium">Arguments:</span>
+                              <pre className={`mt-1 p-2 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} overflow-x-auto`}>
+                                {JSON.stringify(args, null, 2)}
+                              </pre>
+                            </div>
+                            <div className="flex space-x-2 mt-3">
+                              <button
+                                onClick={() => handleToolConfirmation(tool_id, true)}
+                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => handleToolConfirmation(tool_id, false)}
+                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // If parsing fails, it's not a valid JSON tool execution request
+                  }
+                  return null;
+                })() || (
+                  <CompactMarkdown
+                    content={typeof msg.content === 'string' ? msg.content : ''}
+                    className={msg.role === 'user' ? 'prose-invert' : 'prose-gray'}
+                  />
+                )}
               </div>
             </div>
           </div>

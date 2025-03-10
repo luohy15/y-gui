@@ -2,6 +2,7 @@ import { handleCors } from './middleware/cors';
 import { handleAuthRequest } from './api/auth';
 import { handleChatsRequest } from './api/chat';
 import { handleConfigRequest } from './api/config';
+import { handleToolConfirmation } from './api/tool-confirmation';
 
 interface Env {
   CHAT_KV: KVNamespace;
@@ -38,6 +39,11 @@ export default {
         // Handle config endpoints
         if (path.startsWith('/api/config')) {
           return handleConfigRequest(request, env);
+        }
+        
+        // Handle tool confirmation endpoint
+        if (path === '/api/tool/confirm' && request.method === 'POST') {
+          return handleToolConfirmation(request, env);
         }
 
         return new Response('Not Found', { 
