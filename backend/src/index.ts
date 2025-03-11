@@ -2,7 +2,7 @@ import { handleCors } from './middleware/cors';
 import { handleAuthRequest } from './api/auth';
 import { handleChatsRequest } from './api/chat';
 import { handleConfigRequest } from './api/config';
-import { handleToolConfirmation } from './api/tool-confirmation';
+import { handleToolConfirmation } from './api/tool';
 
 interface Env {
   CHAT_KV: KVNamespace;

@@ -1,5 +1,5 @@
-import { AIProvider, ProviderResponseData } from './provider-interface';
-import { Bot, Chat, ChatMessage, ContentBlock } from '../../../shared/types';
+import { BaseProvider, ProviderResponseChunk } from './provider-interface';
+import { BotConfig, Chat, Message, ContentBlock } from '../../../shared/types';
 
 // Define interfaces for message content blocks
 interface TextContentBlock {
@@ -12,17 +12,17 @@ type MessageContentBlock = TextContentBlock;
 
 /**
  * OpenAI Format Provider implementation
- * This class implements the AIProvider interface for providers using OpenAI-compatible API format
+ * This class implements the BaseProvider interface for providers using OpenAI-compatible API format
  * (OpenAI, Anthropic Claude, etc.)
  */
-export class OpenAIFormatProvider implements AIProvider {
-  private botConfig: Bot;
+export class OpenAIFormatProvider implements BaseProvider {
+  private botConfig: BotConfig;
   
   /**
    * Create a new OpenAIFormatProvider
    * @param botConfig Bot configuration
    */
-  constructor(botConfig: Bot) {
+  constructor(botConfig: BotConfig) {
     this.botConfig = botConfig;
   }
 
@@ -33,7 +33,7 @@ export class OpenAIFormatProvider implements AIProvider {
    * @returns Prepared messages for the API
    */
   prepareMessagesForCompletion(
-    messages: ChatMessage[] | undefined,
+    messages: Message[] | undefined,
     systemPrompt?: string
   ): any[] {
     // handle undefined messages
@@ -124,7 +124,7 @@ export class OpenAIFormatProvider implements AIProvider {
   async *callChatCompletions(
     chat?: Chat, 
     systemPrompt?: string
-  ): AsyncGenerator<ProviderResponseData, void, unknown> {
+  ): AsyncGenerator<ProviderResponseChunk, void, unknown> {
     // Prepare messages with system prompt
     const preparedMessages = this.prepareMessagesForCompletion(chat?.messages, systemPrompt);
     
@@ -184,33 +184,29 @@ export class OpenAIFormatProvider implements AIProvider {
       if (done) break;
   
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n\n'); // SSE 事件通常以空行分隔
+      const lines = buffer.split('\n\n');
   
-      // 处理完整的事件
       for (let i = 0; i < lines.length - 1; i++) {
         const event = lines[i];
         if (event.startsWith('data:')) {
           const data = event.replace('data:', '').trim();
           if (data === '[DONE]') {
-            // console.log('收到 [DONE]，停止处理');
-            reader.cancel(); // 取消流读取
+            reader.cancel();
             return;
           } else {
-            // console.log('收到数据:', data);
             try {
               const jsonData = JSON.parse(data);
-              const responseData = this.extractContentFromEvent(jsonData);
+              const responseData = this.extractChunk(jsonData);
               if (responseData) {
                 yield responseData;
               }
             } catch (error) {
-              console.error('解析 JSON 数据时出错:', error);
+              console.error('Error in json parse', error);
             }
           }
         }
       }
   
-      // 将未处理完的部分留到下一次
       buffer = lines[lines.length - 1];
     }
   }
@@ -220,13 +216,14 @@ export class OpenAIFormatProvider implements AIProvider {
    * @param event The parsed event object
    * @returns The extracted provider response data or null
    */
-  private extractContentFromEvent(event: any): ProviderResponseData | null {
+  private extractChunk(event: any): ProviderResponseChunk | null {
     // Handle OpenAI format
     if (event.choices && event.choices[0]) {
       const delta = event.choices[0].delta;
-      if (delta && delta.content) {
+      if (delta) {
         return {
           content: delta.content,
+          reasoningContent: delta.reasoning_content,
           provider: event.provider,
           model: event.model
         };

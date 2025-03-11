@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { Bot } from '../../../shared/types';
+import { BotConfig } from '../../../shared/types';
 import { ConfigR2Repository } from '../repository/config-r2-repository';
 import { FetchLikeInit } from 'eventsource';
 
@@ -28,7 +28,7 @@ export class McpManager {
       // Filter servers by name if serverNames is provided
       const serversToConnect = serverNames 
         ? mcpServers.filter(server => serverNames.includes(server.name))
-        : mcpServers;
+        : [];
       
       // Connect to each server that's not already connected
       for (const server of serversToConnect) {
@@ -47,12 +47,21 @@ export class McpManager {
           // Create a URL from the server configuration
           const serverUrl = new URL(server.url);
           // Create transport with token if available
-          const transportOptions = { 
+          const transportOptions = {
             eventSourceInit: {
               fetch: (input: string | URL, init?: FetchLikeInit) => {
                 if (init) {
                   init.mode = undefined;
                   init.cache = undefined;
+                }
+                if (server.token) {
+                  if (!init) {
+                    init = {};
+                  }
+                  if (!init.headers) {
+                    init.headers = {};
+                  }
+                  init.headers["Authorization"] = `Bearer ${server.token}`;
                 }
                 return fetch(input, init as RequestInit);
               }
@@ -175,7 +184,7 @@ export class McpManager {
    * @param bot The bot to initialize MCP servers for
    * @returns Promise resolving when connections are established
    */
-  async initMcpServersForBot(bot: Bot): Promise<void> {
+  async initMcpServersForBot(bot: BotConfig): Promise<void> {
     try {
       // If the bot has mcp_servers property, use those servers
       // Otherwise, connect to all available servers

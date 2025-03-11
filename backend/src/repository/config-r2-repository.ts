@@ -1,9 +1,9 @@
-import { Bot, McpServer, ConfigRepository } from '../../../shared/types';
+import { BotConfig, McpServerConfig, ConfigRepository } from '../../../shared/types';
 
 export class ConfigR2Repository implements ConfigRepository {
   constructor(private r2: R2Bucket) {}
 
-  async getBots(): Promise<Bot[]> {
+  async getBots(): Promise<BotConfig[]> {
     try {
       const object = await this.r2.get('bot_config.jsonl');
       if (!object) {
@@ -24,7 +24,7 @@ export class ConfigR2Repository implements ConfigRepository {
     }
   }
 
-  async getMcpServers(): Promise<McpServer[]> {
+  async getMcpServers(): Promise<McpServerConfig[]> {
     try {
       const object = await this.r2.get('mcp_config.jsonl');
       if (!object) {

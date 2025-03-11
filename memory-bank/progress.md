@@ -48,6 +48,7 @@
 - [ ] Loading states
 - [ ] Error handling
 - [x] Message sending functionality
+- [x] MCP tool handling improvements
 
 ### UI Improvements
 - [x] Responsive design refinements
@@ -92,6 +93,10 @@
 10. Chat message display with metadata
 11. Theme switching (dark/light mode)
 12. Basic chat sending functionality
+13. Streamlined MCP tool handling:
+    - Clean assistant messages (removing tool parameter parts)
+    - Immediate response ending after tool detection
+    - Direct tool execution after confirmation
 
 ### In Progress
 1. Authentication system

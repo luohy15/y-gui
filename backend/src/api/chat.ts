@@ -1,5 +1,5 @@
 import { Chat } from '../../../shared/types';
-import { KVR2ChatRepository } from '../repository/kv-r2-repository';
+import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
 import { corsHeaders } from '../middleware/cors';
 import { validateAuth } from '../utils/auth';
 import { handleChatCompletions } from './chat-completions';
@@ -20,7 +20,7 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
     });
   }
 
-  const storage = new KVR2ChatRepository(env.CHAT_KV, env.CHAT_R2);
+  const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2);
   const url = new URL(request.url);
   const path = url.pathname;
 

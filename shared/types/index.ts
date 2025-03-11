@@ -1,6 +1,6 @@
 export interface Chat {
   id: string;
-  messages: ChatMessage[];
+  messages: Message[];
   create_time: string;
   update_time: string;
 }
@@ -10,7 +10,11 @@ export interface ContentBlock {
   text: string;
 }
 
-export interface ChatMessage {
+export interface ProviderResponse {
+  content: string;
+}
+
+export interface Message {
   role: 'user' | 'assistant';
   content: string | ContentBlock[];
   timestamp: string;
@@ -18,6 +22,9 @@ export interface ChatMessage {
   model?: string;
   provider?: string;
   reasoning_content?: string;
+  tool?: string;
+  server?: string;
+  arguments?: string | Record<string, any>;
 }
 
 export interface ListChatsOptions {
@@ -39,7 +46,7 @@ export interface ChatRepository {
   saveChat(chat: Chat): Promise<Chat>;
 }
 
-export interface Bot {
+export interface BotConfig {
   name: string;
   model: string;
   base_url: string;
@@ -53,7 +60,7 @@ export interface Bot {
   reasoning_effort?: string;
 }
 
-export interface McpServer {
+export interface McpServerConfig {
   name: string;
   command: string | null;
   args: string[] | null;
@@ -63,6 +70,6 @@ export interface McpServer {
 }
 
 export interface ConfigRepository {
-  getBots(): Promise<Bot[]>;
-  getMcpServers(): Promise<McpServer[]>;
+  getBots(): Promise<BotConfig[]>;
+  getMcpServers(): Promise<McpServerConfig[]>;
 }

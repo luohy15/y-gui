@@ -1,6 +1,6 @@
 import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../../shared/types';
 
-export class KVR2ChatRepository implements ChatRepository {
+export class ChatKVR2Repository implements ChatRepository {
   constructor(private kv: KVNamespace, private r2: R2Bucket) {}
 
   async getOrCreateChat(id: string): Promise<Chat> {

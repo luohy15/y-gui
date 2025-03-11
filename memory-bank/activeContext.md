@@ -18,6 +18,10 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 12. JSONL format for configuration storage
 13. Basic chat conversation function
 14. Message sending functionality implemented
+15. Improved MCP tool handling in chat completions API:
+    - Modified to parse tools and clean assistant messages (removing tool parameter parts)
+    - Updated to end response immediately after tool detection without waiting for confirmation
+    - Enhanced tool confirmation endpoint to directly execute MCP tools after confirmation
 
 ## Active Decisions
 
@@ -85,4 +89,18 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 6. Best approach for managing bot and MCP server configurations
 
 ## Current Status
-Basic bot and MCP configuration display implemented. Chat interface fully functional with message display, metadata, and message sending capabilities. Settings component allows viewing bot and MCP server configurations. Basic chat sending function is now complete. Next steps include implementing editing capabilities for configurations, enhancing the home page, and completing the authentication system.
+Basic bot and MCP configuration display implemented. Chat interface fully functional with message display, metadata, and message sending capabilities. Settings component allows viewing bot and MCP server configurations. Basic chat sending function is now complete. 
+
+MCP tool handling has been streamlined with the following improvements:
+1. When an AI response contains a tool use, the system now:
+   - Extracts the tool information
+   - Saves only the plain text part to the assistant message (removing XML tool parameters)
+   - Immediately ends the response after sending tool information to the client
+   
+2. The tool confirmation endpoint now:
+   - Directly executes the MCP tool after receiving confirmation
+   - Creates a new user message with the tool result
+   - Adds this message to the chat history
+   - Returns the result to the client
+
+Next steps include implementing editing capabilities for configurations, enhancing the home page, and completing the authentication system.

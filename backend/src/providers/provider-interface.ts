@@ -6,13 +6,14 @@ import { Chat } from '../../../shared/types';
  */
 
 // Response data from the provider
-export interface ProviderResponseData {
-  content: string;
-  provider?: string;
-  model?: string;
+export interface ProviderResponseChunk {
+  content: string | null,
+  reasoningContent: string | null,
+  provider: string | null,
+  model: string | null
 }
 
-export interface AIProvider {
+export interface BaseProvider {
   /**
    * Generate a response from the AI provider
    * @param messages List of chat messages
@@ -23,5 +24,5 @@ export interface AIProvider {
   callChatCompletions(
     chat?: Chat, 
     systemPrompt?: string
-  ): AsyncGenerator<ProviderResponseData, void, unknown>;
+  ): AsyncGenerator<ProviderResponseChunk, void, unknown>;
 }
