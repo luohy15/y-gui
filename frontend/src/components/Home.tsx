@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, Chat, ListChatsResult } from '@shared/types';
-import useSWR from 'swr';
+import { Chat, ListChatsResult } from '@shared/types';
+import { useAuthenticatedSWR, useApi } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
 import AssistantAvatar from './AssistantAvatar';
 import MessageInput from './MessageInput';
@@ -27,6 +27,9 @@ export default function Home({ }: HomeProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
 
 
+  // Get the API utility for authenticated requests
+  const api = useApi();
+
   // Handle creating a new chat with a message
   const handleNewChatWithMessage = async (content: string, botName: string) => {
     if (!content.trim() || !botName) return;
@@ -34,18 +37,8 @@ export default function Home({ }: HomeProps) {
     setIsCreatingChat(true);
 
     try {
-      // First, create a new chat ID
-      const idResponse = await fetch('/api/chat/id', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-
-      if (!idResponse.ok) {
-        throw new Error('Failed to get new chat ID');
-      }
-
-      const { id } = await idResponse.json();
+      // First, create a new chat ID using the authenticated API
+      const { id } = await api.get('/api/chat/id');
 
       // Navigate to the new chat page
       navigate(`/chat/${id}`);
@@ -67,16 +60,8 @@ export default function Home({ }: HomeProps) {
     }
   };
 
-  const { data, error, mutate } = useSWR<ListChatsResult>(
+  const { data, error, mutate } = useAuthenticatedSWR<ListChatsResult>(
     `/api/chats?search=${encodeURIComponent(confirmedSearch)}&page=${currentPage}&limit=${limit}`,
-    (url: string) => fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      }
-    }).then(res => {
-      if (!res.ok) throw new Error('Failed to fetch');
-      return res.json();
-    }),
     {
       onError: (err: any) => {
         if (err.status === 401) {

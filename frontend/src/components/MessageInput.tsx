@@ -1,6 +1,6 @@
 import React, { KeyboardEvent, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import useSWR from 'swr';
+import { useAuthenticatedSWR } from '../utils/api';
 import { BotConfig } from '@shared/types';
 
 interface MessageInputProps {
@@ -26,18 +26,8 @@ export default function MessageInput({
 }: MessageInputProps) {
   const { isDarkMode } = useTheme();
 
-  // Fetch bots data internally
-  const { data: botsData } = useSWR<BotConfig[]>(
-    '/api/config/bots',
-    (url: string) => fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      }
-    }).then(res => {
-      if (!res.ok) throw new Error('Failed to fetch bots');
-      return res.json();
-    })
-  );
+  // Fetch bots data internally using authenticated SWR
+  const { data: botsData } = useAuthenticatedSWR<BotConfig[]>('/api/config/bots');
 
   const bots = botsData || [];
 

@@ -3,11 +3,12 @@ import { handleAuthRequest } from './api/auth';
 import { handleChatsRequest } from './api/chat';
 import { handleConfigRequest } from './api/config';
 import { handleToolConfirmation } from './api/tool';
+import { validateAuth, extractUserInfo } from './utils/auth';
+import { corsHeaders } from './middleware/cors';
 
 interface Env {
   CHAT_KV: KVNamespace;
   CHAT_R2: R2Bucket;
-  SECRET_KEY: string;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
 }
 
@@ -31,22 +32,49 @@ export default {
           return handleAuthRequest(request, env);
         }
 
+        const isAuthenticated = await validateAuth(request);
+        if (!isAuthenticated) {
+          return new Response('Unauthorized', {
+            status: 401,
+            headers: corsHeaders
+          });
+        }
+
+        // Extract user email from Auth0 token
+        let userEmail: string | undefined;
+        const authHeader = request.headers.get('Authorization');
+        if (authHeader?.startsWith('Bearer ')) {
+          try {
+            const token = authHeader.slice(7);
+            const userInfo = extractUserInfo(token);
+            userEmail = userInfo.email;
+            console.log('User email extracted:', userEmail);
+          } catch (error) {
+            console.error('Error extracting user email:', error);
+          }
+        }
+
+        // Add user email to request object for API handlers
+        const requestWithUser = new Request(request);
+        // @ts-ignore - Adding custom property to Request
+        requestWithUser.userEmail = userEmail;
+
         // Handle chat endpoints
         if (path.startsWith('/api/chats') || path.startsWith('/api/chat/')) {
-          return handleChatsRequest(request, env);
+          return handleChatsRequest(requestWithUser, env);
         }
 
         // Handle config endpoints
         if (path.startsWith('/api/config')) {
-          return handleConfigRequest(request, env);
-        }
-        
-        // Handle tool confirmation endpoint
-        if (path === '/api/tool/confirm' && request.method === 'POST') {
-          return handleToolConfirmation(request, env);
+          return handleConfigRequest(requestWithUser, env);
         }
 
-        return new Response('Not Found', { 
+        // Handle tool confirmation endpoint
+        if (path === '/api/tool/confirm' && request.method === 'POST') {
+          return handleToolConfirmation(requestWithUser, env);
+        }
+
+        return new Response('Not Found', {
           status: 404,
           headers: handleCors(request) as Headers
         });
@@ -57,7 +85,7 @@ export default {
     } catch (error) {
       console.error('Error handling request:', error);
       const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-      return new Response(errorMessage, { 
+      return new Response(errorMessage, {
         status: 500,
         headers: handleCors(request) as Headers
       });

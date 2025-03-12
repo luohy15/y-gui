@@ -44,10 +44,11 @@ flowchart TD
 - Consistent state synchronization
 
 ### Authentication Pattern
-- Secret key validation
+- Auth0 integration for secure authentication
+- Google social login support
 - Token-based session management
 - Secure middleware implementation
-- Local storage for token persistence
+- Auth0 hooks for authentication state
 
 ## Component Relationships
 
@@ -113,10 +114,11 @@ flowchart LR
 - Error boundary handling
 
 ### Authentication Flow
-- Secret key validation
-- JWT token generation
-- Token storage in localStorage
-- Secure API requests
+- Auth0 Universal Login
+- Google social login option
+- Auth0 token generation and management
+- Secure API requests with Auth0 tokens
+- Auth0 hooks for authentication state
 
 ## Error Handling
 - Global error boundaries

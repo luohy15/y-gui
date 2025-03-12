@@ -10,7 +10,6 @@ import { createMessage } from 'src/utils/message';
 interface Env {
   CHAT_KV: KVNamespace;
   CHAT_R2: R2Bucket;
-  SECRET_KEY: string;
 }
 
 /**
@@ -34,11 +33,15 @@ export async function handleChatCompletions(request: Request, env: Env): Promise
 
   (async () => {
     try {
-       // Get or create the chat
-      const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2);
+       // Get user email from request object (added in index.ts)
+      // @ts-ignore - Accessing custom property from Request
+      const userEmail = request.userEmail;
+      
+      // Get or create the chat
+      const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userEmail);
 
       // Get the bot config
-      const configStorage = new ConfigR2Repository(env.CHAT_R2);
+      const configStorage = new ConfigR2Repository(env.CHAT_R2, userEmail);
       const bots = await configStorage.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {

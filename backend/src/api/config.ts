@@ -4,20 +4,14 @@ import { ConfigR2Repository } from '../repository/config-r2-repository';
 
 interface Env {
   CHAT_R2: R2Bucket;
-  SECRET_KEY: string;
 }
 
 export async function handleConfigRequest(request: Request, env: Env): Promise<Response> {
-  // Validate authentication
-  const isAuthenticated = await validateAuth(request, env.SECRET_KEY);
-  if (!isAuthenticated) {
-    return new Response('Unauthorized', { 
-      status: 401,
-      headers: corsHeaders
-    });
-  }
-
-  const configRepo = new ConfigR2Repository(env.CHAT_R2);
+  // Get user email from request object (added in index.ts)
+  // @ts-ignore - Accessing custom property from Request
+  const userEmail = request.userEmail;
+  
+  const configRepo = new ConfigR2Repository(env.CHAT_R2, userEmail);
   const url = new URL(request.url);
   const path = url.pathname;
 

@@ -1,18 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
-import useSWR from 'swr';
-import { Bot, McpServer } from '../../../shared/types';
-
-const fetcher = (url: string) =>
-  fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-    }
-  }).then(res => {
-    if (!res.ok) throw new Error('Failed to fetch');
-    return res.json();
-  });
+import { useAuthenticatedSWR } from '../utils/api';
+import { BotConfig, McpServerConfig } from '../../../shared/types';
 
 interface SettingsProps {
 }
@@ -24,9 +14,9 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch configurations
-  const { data: bots, error: botsError, isLoading: botsLoading } = useSWR<Bot[]>('/api/config/bots', fetcher);
-  const { data: mcpServers, error: mcpError, isLoading: mcpLoading } = useSWR<McpServer[]>('/api/config/mcp-servers', fetcher);
+  // Fetch configurations using authenticated SWR
+  const { data: bots, error: botsError, isLoading: botsLoading } = useAuthenticatedSWR<BotConfig[]>('/api/config/bots');
+  const { data: mcpServers, error: mcpError, isLoading: mcpLoading } = useAuthenticatedSWR<McpServerConfig[]>('/api/config/mcp-servers');
 
   // Close dropdown when clicking outside
   useEffect(() => {

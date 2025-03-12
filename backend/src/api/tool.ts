@@ -11,7 +11,6 @@ import { ChatService } from '../serivce/chat';
 interface Env {
   CHAT_KV: KVNamespace;
   CHAT_R2: R2Bucket;
-  SECRET_KEY: string;
 }
 
 /**
@@ -38,12 +37,16 @@ export async function handleToolConfirmation(request: Request, env: Env): Promis
   
   (async () => {
     try {
+      // Get user email from request object (added in index.ts)
+      // @ts-ignore - Accessing custom property from Request
+      const userEmail = request.userEmail;
+      
       // Initialize repositories and MCP manager
-      const configRepo = new ConfigR2Repository(env.CHAT_R2);
+      const configRepo = new ConfigR2Repository(env.CHAT_R2, userEmail);
       const mcpManager = new McpManager(configRepo);
       
       // Get the bot config
-      const configStorage = new ConfigR2Repository(env.CHAT_R2);
+      const configStorage = new ConfigR2Repository(env.CHAT_R2, userEmail);
       const bots = await configStorage.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {

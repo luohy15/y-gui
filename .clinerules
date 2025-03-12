@@ -1,0 +1,75 @@
+# Cline Rules for y-gui
+
+## Auth0 Integration
+
+### Authentication Patterns
+- Always use the useAuth0 hook from @auth0/auth0-react for authentication state
+- Use the isAuthenticated flag to determine if a user is logged in
+- Use the isLoading flag to show loading states during authentication
+- Use the getAccessTokenSilently function to get the Auth0 token for API calls
+- Use the loginWithRedirect function for login
+- Use the logout function for logout
+
+### API Authentication
+- Use the useAuthenticatedSWR hook from utils/api.ts for authenticated SWR requests
+- Use the useApi hook from utils/api.ts for authenticated API calls without SWR
+- Always include the Auth0 token in the Authorization header for API calls
+
+### Auth0 Configuration
+- Auth0 configuration is in index.tsx in the Auth0Provider component
+- Auth0 domain and clientId should be configured in the Auth0Provider
+- The redirect_uri should be set to window.location.origin
+
+### Google Login
+- Google login is enabled through Auth0 social connections
+- Use the connection parameter in loginWithRedirect to specify Google login:
+  ```tsx
+  loginWithRedirect({
+    authorizationParams: {
+      connection: 'google-oauth2'
+    }
+  })
+  ```
+
+## Project Patterns
+
+### Component Structure
+- Use functional components with hooks
+- Use TypeScript for type safety
+- Use Tailwind CSS for styling
+- Use SWR for data fetching
+- Use React Router for navigation
+- Use React Context for global state
+
+### API Calls
+- Use SWR for data fetching when possible
+- Use the fetch API for direct API calls
+- Always include error handling for API calls
+- Use try/catch blocks for async/await calls
+
+### Styling
+- Use Tailwind CSS for styling
+- Use the ThemeContext for dark/light mode
+- Use responsive design for all components
+- Use the isDarkMode flag from ThemeContext to conditionally apply styles
+
+### Error Handling
+- Use try/catch blocks for async/await calls
+- Use error boundaries for component errors
+- Use loading states for async operations
+- Use error states for API errors
+
+### State Management
+- Use React hooks for local state
+- Use React Context for global state
+- Use SWR for remote state
+- Use optimistic updates for better UX
+
+### File Organization
+- Components in src/components
+- Contexts in src/contexts
+- Utilities in src/utils
+- Types in shared/types
+- API endpoints in backend/src/api
+- Middleware in backend/src/middleware
+- Repository in backend/src/repository

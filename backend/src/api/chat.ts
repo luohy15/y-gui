@@ -1,26 +1,19 @@
 import { Chat } from '../../../shared/types';
 import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
 import { corsHeaders } from '../middleware/cors';
-import { validateAuth } from '../utils/auth';
 import { handleChatCompletions } from './chat-completions';
 
 interface Env {
   CHAT_KV: KVNamespace;
   CHAT_R2: R2Bucket;
-  SECRET_KEY: string;
 }
 
 export async function handleChatsRequest(request: Request, env: Env): Promise<Response> {
-  // Validate authentication for all chat endpoints
-  const isAuthenticated = await validateAuth(request, env.SECRET_KEY);
-  if (!isAuthenticated) {
-    return new Response('Unauthorized', { 
-      status: 401,
-      headers: corsHeaders
-    });
-  }
-
-  const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2);
+  // Get user email from request object (added in index.ts)
+  // @ts-ignore - Accessing custom property from Request
+  const userEmail = request.userEmail;
+  
+  const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userEmail);
   const url = new URL(request.url);
   const path = url.pathname;
 

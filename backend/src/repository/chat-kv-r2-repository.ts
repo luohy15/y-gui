@@ -1,7 +1,17 @@
 import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../../shared/types';
 
 export class ChatKVR2Repository implements ChatRepository {
-  constructor(private kv: KVNamespace, private r2: R2Bucket) {}
+  private userPrefix: string;
+
+  constructor(private kv: KVNamespace, private r2: R2Bucket, userEmail?: string) {
+    // Create a sanitized prefix from the email
+    this.userPrefix = userEmail ? `${this.sanitizeEmail(userEmail)}/` : '';
+  }
+
+  // Helper method to sanitize email for use as a folder prefix
+  private sanitizeEmail(email: string): string {
+    return email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  }
 
   async getOrCreateChat(id: string): Promise<Chat> {
     // Try to get an existing chat
@@ -57,15 +67,17 @@ export class ChatKVR2Repository implements ChatRepository {
 
   private async getR2Chats(): Promise<Chat[]> {
     try {
-      console.log('Attempting to get chat.jsonl from R2...');
+      console.log(`Attempting to get ${this.userPrefix}chat.jsonl from R2...`);
       
       // List objects to debug
-      const list = await this.r2.list();
+      const list = await this.r2.list({ prefix: this.userPrefix });
       console.log('R2 objects:', list.objects.map(obj => obj.key));
       
-      // Try both possible filenames
-      let object = await this.r2.get('chat1.jsonl');
-      if (!object) {
+      // Try with user prefix
+      let object = await this.r2.get(`${this.userPrefix}chat.jsonl`);
+      
+      // Fallback to legacy path if no user-specific file exists and no prefix was provided
+      if (!object && !this.userPrefix) {
         object = await this.r2.get('chat.jsonl');
       }
       
@@ -194,6 +206,16 @@ export class ChatKVR2Repository implements ChatRepository {
     // Convert to JSONL format and save back to KV
     const jsonlContent = existingChats.map(c => JSON.stringify(c)).join('\n');
     await this.kv.put('chats', jsonlContent);
+    
+    // Also save to R2 with user prefix if available
+    if (this.userPrefix) {
+      try {
+        await this.r2.put(`${this.userPrefix}chat.jsonl`, jsonlContent);
+      } catch (error) {
+        console.error('Error saving to R2:', error);
+      }
+    }
+    
     // return chat with id
     return chat;
   }

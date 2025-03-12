@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useTheme } from '../contexts/ThemeContext';
 import Logo from './Logo';
 
-interface HeaderProps {
-  onLogout: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ onLogout }) => {
+const Header: React.FC = () => {
+  const { logout } = useAuth0();
   const navigate = useNavigate();
   const location = useLocation();
   const { isDarkMode, theme, setTheme } = useTheme();
@@ -62,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           <div className="flex items-center space-x-8">
             <div className="flex items-center">
               <Logo />
-              <h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>y-gui</h1>
+              <h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>y-mcp</h1>
             </div>
 
             {/* Navigation links - hidden on mobile */}
@@ -193,7 +191,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
 
                 {/* Sign out option */}
                 <button
-                  onClick={onLogout}
+                  onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
                   className={`block w-full text-left px-4 py-2 text-sm ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                 >
                   <div className="flex items-center space-x-2">

@@ -1,141 +1,46 @@
 import React from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useTheme } from '../contexts/ThemeContext';
+import Logo from './Logo';
 
-interface LoginProps {
-  onLogin: (token: string) => void;
-}
-
-export default function Login({ onLogin }: LoginProps) {
-  const [secretKey, setSecretKey] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [rememberMe, setRememberMe] = React.useState(false);
+export default function Login() {
+  const { loginWithRedirect } = useAuth0();
   const { isDarkMode } = useTheme();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!secretKey.trim()) return;
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secretKey: secretKey.trim() }),
-        credentials: 'omit'
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || data.message || 'Invalid secret key');
-      }
-
-      const data = await response.json() as { token?: string; message?: string };
-
-      if (!data.token) {
-        throw new Error('Invalid response from server');
-      }
-
-      const { token } = data;
-      localStorage.setItem('authToken', token);
-      onLogin(token);
-    } catch (err) {
-      console.error('Login error:', err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else if (!navigator.onLine) {
-        setError('Please check your internet connection');
-      } else {
-        setError('Authentication failed. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
 
   return (
     <div className={`min-h-screen flex flex-col justify-center py-16 px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-white text-gray-900'}`}>
-
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        {/* Logo */}
-        <div className="mx-auto h-12 w-12 bg-[#4285f4] rounded-full flex items-center justify-center transform transition hover:scale-105">
-          <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4-4-4z" />
-          </svg>
-        </div>
+				{/* logo shoud be center */}
+				<div className='flex justify-center items-center'>
+        	<Logo className='w-16 h-16' />
+				</div>
         <h2 className="mt-6 text-center text-2xl font-light tracking-tight">
-          y-gui Chat
+          y-mcp Chat
         </h2>
         <p className="mt-3 text-center text-sm text-gray-400">
-          Enter your secret key to access your chats
+          Sign in to access your chats
         </p>
       </div>
 
       <div className="mt-10 sm:mx-auto w-full max-w-[90%] sm:max-w-[360px]">
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="secretKey" className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-              Secret Key
-            </label>
-            <input
-              id="secretKey"
-              type="password"
-              autoComplete="off"
-              spellCheck="false"
-              autoCapitalize="off"
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-              className={`appearance-none block w-full px-3 py-2 rounded-md text-sm focus:outline-none transition-all duration-200 ${
-                isDarkMode
-                  ? 'bg-[#1a1a1a] border-[#333] text-white placeholder-gray-500 focus:border-[#4285f4]'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-[#4285f4]'
-              } ${error ? 'border-red-500' : 'border'}`}
-              placeholder="Enter your secret key"
-              required
-            />
-          </div>
-
-          <div className="flex items-center">
-            <input
-              id="remember-me"
-              name="remember-me"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className={`h-4 w-4 rounded focus:ring-0 text-[#4285f4] transition-all duration-200 ${
-                isDarkMode ? 'bg-[#1a1a1a] border-gray-600' : 'border-gray-300'
-              }`}
-            />
-            <label htmlFor="remember-me" className={`ml-2 block text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Remember me
-            </label>
-          </div>
-
-          {error && (
-            <div role="alert" className="text-sm text-red-500 text-center" aria-live="polite">
-              {error}
-            </div>
-          )}
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isLoading || !secretKey.trim()}
-              className="w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium text-white bg-[#4285f4] hover:bg-[#3b78e7] focus:outline-none transition-all duration-200 transform hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-              aria-busy={isLoading}
-            >
-              {isLoading ? 'Authenticating...' : 'Sign in'}
-            </button>
-          </div>
-        </form>
-
-        <div className="mt-8 text-center">
-          <a href="#" className="text-sm font-medium text-[#4285f4] hover:text-[#3b78e7] transition-colors">
-            Learn how to get your secret key
-          </a>
+        <div className="flex flex-col space-y-4">
+          {/* Google Login Button */}
+          <button
+            onClick={() => loginWithRedirect({
+              authorizationParams: {
+                connection: 'google-oauth2'
+              }
+            })}
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200"
+          >
+            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Sign in with Google
+          </button>
         </div>
       </div>
     </div>

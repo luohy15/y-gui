@@ -35,9 +35,9 @@ Users need a web-based interface to:
 
 ### Authentication Flow
 1. Access web interface
-2. Enter secret key
+2. Login with Auth0 (Universal Login or Google)
 3. Gain access to chat data
-4. Maintain session with token
+4. Maintain session with Auth0 token
 
 ### Chat Workflow
 1. View list of existing chats
@@ -75,10 +75,12 @@ Users need a web-based interface to:
 - Server status monitoring
 
 ### Authentication Features
-- Secret key validation
+- Auth0 integration
+- Google social login
 - Token-based session management
 - Secure data access
 - Session persistence
+- Auth0 token validation
 
 ### Interface Features
 - Responsive design

@@ -6,6 +6,8 @@ import useSWR, { SWRConfiguration, mutate } from 'swr';
 import { useTheme } from '../contexts/ThemeContext';
 import AssistantAvatar from './AssistantAvatar';
 import CompactMarkdown from './Markdown';
+import { useApi, useAuthenticatedSWR } from '../utils/api';
+import { useAuth0 } from '@auth0/auth0-react';
 
 export default function ChatView() {
 	const { isDarkMode } = useTheme();
@@ -65,7 +67,7 @@ export default function ChatView() {
 		}
 	});
 
-	const { data: chat, error } = useSWR<Chat>(
+	const { data: chat, error } = useAuthenticatedSWR<Chat>(
 		id ? `/api/chats/${id}` : null,
 		swrConfig
 	);
@@ -260,6 +262,9 @@ export default function ChatView() {
 		})();
 	}, [chat, id, isLoading, isStreaming]);
 
+	// Get the API utility for authenticated requests
+	const { getAccessTokenSilently } = useAuth0();
+
 	// Function to stream response from API
 	const streamResponse = async (url: string, body: string) => {
 		if (!id) return;
@@ -267,12 +272,15 @@ export default function ChatView() {
 		setIsStreaming(true);
 
 		try {
+			// Get Auth0 token
+			const token = await getAccessTokenSilently();
+
 			// Make the API request
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+					'Authorization': `Bearer ${token}`
 				},
 				body: body
 			});
