@@ -342,11 +342,7 @@ export default function ChatView() {
 
 								// Check if user message appear
 								if (parsedData.role && parsedData.role === 'user') {
-									// Add user message to chat
-									await updateLastMessage(parsedData.content, 'user', parsedData);
-
-									// Add empty assistant message to start streaming into
-									await addMessageToChat('', 'assistant');
+									await handleUserMessage(parsedData.content, parsedData);
 								}
 							} catch (e) {
 								console.error('Error parsing SSE data:', e);
@@ -391,19 +387,22 @@ export default function ChatView() {
 		}));
 	};
 
-	const handleUserMessae = async (messageContent: string) => {
+	const handleUserMessage = async (messageContent: string,
+		additionalProps: Partial<Message> = {}
+	) => {
 		setIsLoading(true);
 
 		try {
 			// Add user message to chat immediately
-			await addMessageToChat(messageContent, 'user');
+			await addMessageToChat(messageContent, 'user', additionalProps);
 			// Add assistant message to chat immediately
 			await addMessageToChat('', 'assistant');
 
 			await streamResponse(`/api/chat/completions`, JSON.stringify({
 				content: messageContent,
 				botName: selectedBot,
-				chatId: id
+				chatId: id,
+				tool: additionalProps ? additionalProps.tool : undefined
 			}));
 		} catch (error) {
 			console.error('Error sending message:', error);
@@ -425,7 +424,7 @@ export default function ChatView() {
 		const messageCopy = message;
 		setMessage('');
 		// Clear the input immediately to improve UX
-		await handleUserMessae(messageCopy);
+		await handleUserMessage(messageCopy);
 	};
 
 
@@ -433,7 +432,7 @@ export default function ChatView() {
 	const handleToolConfirmation = async (server?: string, tool?: string, tool_args?: any) => {
 		if (!id) return;
 
-		await addMessageToChat('Tool call', 'user', { server, tool, arguments: tool_args });
+		await addMessageToChat('Tool calling ...', 'user', { server, tool, arguments: tool_args });
 
 		await streamResponse(`/api/tool/confirm`, JSON.stringify({
 			chatId: id,
@@ -538,7 +537,7 @@ export default function ChatView() {
 											className="flex items-center space-x-1 mb-2 opacity-80 hover:opacity-100 text-sm font-medium"
 										>
 											<svg
-												className={`h-4 w-4 transform transition-transform ${!collapsedToolResults[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
+												className={`h-4 w-4 transform transition-transform ${collapsedToolResults[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
 												fill="none"
 												stroke="currentColor"
 												viewBox="0 0 24 24"
@@ -547,7 +546,7 @@ export default function ChatView() {
 											</svg>
 											<span>Tool Result</span>
 										</button>
-										{!collapsedToolResults[msg.unix_timestamp.toString()] && (
+										{collapsedToolResults[msg.unix_timestamp.toString()] && (
 											<div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'}`}>
 												{typeof msg.content === 'string' ? (
 													msg.content.trim().startsWith('{') && msg.content.trim().endsWith('}') ? (
@@ -577,7 +576,7 @@ export default function ChatView() {
 											className="flex items-center space-x-1 mb-1 opacity-80 hover:opacity-100"
 										>
 											<svg
-												className={`h-4 w-4 transform transition-transform ${!collapsedToolInfo[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
+												className={`h-4 w-4 transform transition-transform ${collapsedToolInfo[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
 												fill="none"
 												stroke="currentColor"
 												viewBox="0 0 24 24"
@@ -586,7 +585,7 @@ export default function ChatView() {
 											</svg>
 											<span>{index === chat.messages.length - 1 && msg.role === 'assistant' ? 'Tool Execution Request' : 'Tool Information'}</span>
 										</button>
-										{!collapsedToolInfo[msg.unix_timestamp.toString()] && (
+										{collapsedToolInfo[msg.unix_timestamp.toString()] && (
 											<div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
 												<div className="mb-2">
 													<span className="text-sm font-semibold">Server:</span>
@@ -614,7 +613,7 @@ export default function ChatView() {
 															Approve
 														</button>
 														<button
-															onClick={() => handleUserMessae("cancel")}
+															onClick={() => handleUserMessage("cancel")}
 															className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
 																isDarkMode
 																	? 'bg-gray-700 hover:bg-gray-600 text-gray-200'

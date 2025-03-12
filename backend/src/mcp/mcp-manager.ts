@@ -134,38 +134,6 @@ export class McpManager {
         console.error(`Error listing tools for ${serverName}:`, error);
       }
 
-      try {
-        // Get and format resource templates section
-        const templatesResponse = await client.listResourceTemplates();
-        if (templatesResponse && templatesResponse.resourceTemplates && templatesResponse.resourceTemplates.length > 0) {
-          const templates = [];
-          for (const template of templatesResponse.resourceTemplates) {
-            templates.push(
-              `- ${template.uriTemplate} (${template.name}): ${template.description}`
-            );
-          }
-          templatesSection = "\n\n### Resource Templates\n" + templates.join("\n");
-        }
-      } catch (error) {
-        // Silently handle errors listing resource templates
-      }
-
-      try {
-        // Get and format direct resources section
-        const resourcesResponse = await client.listResources();
-        if (resourcesResponse && resourcesResponse.resources && resourcesResponse.resources.length > 0) {
-          const resources = [];
-          for (const resource of resourcesResponse.resources) {
-            resources.push(
-              `- ${resource.uri} (${resource.name}): ${resource.description}`
-            );
-          }
-          resourcesSection = "\n\n### Direct Resources\n" + resources.join("\n");
-        }
-      } catch (error) {
-        // Silently handle errors listing resources
-      }
-
       // Combine all sections
       const serverSection = 
         `## ${serverName}` +

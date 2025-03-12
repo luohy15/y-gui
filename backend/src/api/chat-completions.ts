@@ -23,32 +23,10 @@ export async function handleChatCompletions(request: Request, env: Env): Promise
     content: string;
     botName: string;
     chatId: string;
+    tool?: string;
   }
   const completionData = await request.json() as CompletionRequest;
   const { content, botName, chatId } = completionData;
-  
-  // Get or create the chat
-  const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2);
-
-  // Get the bot config
-  const configStorage = new ConfigR2Repository(env.CHAT_R2);
-  const bots = await configStorage.getBots();
-  const botConfig = bots.find(bot => bot.name === botName);
-  if (!botConfig) {
-    return new Response('Bot not found', { status: 404, headers: corsHeaders });
-  }
-
-  // Get the provider
-  const provider = ProviderFactory.createProvider(botConfig);
-
-  // Get the MCP manager
-  const mcpManager = new McpManager(configStorage);
-
-  // Create the chat service
-  const chatService = new ChatService(storage, provider, mcpManager, chatId, botConfig);
-
-  // Create the user message
-  const userMessage: Message = createMessage('user', content);
 
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -56,7 +34,30 @@ export async function handleChatCompletions(request: Request, env: Env): Promise
 
   (async () => {
     try {
+       // Get or create the chat
+      const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2);
+
+      // Get the bot config
+      const configStorage = new ConfigR2Repository(env.CHAT_R2);
+      const bots = await configStorage.getBots();
+      const botConfig = bots.find(bot => bot.name === botName);
+      if (!botConfig) {
+        return new Response('Bot not found', { status: 404, headers: corsHeaders });
+      }
+
+      // Get the provider
+      const provider = ProviderFactory.createProvider(botConfig);
+
+      // Get the MCP manager
+      const mcpManager = new McpManager(configStorage);
+
+      // Create the chat service
+      const chatService = new ChatService(storage, provider, mcpManager, chatId, botConfig);
+
       await chatService.initializeChat();
+
+      // Create the user message
+      const userMessage: Message = createMessage('user', content, { tool: completionData.tool });
 
       // Process the user message
       await chatService.processUserMessage(userMessage, writer);

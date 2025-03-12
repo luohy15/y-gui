@@ -1,7 +1,7 @@
 import React, { KeyboardEvent, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { Bot } from '@shared/types';
 import useSWR from 'swr';
+import { BotConfig } from '@shared/types';
 
 interface MessageInputProps {
   message: string;
@@ -27,7 +27,7 @@ export default function MessageInput({
   const { isDarkMode } = useTheme();
 
   // Fetch bots data internally
-  const { data: botsData } = useSWR<Bot[]>(
+  const { data: botsData } = useSWR<BotConfig[]>(
     '/api/config/bots',
     (url: string) => fetch(url, {
       headers: {
@@ -42,11 +42,40 @@ export default function MessageInput({
   const bots = botsData || [];
 
   // Set default bot to first in the array if not already selected
+  // Or load from localStorage if available
   React.useEffect(() => {
-    if ((!selectedBot || selectedBot === '') && bots.length > 0) {
+    // Get the current chat ID from URL
+    const chatId = window.location.pathname.split('/').pop();
+
+    if (chatId) {
+      // Try to get the selected bot from localStorage for this chat
+      const savedBot = localStorage.getItem(`chat_${chatId}_selectedBot`);
+
+      if (savedBot) {
+        // If we have a saved bot for this chat, use it
+        setSelectedBot(savedBot);
+      } else if (bots.length > 0) {
+        // Otherwise use the first bot in the list
+        setSelectedBot(bots[0].name);
+      }
+    } else if (bots.length > 0) {
+      // If no chat ID (unlikely), fall back to first bot
       setSelectedBot(bots[0].name);
     }
-  }, [selectedBot, bots, setSelectedBot]);
+  }, [bots, setSelectedBot]); // Removed selectedBot from dependencies to prevent infinite loop
+
+  // Save selected bot to localStorage whenever it changes
+  React.useEffect(() => {
+    if (selectedBot) {
+      // Get the current chat ID from URL
+      const chatId = window.location.pathname.split('/').pop();
+
+      if (chatId) {
+        // Save the selected bot for this chat
+        localStorage.setItem(`chat_${chatId}_selectedBot`, selectedBot);
+      }
+    }
+  }, [selectedBot]);
 
   // Handle Enter key to send message (without Shift key)
   // Skip if in IME composition mode (for languages like Chinese, Japanese, etc.)

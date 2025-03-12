@@ -50,6 +50,9 @@ export function createMessage(
     model?: string;
     id?: string;
     reasoningEffort?: number;
+    tool?: string;
+    server?: string;
+    arguments?: any;
   }
 ): Message {
   const messageData: Message = {
@@ -70,6 +73,18 @@ export function createMessage(
 
     if (options.model !== undefined) {
       messageData.model = options.model;
+    }
+
+    if (options.tool !== undefined) {
+      messageData.tool = options.tool;
+    }
+
+    if (options.server !== undefined) {
+      messageData.server = options.server;
+    }
+
+    if (options.arguments !== undefined) {
+      messageData.arguments = options.arguments;
     }
   }
 

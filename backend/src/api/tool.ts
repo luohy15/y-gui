@@ -42,9 +42,6 @@ export async function handleToolConfirmation(request: Request, env: Env): Promis
       const configRepo = new ConfigR2Repository(env.CHAT_R2);
       const mcpManager = new McpManager(configRepo);
       
-      // Get or create the chat
-      const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2);
-
       // Get the bot config
       const configStorage = new ConfigR2Repository(env.CHAT_R2);
       const bots = await configStorage.getBots();
@@ -52,11 +49,6 @@ export async function handleToolConfirmation(request: Request, env: Env): Promis
       if (!botConfig) {
         return new Response('Bot not found', { status: 404, headers: corsHeaders });
       }
-
-      const provider = ProviderFactory.createProvider(botConfig);
-
-      // Create the chat service
-      const chatService = new ChatService(storage, provider, mcpManager, chatId, botConfig);
 
       // Execute the tool directly
       // We've already checked that server, tool, and args are not undefined
@@ -67,17 +59,9 @@ export async function handleToolConfirmation(request: Request, env: Env): Promis
       );
 
       // Create a new user message with the tool result
-      const userMessage: Message = createMessage('user', toolResult);
-      userMessage.tool = tool;
-      userMessage.server = server;
-      userMessage.arguments = args;
+      const userMessage: Message = createMessage('user', toolResult, {tool, server, arguments: args});
 
       await writer.write(encoder.encode(`data: ${JSON.stringify(userMessage)}\n\n`));
-      
-      await chatService.initializeChat();
-
-      // Process the user message
-      await chatService.processUserMessage(userMessage, writer);
       
       // Close the writer
       await writer.write(encoder.encode(`data: [DONE]\n\n`));
