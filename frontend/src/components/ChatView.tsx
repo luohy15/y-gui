@@ -263,7 +263,7 @@ export default function ChatView() {
 	}, [chat, id, isLoading, isStreaming]);
 
 	// Get the API utility for authenticated requests
-	const { getAccessTokenSilently } = useAuth0();
+	const { getIdTokenClaims } = useAuth0();
 
 	// Function to stream response from API
 	const streamResponse = async (url: string, body: string) => {
@@ -273,14 +273,19 @@ export default function ChatView() {
 
 		try {
 			// Get Auth0 token
-			const token = await getAccessTokenSilently();
+			const claims = await getIdTokenClaims();
+			if (!claims || !claims.__raw) {
+			throw new Error('Failed to get ID token');
+			}
+
+			const idToken = claims.__raw;
 
 			// Make the API request
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${token}`
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: body
 			});
@@ -545,7 +550,7 @@ export default function ChatView() {
 											className="flex items-center space-x-1 mb-2 opacity-80 hover:opacity-100 text-sm font-medium"
 										>
 											<svg
-												className={`h-4 w-4 transform transition-transform ${collapsedToolResults[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
+												className={`h-4 w-4 transform transition-transform ${!collapsedToolResults[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
 												fill="none"
 												stroke="currentColor"
 												viewBox="0 0 24 24"
@@ -554,7 +559,7 @@ export default function ChatView() {
 											</svg>
 											<span>Tool Result</span>
 										</button>
-										{collapsedToolResults[msg.unix_timestamp.toString()] && (
+										{!collapsedToolResults[msg.unix_timestamp.toString()] && (
 											<div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'}`}>
 												{typeof msg.content === 'string' ? (
 													msg.content.trim().startsWith('{') && msg.content.trim().endsWith('}') ? (
@@ -584,7 +589,7 @@ export default function ChatView() {
 											className="flex items-center space-x-1 mb-1 opacity-80 hover:opacity-100"
 										>
 											<svg
-												className={`h-4 w-4 transform transition-transform ${collapsedToolInfo[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
+												className={`h-4 w-4 transform transition-transform ${!collapsedToolInfo[msg.unix_timestamp.toString()] ? 'rotate-90' : ''}`}
 												fill="none"
 												stroke="currentColor"
 												viewBox="0 0 24 24"
@@ -593,7 +598,7 @@ export default function ChatView() {
 											</svg>
 											<span>{index === chat.messages.length - 1 && msg.role === 'assistant' ? 'Tool Execution Request' : 'Tool Information'}</span>
 										</button>
-										{collapsedToolInfo[msg.unix_timestamp.toString()] && (
+										{!collapsedToolInfo[msg.unix_timestamp.toString()] && (
 											<div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
 												<div className="mb-2">
 													<span className="text-sm font-semibold">Server:</span>

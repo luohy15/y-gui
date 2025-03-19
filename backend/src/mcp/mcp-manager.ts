@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { BotConfig } from '../../../shared/types';
-import { ConfigR2Repository } from '../repository/config-r2-repository';
+import { BotConfig, McpServerRepository } from '../../../shared/types';
+import { BotR2Repository } from '../repository/bot-r2-repository';
 import { FetchLikeInit } from 'eventsource';
 
 /**
@@ -14,7 +14,7 @@ export class McpManager {
    * Create a new MCP Manager
    * @param configRepo Repository for accessing MCP server configurations
    */
-  constructor(private configRepo: ConfigR2Repository) {}
+  constructor(private mcpServerConfigRepository: McpServerRepository) {}
   
   /**
    * Connect to specified MCP servers or all if no names provided
@@ -23,7 +23,7 @@ export class McpManager {
    */
   async connectToServers(serverNames?: string[]): Promise<void> {
     try {
-      const mcpServers = await this.configRepo.getMcpServers();
+      const mcpServers = await this.mcpServerConfigRepository.getMcpServers();
       
       // Filter servers by name if serverNames is provided
       const serversToConnect = serverNames 

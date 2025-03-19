@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../contexts/ThemeContext';
-import { useAuthenticatedSWR } from '../utils/api';
-import { BotConfig, McpServerConfig } from '../../../shared/types';
+import { useTheme } from '../../contexts/ThemeContext';
+import { BotSection } from './BotSection';
+import { McpServerSection } from './McpServerSection';
 
 interface SettingsProps {
 }
@@ -14,9 +14,9 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch configurations using authenticated SWR
-  const { data: bots, error: botsError, isLoading: botsLoading } = useAuthenticatedSWR<BotConfig[]>('/api/config/bots');
-  const { data: mcpServers, error: mcpError, isLoading: mcpLoading } = useAuthenticatedSWR<McpServerConfig[]>('/api/config/mcp-servers');
+
+  // Status message state
+  const [statusMessage, setStatusMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -30,6 +30,17 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuRef]);
+
+  // Clear status message after 5 seconds
+  useEffect(() => {
+    if (statusMessage) {
+      const timer = setTimeout(() => {
+        setStatusMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusMessage]);
+
 
   return (
     <div className={`max-w-full flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -117,6 +128,18 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
           )}
         </div>
       </div>
+
+      {/* Status message */}
+      {statusMessage && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
+          statusMessage.type === 'success'
+            ? isDarkMode ? 'bg-green-800 text-white' : 'bg-green-100 text-green-800'
+            : isDarkMode ? 'bg-red-800 text-white' : 'bg-red-100 text-red-800'
+        }`}>
+          {statusMessage.text}
+        </div>
+      )}
+
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - hidden on mobile */}
@@ -211,109 +234,18 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
 
           {/* Bot settings section */}
           {activeTab === 'bots' && (
-            <div className="mb-12">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl md:text-2xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} md:hidden`}>Bots</h2>
-                <h2 className={`hidden md:block text-2xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Bots</h2>
-                <button className={`px-3 py-1.5 md:px-4 md:py-2 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm md:text-base`}>Add Bot</button>
-              </div>
-
-              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-6 text-sm md:text-base`}>Manage your bot configurations</p>
-
-              <div className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'} border rounded-lg overflow-hidden`}>
-                {botsLoading ? (
-                  <div className="p-4 text-center">
-                    <div className={`animate-pulse ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading bot configurations...</div>
-                  </div>
-                ) : botsError ? (
-                  <div className="p-4 text-center">
-                    <div className="text-red-500">Error loading bot configurations</div>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="mt-2 text-sm text-blue-500 hover:underline"
-                    >
-                      Try again
-                    </button>
-                  </div>
-                ) : bots && bots.length > 0 ? (
-                  bots.map((bot, index) => (
-                  <div key={bot.name} className={`${index !== bots.length - 1 ? isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200' : ''} p-4`}>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{bot.name}</h3>
-                        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <span>{bot.model} {bot.mcp_servers && bot.mcp_servers.length > 0 && `• MCPs: ${bot.mcp_servers.join(', ')}`}</span>
-                        </div>
-                      </div>
-                      <button className={`p-2 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  ))
-                ) : (
-                  <div className="p-4 text-center">
-                    <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No bot configurations found</div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <BotSection
+              isDarkMode={isDarkMode}
+              setStatusMessage={setStatusMessage}
+            />
           )}
 
           {/* MCP Servers settings section */}
           {activeTab === 'mcp-servers' && (
-            <div className="mb-12">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl md:text-2xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} md:hidden`}>MCP Servers</h2>
-                <h2 className={`hidden md:block text-2xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>MCP Servers</h2>
-                <button className={`px-3 py-1.5 md:px-4 md:py-2 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm md:text-base`}>Add Server</button>
-              </div>
-
-              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-6 text-sm md:text-base`}>Manage your MCP server configurations</p>
-
-              <div className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'} border rounded-lg overflow-hidden`}>
-                {mcpLoading ? (
-                  <div className="p-4 text-center">
-                    <div className={`animate-pulse ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading MCP server configurations...</div>
-                  </div>
-                ) : mcpError ? (
-                  <div className="p-4 text-center">
-                    <div className="text-red-500">Error loading MCP server configurations</div>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="mt-2 text-sm text-blue-500 hover:underline"
-                    >
-                      Try again
-                    </button>
-                  </div>
-                ) : mcpServers && mcpServers.length > 0 ? (
-                  mcpServers.map((server, index) => (
-                  <div key={server.name} className={`${index !== mcpServers.length - 1 ? isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200' : ''} p-4`}>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{server.name}</h3>
-                        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {server.command && <div>{server.command} {server.args?.join(' ')}</div>}
-                          {server.url && <div>URL: {server.url}</div>}
-                        </div>
-                      </div>
-                      <button className={`p-2 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  ))
-                ) : (
-                  <div className="p-4 text-center">
-                    <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No MCP server configurations found</div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <McpServerSection
+              isDarkMode={isDarkMode}
+              setStatusMessage={setStatusMessage}
+            />
           )}
         </div>
       </div>

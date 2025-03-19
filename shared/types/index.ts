@@ -22,8 +22,8 @@ export interface Message {
   model?: string;
   provider?: string;
   reasoning_content?: string;
-  tool?: string;
   server?: string;
+  tool?: string;
   arguments?: string | Record<string, any>;
 }
 
@@ -69,7 +69,16 @@ export interface McpServerConfig {
   token?: string | null;        // Optional token for authentication
 }
 
-export interface ConfigRepository {
+export interface BotRepository {
   getBots(): Promise<BotConfig[]>;
+  addBot(bot: BotConfig): Promise<void>;
+  updateBot(name: string, bot: BotConfig): Promise<void>;
+  deleteBot(name: string): Promise<void>;
+}
+
+export interface McpServerRepository {
   getMcpServers(): Promise<McpServerConfig[]>;
+  addMcpserver(mcp_server: McpServerConfig): Promise<void>;
+  updateMcpServer(name: string, mcp_server: McpServerConfig): Promise<void>;
+  deleteMcpServer(name: string): Promise<void>;
 }

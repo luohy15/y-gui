@@ -13,8 +13,8 @@ export function useAuthenticatedSWR<Data = any, Error = any>(
   url: string | null,
   options?: SWRConfiguration
 ): SWRResponse<Data, Error> {
-  const { getAccessTokenSilently } = useAuth0();
-  const authenticatedFetcher = createAuthenticatedFetch(getAccessTokenSilently);
+  const { getIdTokenClaims } = useAuth0();
+  const authenticatedFetcher = createAuthenticatedFetch(getIdTokenClaims);
 
   return useSWR<Data, Error>(
     url,
@@ -29,20 +29,26 @@ export function useAuthenticatedSWR<Data = any, Error = any>(
  * @returns Object with methods for making authenticated API requests
  */
 export function useApi() {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getIdTokenClaims } = useAuth0();
 
   const fetchWithAuth = async <T = any>(
     url: string,
     options: RequestInit = {}
   ): Promise<T> => {
     try {
-      const token = await getAccessTokenSilently();
+      // Get the ID token from claims
+      const claims = await getIdTokenClaims();
+      if (!claims || !claims.__raw) {
+        throw new Error('Failed to get ID token');
+      }
+
+      const idToken = claims.__raw;
 
       const response = await fetch(url, {
         ...options,
         headers: {
           ...options.headers,
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${idToken}`,
           'Content-Type': 'application/json',
         },
       });

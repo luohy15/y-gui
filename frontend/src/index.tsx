@@ -39,8 +39,11 @@ root.render(
       clientId="safDbsh9wR6KWm2TzHpaIxkSiDB02npy"
       authorizationParams={{
         redirect_uri: window.location.origin,
-				audience: 'https://mcp.jp.auth0.com/api/v2/'
+        audience: 'https://mcp.jp.auth0.com/api/v2/',
+        scope: 'openid profile email'
       }}
+      useRefreshTokens={true}
+      cacheLocation="localstorage"
     >
       <SWRConfig value={{ fetcher }}>
         <App />

@@ -1,12 +1,9 @@
 import { corsHeaders } from '../middleware/cors';
-import { validateAuth } from '../utils/auth';
 import { McpManager } from '../mcp/mcp-manager';
-import { ConfigR2Repository } from '../repository/config-r2-repository';
+import { BotR2Repository } from '../repository/bot-r2-repository';
+import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
 import { Message } from '../../../shared/types';
 import { createMessage } from 'src/utils/message';
-import { ProviderFactory } from '../providers/provider-factory';
-import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
-import { ChatService } from '../serivce/chat';
 
 interface Env {
   CHAT_KV: KVNamespace;
@@ -18,7 +15,7 @@ interface Env {
  * This endpoint allows clients to confirm or cancel tool execution
  * and directly executes the tool if confirmed
  */
-export async function handleToolConfirmation(request: Request, env: Env): Promise<Response> {
+export async function handleToolConfirmation(request: Request, env: Env, userPrefix?: string): Promise<Response> {
   // Parse request body
   interface ConfirmationRequest {
     chatId: string;
@@ -37,16 +34,13 @@ export async function handleToolConfirmation(request: Request, env: Env): Promis
   
   (async () => {
     try {
-      // Get user email from request object (added in index.ts)
-      // @ts-ignore - Accessing custom property from Request
-      const userEmail = request.userEmail;
-      
       // Initialize repositories and MCP manager
-      const configRepo = new ConfigR2Repository(env.CHAT_R2, userEmail);
-      const mcpManager = new McpManager(configRepo);
+      const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
+      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, userPrefix);
+      const mcpManager = new McpManager(mcpServerRepository);
       
       // Get the bot config
-      const configStorage = new ConfigR2Repository(env.CHAT_R2, userEmail);
+      const configStorage = new BotR2Repository(env.CHAT_R2, userPrefix);
       const bots = await configStorage.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {
@@ -62,7 +56,7 @@ export async function handleToolConfirmation(request: Request, env: Env): Promis
       );
 
       // Create a new user message with the tool result
-      const userMessage: Message = createMessage('user', toolResult, {tool, server, arguments: args});
+      const userMessage: Message = createMessage('user', toolResult, {server, tool, arguments: args});
 
       await writer.write(encoder.encode(`data: ${JSON.stringify(userMessage)}\n\n`));
       

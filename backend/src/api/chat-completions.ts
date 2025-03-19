@@ -1,11 +1,12 @@
 import { Chat, Message } from '../../../shared/types';
 import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
-import { ConfigR2Repository } from '../repository/config-r2-repository';
+import { BotR2Repository } from '../repository/bot-r2-repository';
 import { corsHeaders } from '../middleware/cors';
 import { ProviderFactory } from '../providers/provider-factory';
 import { McpManager } from '../mcp/mcp-manager';
 import { ChatService } from '../serivce/chat';
 import { createMessage } from 'src/utils/message';
+import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
 
 interface Env {
   CHAT_KV: KVNamespace;
@@ -16,7 +17,7 @@ interface Env {
  * Handle the chat completions endpoint
  * This function processes requests to send messages to a chat and get AI responses
  */
-export async function handleChatCompletions(request: Request, env: Env): Promise<Response> {
+export async function handleChatCompletions(request: Request, env: Env, userPrefix?: string): Promise<Response> {
   // Get message data from request
   interface CompletionRequest {
     content: string;
@@ -33,16 +34,14 @@ export async function handleChatCompletions(request: Request, env: Env): Promise
 
   (async () => {
     try {
-       // Get user email from request object (added in index.ts)
-      // @ts-ignore - Accessing custom property from Request
-      const userEmail = request.userEmail;
-      
+      console.log('User prefix:', userPrefix);
       // Get or create the chat
-      const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userEmail);
+      const chatRepository = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userPrefix);
 
       // Get the bot config
-      const configStorage = new ConfigR2Repository(env.CHAT_R2, userEmail);
-      const bots = await configStorage.getBots();
+      const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
+      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, userPrefix);
+      const bots = await botRepository.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {
         return new Response('Bot not found', { status: 404, headers: corsHeaders });
@@ -52,10 +51,10 @@ export async function handleChatCompletions(request: Request, env: Env): Promise
       const provider = ProviderFactory.createProvider(botConfig);
 
       // Get the MCP manager
-      const mcpManager = new McpManager(configStorage);
+      const mcpManager = new McpManager(mcpServerRepository);
 
       // Create the chat service
-      const chatService = new ChatService(storage, provider, mcpManager, chatId, botConfig);
+      const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, botConfig);
 
       await chatService.initializeChat();
 

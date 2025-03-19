@@ -1,10 +1,12 @@
 import { handleCors } from './middleware/cors';
-import { handleAuthRequest } from './api/auth';
 import { handleChatsRequest } from './api/chat';
-import { handleConfigRequest } from './api/config';
 import { handleToolConfirmation } from './api/tool';
-import { validateAuth, extractUserInfo } from './utils/auth';
+import { handleBotRequest } from './api/bot';
+import { handleMcpServerRequest } from './api/mcp-server';
+import { handleApiDocs } from './openapi';
+import { validateAuth, extractUserInfo, UserInfo } from './utils/auth';
 import { corsHeaders } from './middleware/cors';
+import { calculateUserPrefix } from './utils/user';
 
 interface Env {
   CHAT_KV: KVNamespace;
@@ -25,13 +27,13 @@ export default {
     try {
       console.log('Handling request:', request.method, path);
 
+      // Handle API documentation routes - no authentication required
+      if (path.startsWith('/api/docs')) {
+        return handleApiDocs(request);
+      }
+
       // Handle API routes
       if (path.startsWith('/api/')) {
-        // Handle auth endpoints
-        if (path.startsWith('/api/auth/')) {
-          return handleAuthRequest(request, env);
-        }
-
         const isAuthenticated = await validateAuth(request);
         if (!isAuthenticated) {
           return new Response('Unauthorized', {
@@ -41,37 +43,47 @@ export default {
         }
 
         // Extract user email from Auth0 token
-        let userEmail: string | undefined;
+        let userInfo: UserInfo = { sub: '', email: '', picture: '', name: '' };
         const authHeader = request.headers.get('Authorization');
         if (authHeader?.startsWith('Bearer ')) {
           try {
             const token = authHeader.slice(7);
-            const userInfo = extractUserInfo(token);
-            userEmail = userInfo.email;
-            console.log('User email extracted:', userEmail);
+            userInfo = extractUserInfo(token);
           } catch (error) {
-            console.error('Error extracting user email:', error);
+            console.error('Error extracting user info:', error);
           }
         }
 
-        // Add user email to request object for API handlers
-        const requestWithUser = new Request(request);
-        // @ts-ignore - Adding custom property to Request
-        requestWithUser.userEmail = userEmail;
+        // Handle userinfo endpoints
+        if (url.pathname === '/api/auth/userinfo' && request.method === 'GET') {
+          return new Response(JSON.stringify(userInfo), {
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
+        }
+
+        const userPrefix = await calculateUserPrefix(userInfo.email);
 
         // Handle chat endpoints
         if (path.startsWith('/api/chats') || path.startsWith('/api/chat/')) {
-          return handleChatsRequest(requestWithUser, env);
-        }
-
-        // Handle config endpoints
-        if (path.startsWith('/api/config')) {
-          return handleConfigRequest(requestWithUser, env);
+          return handleChatsRequest(request, env, userPrefix);
         }
 
         // Handle tool confirmation endpoint
         if (path === '/api/tool/confirm' && request.method === 'POST') {
-          return handleToolConfirmation(requestWithUser, env);
+          return handleToolConfirmation(request, env, userPrefix);
+        }
+
+        // Handle bot endpoints
+        if (path.startsWith('/api/bot')) {
+          return handleBotRequest(request, env, userPrefix);
+        }
+        
+        // Handle MCP server endpoints
+        if (path.startsWith('/api/mcp-server')) {
+          return handleMcpServerRequest(request, env, userPrefix);
         }
 
         return new Response('Not Found', {

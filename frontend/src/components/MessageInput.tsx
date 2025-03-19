@@ -27,7 +27,7 @@ export default function MessageInput({
   const { isDarkMode } = useTheme();
 
   // Fetch bots data internally using authenticated SWR
-  const { data: botsData } = useAuthenticatedSWR<BotConfig[]>('/api/config/bots');
+  const { data: botsData } = useAuthenticatedSWR<BotConfig[]>('/api/bots');
 
   const bots = botsData || [];
 

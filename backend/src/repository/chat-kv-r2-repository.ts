@@ -1,16 +1,13 @@
 import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../../shared/types';
 
 export class ChatKVR2Repository implements ChatRepository {
-  private userPrefix: string;
+  private kvKey: string;
+  private r2Key: string;
 
-  constructor(private kv: KVNamespace, private r2: R2Bucket, userEmail?: string) {
-    // Create a sanitized prefix from the email
-    this.userPrefix = userEmail ? `${this.sanitizeEmail(userEmail)}/` : '';
-  }
-
-  // Helper method to sanitize email for use as a folder prefix
-  private sanitizeEmail(email: string): string {
-    return email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  constructor(private kv: KVNamespace, private r2: R2Bucket, userPrefix?: string) {
+    console.log('ChatKVR2Repository created with user prefix:', userPrefix);
+    this.kvKey = userPrefix ? `${userPrefix}:chats` : 'chats';
+    this.r2Key = userPrefix ? `${userPrefix}/chat.jsonl` : 'chat.jsonl';
   }
 
   async getOrCreateChat(id: string): Promise<Chat> {
@@ -48,44 +45,21 @@ export class ChatKVR2Repository implements ChatRepository {
   }
 
   private async getKVChats(): Promise<Chat[]> {
-    const content = await this.kv.get('chats', 'text');
+    const content = await this.kv.get(this.kvKey, 'text');
     if (!content) return [];
     
-    return content
+    const chats: Chat[] = content
       .split('\n')
       .filter(line => line.trim())
-      .map(line => {
-        try {
-          return JSON.parse(line);
-        } catch (error) {
-          console.error('Error parsing chat from KV:', error);
-          return null;
-        }
-      })
-      .filter((chat): chat is Chat => chat !== null);
+      .map(line => JSON.parse(line));
+    console.log('KV chats:', chats.length);
+    return chats;
   }
 
   private async getR2Chats(): Promise<Chat[]> {
     try {
-      console.log(`Attempting to get ${this.userPrefix}chat.jsonl from R2...`);
-      
-      // List objects to debug
-      const list = await this.r2.list({ prefix: this.userPrefix });
-      console.log('R2 objects:', list.objects.map(obj => obj.key));
-      
-      // Try with user prefix
-      let object = await this.r2.get(`${this.userPrefix}chat.jsonl`);
-      
-      // Fallback to legacy path if no user-specific file exists and no prefix was provided
-      if (!object && !this.userPrefix) {
-        object = await this.r2.get('chat.jsonl');
-      }
-      
-      console.log('R2 object exists:', !!object);
-      if (!object) {
-        console.log('Could not find chat file in R2');
-        return [];
-      }
+      let object = await this.r2.get(this.r2Key);
+      if (!object) return [];
 
       // Read the file content as text
       const content = await object.text();
@@ -205,16 +179,7 @@ export class ChatKVR2Repository implements ChatRepository {
     
     // Convert to JSONL format and save back to KV
     const jsonlContent = existingChats.map(c => JSON.stringify(c)).join('\n');
-    await this.kv.put('chats', jsonlContent);
-    
-    // Also save to R2 with user prefix if available
-    if (this.userPrefix) {
-      try {
-        await this.r2.put(`${this.userPrefix}chat.jsonl`, jsonlContent);
-      } catch (error) {
-        console.error('Error saving to R2:', error);
-      }
-    }
+    await this.kv.put(this.kvKey, jsonlContent);
     
     // return chat with id
     return chat;

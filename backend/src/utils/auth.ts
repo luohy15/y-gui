@@ -36,6 +36,15 @@ let jwksCacheTime: number = 0;
 const JWKS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const AUTH0_DOMAIN = 'mcp.jp.auth0.com';
 
+// Interface for user information extracted from tokens
+export interface UserInfo {
+  sub: string;
+  email?: string;
+  picture?: string;
+  name?: string;
+  [key: string]: any;
+}
+
 /**
  * Fetches the JSON Web Key Set (JWKS) from Auth0
  * Uses caching to reduce API calls
@@ -144,11 +153,15 @@ export async function validateAuth(request: Request): Promise<boolean> {
 }
 
 /**
- * Extracts user information from a decoded token
+ * Extracts user information directly from an ID token
+ * No need to call Auth0's userinfo endpoint since ID tokens already contain user info
  */
-export function extractUserInfo(token: string): { sub: string; email?: string; picture?: string; name?: string } {
+export function extractUserInfo(token: string): UserInfo {
   try {
+    // Decode the ID token to get user info
     const decoded = decodeToken(token);
+    
+    // Extract user info directly from the token payload
     return {
       sub: decoded.payload.sub,
       email: decoded.payload.email,
@@ -156,6 +169,7 @@ export function extractUserInfo(token: string): { sub: string; email?: string; p
       name: decoded.payload.name
     };
   } catch (error) {
+    console.error('Error extracting user info from ID token:', error);
     throw new Error('Failed to extract user info from token');
   }
 }

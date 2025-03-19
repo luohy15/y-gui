@@ -4,7 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import Home from './Home';
 import ChatView from './ChatView';
 import Login from './Login';
-import { Settings } from './Settings';
+import { Settings } from './Settings/Settings';
 import Header from './Header';
 import { ThemeProvider } from '../contexts/ThemeContext';
 

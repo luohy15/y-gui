@@ -8,12 +8,8 @@ interface Env {
   CHAT_R2: R2Bucket;
 }
 
-export async function handleChatsRequest(request: Request, env: Env): Promise<Response> {
-  // Get user email from request object (added in index.ts)
-  // @ts-ignore - Accessing custom property from Request
-  const userEmail = request.userEmail;
-  
-  const storage = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userEmail);
+export async function handleChatsRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
+  const chatRepository = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userPrefix);
   const url = new URL(request.url);
   const path = url.pathname;
 
@@ -27,7 +23,7 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
         limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
       };
       
-      const result = await storage.listChats(options);
+      const result = await chatRepository.listChats(options);
       return new Response(JSON.stringify(result), {
         headers: { 
           'Content-Type': 'application/json',
@@ -46,7 +42,7 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
         });
       }
 
-      const chat = await storage.getOrCreateChat(id);
+      const chat = await chatRepository.getOrCreateChat(id);
 
       return new Response(JSON.stringify(chat), {
         headers: {
@@ -59,7 +55,7 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
     // Create chat
     if (path === '/api/chats' && request.method === 'POST') {
       const chatData = await request.json() as Chat;
-      const resultChat = await storage.saveChat(chatData);
+      const resultChat = await chatRepository.saveChat(chatData);
       return new Response(JSON.stringify(resultChat), {
         headers: { 
           'Content-Type': 'application/json',
@@ -82,7 +78,7 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
           .substring(0, 6);
         
         // Check if this ID already exists
-        const chat = await storage.getChat(newId);
+        const chat = await chatRepository.getChat(newId);
         exists = chat !== null;
       }
       
@@ -96,7 +92,7 @@ export async function handleChatsRequest(request: Request, env: Env): Promise<Re
 
     // Send message to chat (completions endpoint)
     if (path === '/api/chat/completions' && request.method === 'POST') {
-      return handleChatCompletions(request, env);
+      return handleChatCompletions(request, env, userPrefix);
     }
     
     return new Response('Not Found', { 
