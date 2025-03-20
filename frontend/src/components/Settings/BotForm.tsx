@@ -151,6 +151,9 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
 									required
 								/>
+								<p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+									Your key is visible to site admin, please provide key with Credit limit
+								</p>
 							</div>
 
 							<div>
