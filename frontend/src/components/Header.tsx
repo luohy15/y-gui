@@ -15,7 +15,7 @@ const Header: React.FC = () => {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isSettingsPage = location.pathname === '/settings';
+  const isSettingsPage = location.pathname.startsWith('/settings');
   const isChatPage = location.pathname === '/' || location.pathname.startsWith('/chat');
 
   // Handle clicking outside the dropdown or mobile menu

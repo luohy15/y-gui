@@ -140,7 +140,7 @@ export default function MessageInput({
               </button>
 
               {showBotDropdown && (
-                <div className={`absolute bottom-full right-0 mb-2 w-48 rounded-md shadow-lg ${
+                <div className={`absolute ${isFixed ? 'bottom-full mb-2' : 'top-full mt-2'} right-0 w-48 rounded-md shadow-lg ${
                   isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
                 }`}>
                   <div className="py-1">

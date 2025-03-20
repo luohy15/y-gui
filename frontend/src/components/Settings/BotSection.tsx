@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BotConfig, McpServerConfig } from '../../../../shared/types';
-import { BotFormModal } from './Bot';
+import { BotFormModal } from './BotForm';
 import { ConfirmationDialog } from './Confirm';
-import { ActionMenu } from './Action';
+import { ActionMenu } from './ActionMenu';
 import { useAuthenticatedSWR, useApi } from '../../utils/api';
 
 interface BotSectionProps {
@@ -34,20 +34,6 @@ export const BotSection: React.FC<BotSectionProps> = ({
     useAuthenticatedSWR<BotConfig[]>('/api/bots');
   const { data: mcpServers, error: mcpError, isLoading: mcpLoading } =
     useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers');
-
-  // Close action menu when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      // Close action menu when clicking outside
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
-        setActionMenuBot(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [actionMenuRef]);
 
   // Handle bot form submission
   const handleBotSubmit = async (bot: BotConfig) => {
@@ -91,6 +77,7 @@ export const BotSection: React.FC<BotSectionProps> = ({
 
   // Open edit form for a bot
   const handleEditBot = (bot: BotConfig) => {
+		console.log("handleEditBot", bot);
     setSelectedBot(bot);
     setIsBotFormOpen(true);
   };

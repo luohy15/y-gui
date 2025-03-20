@@ -9,7 +9,20 @@ export const authPaths = {
           description: 'User information',
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/UserInfo' },
+              schema: {
+                allOf: [
+                  { $ref: '#/components/schemas/UserInfo' },
+                  {
+                    type: 'object',
+                    properties: {
+                      userPrefix: {
+                        type: 'string',
+                        description: 'Unique user prefix based on email'
+                      }
+                    }
+                  }
+                ]
+              },
             },
           },
         },

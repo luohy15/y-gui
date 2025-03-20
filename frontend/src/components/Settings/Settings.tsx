@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuthenticatedSWR } from '../../utils/api';
 import { BotSection } from './BotSection';
 import { McpServerSection } from './McpServerSection';
 
@@ -9,10 +10,26 @@ interface SettingsProps {
 
 export const Settings: React.FC<SettingsProps> = ({ }) => {
   const navigate = useNavigate();
+  const { section } = useParams<{ section: string }>();
   const { isDarkMode, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'general'|'bots'|'mcp-servers'>('general');
+
+  // Validate section parameter and default to 'general' if invalid
+  const activeSection = (section === 'general' || section === 'bots' || section === 'mcp-servers')
+    ? section
+    : 'general';
+
+  // Redirect if section is invalid
+  useEffect(() => {
+    if (section !== activeSection) {
+      navigate(`/settings/${activeSection}`, { replace: true });
+    }
+  }, [section, activeSection, navigate]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch user info
+  const { data: userInfo, error: userInfoError, isLoading: userInfoLoading } =
+    useAuthenticatedSWR<{sub: string; email: string; picture: string; name: string; userPrefix: string}>('/api/auth/userinfo');
 
 
   // Status message state
@@ -73,13 +90,11 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
             <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-10 ${
               isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
             }`}>
-              <button
-                onClick={() => {
-                  setActiveTab('general');
-                  setIsMobileMenuOpen(false);
-                }}
+              <Link
+                to="/settings/general"
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={`block w-full text-left px-4 py-2 text-sm ${
-                  activeTab === 'general'
+                  activeSection === 'general'
                     ? isDarkMode
                       ? 'bg-gray-700 text-white'
                       : 'bg-blue-50 text-blue-600'
@@ -89,14 +104,12 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                 }`}
               >
                 General
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('bots');
-                  setIsMobileMenuOpen(false);
-                }}
+              </Link>
+              <Link
+                to="/settings/bots"
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={`block w-full text-left px-4 py-2 text-sm ${
-                  activeTab === 'bots'
+                  activeSection === 'bots'
                     ? isDarkMode
                       ? 'bg-gray-700 text-white'
                       : 'bg-blue-50 text-blue-600'
@@ -106,14 +119,12 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                 }`}
               >
                 Bots
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('mcp-servers');
-                  setIsMobileMenuOpen(false);
-                }}
+              </Link>
+              <Link
+                to="/settings/mcp-servers"
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={`block w-full text-left px-4 py-2 text-sm ${
-                  activeTab === 'mcp-servers'
+                  activeSection === 'mcp-servers'
                     ? isDarkMode
                       ? 'bg-gray-700 text-white'
                       : 'bg-blue-50 text-blue-600'
@@ -123,7 +134,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                 }`}
               >
                 MCP Servers
-              </button>
+              </Link>
             </div>
           )}
         </div>
@@ -147,10 +158,10 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
           <nav>
             <ul>
               <li className="mb-1">
-                <button
-                  onClick={() => setActiveTab('general')}
+                <Link
+                  to="/settings/general"
                   className={`block w-full text-left px-3 py-2 rounded-md ${
-                    activeTab === 'general'
+                    activeSection === 'general'
                       ? isDarkMode
                         ? 'bg-gray-800 text-white font-medium'
                         : 'bg-blue-50 text-blue-600 font-medium'
@@ -160,13 +171,13 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                   }`}
                 >
                   General
-                </button>
+                </Link>
               </li>
               <li className="mb-1">
-                <button
-                  onClick={() => setActiveTab('bots')}
+                <Link
+                  to="/settings/bots"
                   className={`block w-full text-left px-3 py-2 rounded-md ${
-                    activeTab === 'bots'
+                    activeSection === 'bots'
                       ? isDarkMode
                         ? 'bg-gray-800 text-white font-medium'
                         : 'bg-blue-50 text-blue-600 font-medium'
@@ -176,13 +187,13 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                   }`}
                 >
                   Bots
-                </button>
+                </Link>
               </li>
               <li className="mb-1">
-                <button
-                  onClick={() => setActiveTab('mcp-servers')}
+                <Link
+                  to="/settings/mcp-servers"
                   className={`block w-full text-left px-3 py-2 rounded-md ${
-                    activeTab === 'mcp-servers'
+                    activeSection === 'mcp-servers'
                       ? isDarkMode
                         ? 'bg-gray-800 text-white font-medium'
                         : 'bg-blue-50 text-blue-600 font-medium'
@@ -192,7 +203,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                   }`}
                 >
                   MCP Servers
-                </button>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -201,12 +212,47 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
         {/* Main content */}
         <div className="flex-1 p-4 md:p-8 overflow-y-auto">
           {/* General settings section */}
-          {activeTab === 'general' && (
+          {activeSection === 'general' && (
             <div className="mb-12">
               <h2 className={`text-xl md:text-2xl font-medium mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'} md:hidden`}>General</h2>
               <h2 className={`hidden md:block text-2xl font-medium mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>General</h2>
 
               <div className="max-w-3xl">
+                {/* User Information Section */}
+                <div className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} py-4`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>User Information</h3>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Your account details</p>
+                    </div>
+                    <div>
+                      {userInfoLoading && <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading...</span>}
+                      {userInfoError && <span className="text-sm text-red-500">Error loading user data</span>}
+                    </div>
+                  </div>
+
+                  {userInfo && (
+                    <div className="mt-4">
+                      <div className="flex items-center">
+                        {userInfo.picture && (
+                          <img
+                            src={userInfo.picture}
+                            alt="Profile"
+                            className="w-12 h-12 rounded-full mr-4"
+                          />
+                        )}
+                        <div>
+                          <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{userInfo.name || 'User'}</h4>
+                          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{userInfo.email}</p>
+                          <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>ID: {userInfo.sub}</p>
+                          <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Prefix: {userInfo.userPrefix}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+								{/* Theme */}
                 <div className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} py-4`}>
                   <div className="flex items-center justify-between">
                     <div>
@@ -233,7 +279,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
           )}
 
           {/* Bot settings section */}
-          {activeTab === 'bots' && (
+          {activeSection === 'bots' && (
             <BotSection
               isDarkMode={isDarkMode}
               setStatusMessage={setStatusMessage}
@@ -241,7 +287,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
           )}
 
           {/* MCP Servers settings section */}
-          {activeTab === 'mcp-servers' && (
+          {activeSection === 'mcp-servers' && (
             <McpServerSection
               isDarkMode={isDarkMode}
               setStatusMessage={setStatusMessage}

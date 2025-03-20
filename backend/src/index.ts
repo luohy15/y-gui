@@ -54,17 +54,20 @@ export default {
           }
         }
 
+        const userPrefix = await calculateUserPrefix(userInfo.email);
+
         // Handle userinfo endpoints
         if (url.pathname === '/api/auth/userinfo' && request.method === 'GET') {
-          return new Response(JSON.stringify(userInfo), {
+          return new Response(JSON.stringify({
+            ...userInfo,
+            userPrefix
+          }), {
             headers: { 
               'Content-Type': 'application/json',
               ...corsHeaders
             }
           });
         }
-
-        const userPrefix = await calculateUserPrefix(userInfo.email);
 
         // Handle chat endpoints
         if (path.startsWith('/api/chats') || path.startsWith('/api/chat/')) {

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { BotConfig, McpServerConfig } from '../../../../shared/types';
 
 // Action menu component
 interface ActionMenuProps {
@@ -15,13 +14,17 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
 	onClose,
 	onEdit,
 	onDelete,
-	isDarkMode
+	isDarkMode,
 }) => {
-	if (!isOpen) return null;
-
+	// Render the menu directly in the component tree
 	return (
-		<div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-10 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
-			}`}>
+		<div
+			style={{
+				position: 'fixed',
+				zIndex: 9999
+			}}
+			className={`w-48 rounded-md shadow-lg py-1 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}
+		>
 			<button
 				onClick={() => {
 					onEdit();

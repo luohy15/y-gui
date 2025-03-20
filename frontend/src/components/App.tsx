@@ -34,7 +34,8 @@ export default function App() {
 							<Routes>
 								<Route path="/" element={<Home />} />
 								<Route path="/chat/:id" element={<ChatView />} />
-								<Route path="/settings" element={<Settings />} />
+								<Route path="/settings" element={<Navigate to="/settings/general" replace />} />
+								<Route path="/settings/:section" element={<Settings />} />
 								<Route path="*" element={<Navigate to="/" replace />} />
 							</Routes>
 						</div>
