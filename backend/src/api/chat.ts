@@ -2,6 +2,7 @@ import { Chat } from '../../../shared/types';
 import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
 import { corsHeaders } from '../middleware/cors';
 import { handleChatCompletions } from './chat-completions';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Env {
   CHAT_KV: KVNamespace;
@@ -83,7 +84,7 @@ export async function handleChatsRequest(request: Request, env: Env, userPrefix?
       }
       
       return new Response(JSON.stringify({ id: newId }), {
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
         }

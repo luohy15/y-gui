@@ -4,6 +4,7 @@ import { handleToolConfirmation } from './api/tool';
 import { handleBotRequest } from './api/bot';
 import { handleMcpServerRequest } from './api/mcp-server';
 import { handleApiDocs } from './openapi';
+import { handleShareRequest } from './api/share';
 import { validateAuth, extractUserInfo, UserInfo } from './utils/auth';
 import { corsHeaders } from './middleware/cors';
 import { calculateUserPrefix } from './utils/user';
@@ -26,10 +27,9 @@ export default {
 
     try {
       console.log('Handling request:', request.method, path);
-
-      // Handle API documentation routes - no authentication required
-      if (path.startsWith('/api/docs')) {
-        return handleApiDocs(request);
+      
+      if (path.startsWith('/api/share/') && request.method === 'GET') {
+        return handleShareRequest(request, env);
       }
 
       // Handle API routes
@@ -55,6 +55,15 @@ export default {
         }
 
         const userPrefix = await calculateUserPrefix(userInfo.email);
+
+        // Handle API documentation routes and public share routes - no authentication required
+        if (path.startsWith('/api/docs')) {
+          return handleApiDocs(request);
+        }
+        
+        if (path.startsWith('/api/share/')) {
+          return handleShareRequest(request, env, userPrefix);
+        }
 
         // Handle userinfo endpoints
         if (url.pathname === '/api/auth/userinfo' && request.method === 'GET') {

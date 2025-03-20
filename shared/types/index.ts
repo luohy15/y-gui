@@ -3,6 +3,8 @@ export interface Chat {
   messages: Message[];
   create_time: string;
   update_time: string;
+  contentHash?: string;
+  shareId?: string;
 }
 
 export interface ContentBlock {

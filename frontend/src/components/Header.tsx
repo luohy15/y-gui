@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useTheme } from '../contexts/ThemeContext';
 import Logo from './Logo';
+
 
 const Header: React.FC = () => {
   const { logout } = useAuth0();

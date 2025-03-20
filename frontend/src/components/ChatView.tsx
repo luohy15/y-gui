@@ -8,6 +8,7 @@ import AssistantAvatar from './AssistantAvatar';
 import CompactMarkdown from './Markdown';
 import { useApi, useAuthenticatedSWR } from '../utils/api';
 import { useAuth0 } from '@auth0/auth0-react';
+import ShareButton from './ShareButton';
 
 export default function ChatView() {
 	const { isDarkMode } = useTheme();
@@ -645,6 +646,12 @@ export default function ChatView() {
 						</div>
 					</div>
 				))}
+				{/* Add ShareButton below the last message */}
+				{chat.messages.length > 0 && (
+					<div className="mt-4 ml-14">
+						<ShareButton chatId={id} />
+					</div>
+				)}
 				<div ref={messagesEndRef} />
 				<div className="pb-12"></div>
 			</div>
