@@ -57,7 +57,7 @@ flowchart TD
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/y-gui.git
+   git clone https://github.com/luohy15/y-gui.git
    cd y-gui
    ```
 
@@ -67,12 +67,17 @@ flowchart TD
    ```
 
 3. Configure environment variables:
-   - Create a `.env` file in the frontend directory with Auth0 configuration
-   - Configure Cloudflare Worker settings in `wrangler.toml`
+   - Configure Cloudflare Worker settings in `backend/wrangler.toml`
+   - Change the auth0 settings in `frontend/src/index.tsx` and `backend/src/utils/auth.ts`
 
-4. Start the development server:
+4. Build asset:
    ```bash
-   npm run dev
+   npm run build
+   ```
+
+5. Deploy cloudflare worker
+   ```bash
+   npm run deploy
    ```
 
 ## 🛠️ Development

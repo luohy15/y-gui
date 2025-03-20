@@ -1,0 +1,33 @@
+name = "y-gui"
+main = "src/index.ts"
+compatibility_date = "2024-03-05"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build"
+
+[assets]
+directory = "../frontend/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[kv_namespaces]]
+binding = "CHAT_KV"
+id = ""
+preview_id = ""
+
+[[r2_buckets]]
+binding = "CHAT_R2"
+bucket_name = ""
+preview_bucket_name = ""
+
+# Development settings
+[dev]
+port = 8787
+ip = "localhost"
+local_protocol = "http"
+
+# Enable logging
+[observability]
+enabled = true
+head_sampling_rate = 1
