@@ -25,7 +25,7 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 			model: '',
 			base_url: '',
 			api_key: '',
-			print_speed: 1,
+			print_speed: 1000,
 			mcp_servers: []
 		}
 	);
@@ -162,7 +162,7 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 									name="print_speed"
 									value={formData.print_speed}
 									onChange={handleChange}
-									min="1"
+									min="100"
 									max="1000"
 									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
 								/>

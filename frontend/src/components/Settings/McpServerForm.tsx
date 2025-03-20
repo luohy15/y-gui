@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { McpServerConfig } from '../../../../shared/types';
 
+// Server type options
+type ServerType = 'stdio' | 'sse';
+
 // MCP Server form modal component
 interface McpServerFormModalProps {
   isOpen: boolean;
@@ -17,6 +20,15 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
   initialServer,
   isDarkMode
 }) => {
+  // Determine initial server type based on initialServer or default to 'sse'
+  const determineInitialServerType = (): ServerType => {
+    if (initialServer) {
+      return initialServer.command ? 'stdio' : 'sse';
+    }
+    return 'sse'; // Default to 'sse' for new servers
+  };
+
+  const [serverType, setServerType] = useState<ServerType>(determineInitialServerType());
   const [formData, setFormData] = useState<McpServerConfig>(
     initialServer || {
       name: '',
@@ -35,6 +47,8 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
   useEffect(() => {
     if (initialServer) {
       setFormData(initialServer);
+      setServerType(initialServer.command ? 'stdio' : 'sse');
+
       // Convert args array to string for display
       if (initialServer.args) {
         setArgsString(initialServer.args.join(' '));
@@ -62,6 +76,30 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
       setEnvPairs([{ key: '', value: '' }]);
     }
   }, [initialServer]);
+
+  // Handle server type change
+  const handleServerTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newType = e.target.value as ServerType;
+    setServerType(newType);
+
+    // Reset fields that aren't relevant for the new type
+    if (newType === 'stdio') {
+      setFormData(prev => ({
+        ...prev,
+        url: null,
+        token: null
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        command: null,
+        args: null,
+        env: null
+      }));
+      setArgsString('');
+      setEnvPairs([{ key: '', value: '' }]);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -141,9 +179,15 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
       return;
     }
 
-    // Validate that at least command or url is provided
-    if (!formData.command && !formData.url) {
-      setError('Either command or URL must be provided');
+    // Validate type-specific required fields
+    if (serverType === 'stdio' && !formData.command) {
+      setError('Command is required for stdio server type');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (serverType === 'sse' && !formData.url) {
+      setError('URL is required for sse server type');
       setIsSubmitting(false);
       return;
     }
@@ -196,120 +240,157 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
 
               <div>
                 <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                  Command
+                  Server Type *
                 </label>
-                <input
-                  type="text"
-                  name="command"
-                  value={formData.command || ''}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                  placeholder="e.g., node, python, etc."
-                />
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Command to execute the MCP server
-                </p>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                  Arguments
-                </label>
-                <input
-                  type="text"
-                  name="args"
-                  value={argsString}
-                  onChange={handleArgsChange}
-                  className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                  placeholder="e.g., /path/to/script.js arg1 arg2"
-                />
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Space-separated arguments for the command
-                </p>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                  URL
-                </label>
-                <input
-                  type="text"
-                  name="url"
-                  value={formData.url || ''}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                  placeholder="e.g., http://localhost:3000"
-                />
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  URL for the MCP server (if using HTTP instead of command)
-                </p>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                  Token (Optional)
-                </label>
-                <input
-                  type="password"
-                  name="token"
-                  value={formData.token || ''}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                />
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Authentication token for the MCP server
-                </p>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Environment Variables
+                <div className="flex space-x-4 mt-1">
+                  <label className={`inline-flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <input
+                      type="radio"
+                      value="sse"
+                      checked={serverType === 'sse'}
+                      onChange={handleServerTypeChange}
+                      className={`form-radio h-4 w-4 ${isDarkMode ? 'text-blue-500' : 'text-blue-600'}`}
+                    />
+                    <span className="ml-2">SSE (Server-Sent Events)</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={addEnvPair}
-                    className={`text-sm ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
-                  >
-                    + Add Variable
-                  </button>
+                  <label className={`inline-flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <input
+                      type="radio"
+                      value="stdio"
+											disabled={true}
+                      checked={serverType === 'stdio'}
+                      onChange={handleServerTypeChange}
+                      className={`form-radio h-4 w-4 ${isDarkMode ? 'text-blue-500' : 'text-blue-600'}`}
+                    />
+                    <span className="ml-2">STDIO (Command-based)</span>
+                  </label>
                 </div>
-
-                <div className="space-y-2">
-                  {envPairs.map((pair, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        value={pair.key}
-                        onChange={(e) => handleEnvChange(index, 'key', e.target.value)}
-                        placeholder="Key"
-                        className={`flex-1 px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                      />
-                      <input
-                        type="text"
-                        value={pair.value}
-                        onChange={(e) => handleEnvChange(index, 'value', e.target.value)}
-                        placeholder="Value"
-                        className={`flex-1 px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                      />
-                      {envPairs.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeEnvPair(index)}
-                          className="p-2 text-red-500 hover:text-red-700"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Environment variables for the MCP server
-                </p>
               </div>
+
+              {serverType === 'sse' ? (
+                <>
+                  <div>
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                      URL *
+                    </label>
+                    <input
+                      type="text"
+                      name="url"
+                      value={formData.url || ''}
+                      onChange={handleChange}
+                      className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                      placeholder="e.g., http://localhost:3000"
+                      required
+                    />
+                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      URL for the MCP server
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                      Token (Optional)
+                    </label>
+                    <input
+                      type="password"
+                      name="token"
+                      value={formData.token || ''}
+                      onChange={handleChange}
+                      className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Authentication token for the MCP server
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                      Command *
+                    </label>
+                    <input
+                      type="text"
+                      name="command"
+                      value={formData.command || ''}
+                      onChange={handleChange}
+                      className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                      placeholder="e.g., node, python, etc."
+                      required
+                    />
+                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Command to execute the MCP server
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                      Arguments
+                    </label>
+                    <input
+                      type="text"
+                      name="args"
+                      value={argsString}
+                      onChange={handleArgsChange}
+                      className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                      placeholder="e.g., /path/to/script.js arg1 arg2"
+                    />
+                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Space-separated arguments for the command
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Environment Variables
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addEnvPair}
+                        className={`text-sm ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
+                      >
+                        + Add Variable
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {envPairs.map((pair, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={pair.key}
+                            onChange={(e) => handleEnvChange(index, 'key', e.target.value)}
+                            placeholder="Key"
+                            className={`flex-1 px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                          />
+                          <input
+                            type="text"
+                            value={pair.value}
+                            onChange={(e) => handleEnvChange(index, 'value', e.target.value)}
+                            placeholder="Value"
+                            className={`flex-1 px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                          />
+                          {envPairs.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeEnvPair(index)}
+                              className="p-2 text-red-500 hover:text-red-700"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Environment variables for the MCP server
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-4 sm:mt-6 flex justify-end space-x-3">
