@@ -700,8 +700,8 @@ export default function ChatView() {
 						/>
 					</div>
 				)}
-				<div ref={messagesEndRef} />
 				<div className="pb-12"></div>
+				<div ref={messagesEndRef} />
 			</div>
 			<MessageInput
 				message={message}
