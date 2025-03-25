@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Chat, ListChatsResult } from '@shared/types';
 import { useAuthenticatedSWR, useApi } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth0 } from '@auth0/auth0-react';
 import AssistantAvatar from './AssistantAvatar';
 import MessageInput from './MessageInput';
 
@@ -11,10 +12,9 @@ interface HomeProps {
 
 
 export default function Home({ }: HomeProps) {
+  const { user } = useAuth0();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
-  const [searchInput, setSearchInput] = React.useState('');
-  const [confirmedSearch, setConfirmedSearch] = React.useState('');
   const limit = 5;
 
   // New chat creation states
@@ -61,7 +61,7 @@ export default function Home({ }: HomeProps) {
   };
 
   const { data, error, mutate } = useAuthenticatedSWR<ListChatsResult>(
-    `/api/chats?search=${encodeURIComponent(confirmedSearch)}&page=${currentPage}&limit=${limit}`,
+    `/api/chats?page=${currentPage}&limit=${limit}`,
     {
       onError: (err: any) => {
         if (err.status === 401) {
@@ -70,10 +70,6 @@ export default function Home({ }: HomeProps) {
       }
     }
   );
-
-  const handleSearchConfirm = () => {
-    setConfirmedSearch(searchInput);
-  };
 
   if (error) {
     return <div className={isDarkMode ? 'text-red-400' : 'text-red-500'}>Error loading chats</div>;
@@ -155,80 +151,26 @@ export default function Home({ }: HomeProps) {
 
   return (
     <div className={`max-w-full flex flex-col h-full ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
-      <main className="max-w-full mx-4 sm:mx-6 lg:mx-8 py-8 flex flex-col h-full">
+      <main className="max-w-full mx-4 sm:mx-6 lg:mx-8 flex flex-col h-full justify-center">
+        {/* Greeting */}
+        <div className={`w-full max-w-3xl mx-auto mb-6 text-center ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <h1 className="text-4xl mb-2">Welcome, {user?.name || 'there'}.</h1>
+          <p className="text-2xl text-gray-500">How can I help you today?</p>
+        </div>
         {/* New Chat Input */}
-        <div className={`mb-8 w-full max-w-3xl mx-auto ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <MessageInput
-            message={newMessage}
-            setMessage={setNewMessage}
-            selectedBot={selectedBot}
-            setSelectedBot={setSelectedBot}
-            isLoading={isCreatingChat || isProcessingMessage}
-            handleSubmit={async () => Promise.resolve()} // Not used since we're using onSendMessage
-            onSendMessage={handleNewChatWithMessage}
-            isFixed={false} // Don't fix this input to the bottom of the screen
-          />
-        </div>
-
-				<h2 className={`text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Recent</h2>
-
-        {/* Search Area */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-8">
-          <div className="w-full sm:max-w-lg flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-2">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                placeholder="Search chats..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearchConfirm();
-                  }
-                }}
-                className={`input-primary w-full pl-10 pr-4 py-2 rounded-md ${
-                  isDarkMode
-                    ? 'bg-gray-800 text-white placeholder-gray-500 border-gray-700 focus:border-[#4285f4]'
-                    : 'bg-white text-gray-800 placeholder-gray-400 border-gray-200 focus:border-[#4285f4]'
-                } focus:outline-none transition-all duration-200`}
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className={`h-5 w-5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
-            <button
-              onClick={handleSearchConfirm}
-              className="btn-primary flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium text-white focus:outline-none bg-[#4285f4] hover:bg-[#3b78e7] transition-all duration-200 shadow-sm"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18l9-2zm0 0v-8"></path>
-              </svg>
-            </button>
+        <div className={`w-full max-w-3xl mx-auto ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <div className="py-4">
+            <MessageInput
+              message={newMessage}
+              setMessage={setNewMessage}
+              selectedBot={selectedBot}
+              setSelectedBot={setSelectedBot}
+              isLoading={isCreatingChat || isProcessingMessage}
+              handleSubmit={async () => Promise.resolve()} // Not used since we're using onSendMessage
+              onSendMessage={handleNewChatWithMessage}
+              isFixed={false} // Don't fix this input to the bottom of the screen
+            />
           </div>
-        </div>
-
-        <div className="flex-1 space-y-6 min-w-0">
-          {pinnedChats.length > 0 && (
-            <section>
-              <h2 className={`text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Pinned</h2>
-              <div className="space-y-2">
-                {pinnedChats.map(chat => renderChatItem(chat, true))}
-              </div>
-            </section>
-          )}
-
-          <section>
-            <div className="space-y-2">
-              {chats.map(chat => renderChatItem(chat))}
-            </div>
-            {chats.length === 0 && (
-              <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} py-8`}>
-                {searchInput ? 'No chats found' : 'No chats yet'}
-              </div>
-            )}
-          </section>
         </div>
       </main>
     </div>

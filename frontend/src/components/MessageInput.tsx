@@ -115,7 +115,7 @@ export default function MessageInput({
   return (
     <div className={`${isFixed ? 'fixed bottom-6 left-0 right-0' : ''} z-10 flex justify-center px-4`}>
       <form onSubmit={onSubmit} className="w-full max-w-3xl">
-        <div className={`relative flex items-center rounded-full shadow-lg ${
+        <div className={`relative flex items-center rounded-2xl shadow-lg ${
           isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
         }`}>
           <textarea
@@ -123,7 +123,7 @@ export default function MessageInput({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
-            className={`flex-1 rounded-full py-3 pl-5 pr-16 ${
+            className={`flex-1 rounded-2xl py-4 pl-6 pr-16 ${
               isDarkMode
                 ? 'bg-gray-800 text-gray-200 placeholder-gray-500'
                 : 'bg-white text-gray-700 placeholder-gray-400'
@@ -132,9 +132,10 @@ export default function MessageInput({
               WebkitAppearance: 'none',
               MozAppearance: 'none',
               appearance: 'none',
-              resize: 'none' // Disable resize handle
+              resize: 'none', // Disable resize handle
+              minHeight: '60px' // Set minimum height
             }}
-            rows={1}
+            rows={2}
             spellCheck="false"
             autoComplete="off"
           />
@@ -144,13 +145,18 @@ export default function MessageInput({
               <button
                 type="button"
                 onClick={() => setShowBotDropdown(!showBotDropdown)}
-                className={`rounded-full p-2 ${
+                className={`rounded-md p-2 ${
                   isDarkMode
                     ? 'hover:bg-gray-700 text-gray-300'
                     : 'hover:bg-gray-100 text-gray-600'
                 }`}
               >
-                <span className="text-xs font-medium">{selectedBot}</span>
+                <div className="flex items-center space-x-1">
+                  <span className="hidden md:inline text-xs font-medium">{selectedBot}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
               </button>
 
               {showBotDropdown && (
@@ -186,7 +192,7 @@ export default function MessageInput({
               className={`rounded-full p-2 ${
                 isLoading || !message.trim() || !selectedBot
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-[#4285f4] hover:bg-blue-700'
+                  : 'bg-[#4285f4] hover:bg-blue-600'
               } text-white focus:outline-none`}
             >
               {isLoading ? (
@@ -197,8 +203,8 @@ export default function MessageInput({
                   </svg>
                 </span>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 11-2 0V6.414L7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3z" />
                 </svg>
               )}
             </button>

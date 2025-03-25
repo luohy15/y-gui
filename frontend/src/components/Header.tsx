@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useTheme } from '../contexts/ThemeContext';
 import Logo from './Logo';
+import SearchWindow from './SearchWindow';
 
 
 const Header: React.FC = () => {
@@ -12,12 +13,10 @@ const Header: React.FC = () => {
 	const { isDarkMode, theme, setTheme } = useTheme();
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [showSearchWindow, setShowSearchWindow] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const mobileMenuRef = useRef<HTMLDivElement>(null);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-	const isSettingsPage = location.pathname.startsWith('/settings');
-	const isChatPage = location.pathname === '/' || location.pathname.startsWith('/chat');
 
 	// Handle clicking outside the dropdown or mobile menu
 	useEffect(() => {
@@ -34,25 +33,6 @@ const Header: React.FC = () => {
 			document.removeEventListener("mousedown", handleClickOutside);
 		};
 	}, []);
-
-	// Get current page icon
-	const getCurrentPageIcon = () => {
-		if (isChatPage) {
-			return (
-				<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-				</svg>
-			);
-		} else if (isSettingsPage) {
-			return (
-				<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-				</svg>
-			);
-		}
-		return null;
-	};
 
 	return (
 		<header className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b sticky top-0 z-50`}>
@@ -137,9 +117,16 @@ const Header: React.FC = () => {
 
 					{/* Right side icons and dropdown */}
 					<div className="flex items-center space-x-3">
-						<div className={`${isDarkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} p-2 rounded-full transition-colors flex items-center`}>
-							{ getCurrentPageIcon() }
-						</div>
+						{/* History button */}
+						<button
+							onClick={() => setShowSearchWindow(true)}
+							className={`${isDarkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} p-2 rounded-full transition-colors flex items-center`}
+							aria-label="Search History"
+						>
+							<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</button>
 						{/* GitHub link */}
 						<a
 							href="https://github.com/luohy15/y-gui"
@@ -234,13 +221,12 @@ const Header: React.FC = () => {
 							</div>
 						)}
 						</div>
-
-
-
-
 					</div>
 				</div>
 			</div>
+
+			{/* Search Window */}
+			<SearchWindow isOpen={showSearchWindow} onClose={() => setShowSearchWindow(false)} />
 		</header>
 	);
 };
