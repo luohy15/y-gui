@@ -11,6 +11,8 @@ import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
 interface Env {
   CHAT_KV: KVNamespace;
   CHAT_R2: R2Bucket;
+  OPENROUTER_BASE_URL: string;
+  OPENROUTER_FREE_KEY: string;
 }
 
 /**
@@ -46,15 +48,21 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
       if (!botConfig) {
         return new Response('Bot not found', { status: 404, headers: corsHeaders });
       }
+      let resultBotConfig = botConfig;
+      if (!resultBotConfig.api_key || !resultBotConfig.base_url) {
+        resultBotConfig.api_key = env.OPENROUTER_FREE_KEY;
+        resultBotConfig.base_url = env.OPENROUTER_BASE_URL;
+      }
+      console.log('Bot config:', resultBotConfig);
 
       // Get the provider
-      const provider = ProviderFactory.createProvider(botConfig);
+      const provider = ProviderFactory.createProvider(resultBotConfig);
 
       // Get the MCP manager
       const mcpManager = new McpManager(mcpServerRepository);
 
       // Create the chat service
-      const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, botConfig);
+      const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, resultBotConfig);
 
       await chatService.initializeChat();
 

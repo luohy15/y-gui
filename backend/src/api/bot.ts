@@ -29,7 +29,7 @@ export async function handleBotRequest(request: Request, env: Env, userPrefix?: 
       const botConfig: BotConfig = await request.json();
       
       // Validate required fields
-      if (!botConfig.name || !botConfig.model || !botConfig.base_url) {
+      if (!botConfig.name || !botConfig.model) {
         return new Response(JSON.stringify({ error: 'Missing required fields' }), {
           status: 400,
           headers: { 
@@ -67,7 +67,7 @@ export async function handleBotRequest(request: Request, env: Env, userPrefix?: 
       const botConfig: BotConfig = await request.json();
       
       // Validate required fields
-      if (!botConfig.name || !botConfig.model || !botConfig.base_url) {
+      if (!botConfig.name || !botConfig.model) {
         return new Response(JSON.stringify({ error: 'Missing required fields' }), {
           status: 400,
           headers: { 

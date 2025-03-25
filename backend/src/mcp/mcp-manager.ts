@@ -157,6 +157,7 @@ export class McpManager {
       // If the bot has mcp_servers property, use those servers
       // Otherwise, connect to all available servers
       const serverNames = bot.mcp_servers;
+      console.log(`Initializing MCP servers for bot: ${bot.name} ${serverNames}`);
       
       // Connect to the specified servers
       await this.connectToServers(serverNames);

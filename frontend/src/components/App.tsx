@@ -27,6 +27,7 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         {/* Public routes that don't require authentication */}
+
         {!isAuthenticated ? (
           <Routes>
             <Route path="/share/:id" element={<SharedChatView />} />

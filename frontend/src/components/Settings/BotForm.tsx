@@ -59,7 +59,7 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 		setIsSubmitting(true);
 
 		// Validate required fields
-		if (!formData.name || !formData.model || !formData.base_url || !formData.api_key) {
+		if (!formData.name || !formData.model) {
 			setError('Please fill in all required fields');
 			setIsSubmitting(false);
 			return;
@@ -125,9 +125,9 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 								/>
 							</div>
 
-							<div>
+							{/* <div>
 								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									Base URL *
+									Base URL
 								</label>
 								<input
 									type="text"
@@ -135,13 +135,12 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 									value={formData.base_url}
 									onChange={handleChange}
 									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-									required
 								/>
 							</div>
 
 							<div>
 								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									API Key *
+									API Key
 								</label>
 								<input
 									type="password"
@@ -149,12 +148,11 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 									value={formData.api_key}
 									onChange={handleChange}
 									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-									required
 								/>
 								<p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
 									Your key is visible to site admin, please provide key with Credit limit
 								</p>
-							</div>
+							</div> */}
 
 							<div>
 								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>

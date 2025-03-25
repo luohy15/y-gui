@@ -13,8 +13,8 @@ export function useAuthenticatedSWR<Data = any, Error = any>(
   url: string | null,
   options?: SWRConfiguration
 ): SWRResponse<Data, Error> {
-  const { getIdTokenClaims } = useAuth0();
-  const authenticatedFetcher = createAuthenticatedFetch(getIdTokenClaims);
+  const { getIdTokenClaims, logout } = useAuth0();
+  const authenticatedFetcher = createAuthenticatedFetch(getIdTokenClaims, logout);
 
   return useSWR<Data, Error>(
     url,
@@ -29,7 +29,7 @@ export function useAuthenticatedSWR<Data = any, Error = any>(
  * @returns Object with methods for making authenticated API requests
  */
 export function useApi() {
-  const { getIdTokenClaims } = useAuth0();
+  const { getIdTokenClaims, logout } = useAuth0();
 
   const fetchWithAuth = async <T = any>(
     url: string,
@@ -54,6 +54,13 @@ export function useApi() {
       });
 
       if (!response.ok) {
+        // Handle 401 Unauthorized errors by logging out
+        if (response.status === 401) {
+          console.log('Received 401 response, logging out...');
+          logout();
+          window.location.href = '/'; // This will redirect to login due to Auth0 setup
+          return null as any;
+        }
         throw new Error(`API error: ${response.status}`);
       }
 

@@ -2,11 +2,12 @@ import { useAuth0 } from '@auth0/auth0-react';
 
 /**
  * Creates an authenticated fetch function that includes the Auth0 ID token
- * in the Authorization header.
+ * in the Authorization header. Automatically handles 401 errors by logging out
+ * and redirecting to login page.
  *
  * @returns A fetch function that includes the Auth0 ID token
  */
-export const createAuthenticatedFetch = (getIdTokenClaims: () => Promise<any>) => {
+export const createAuthenticatedFetch = (getIdTokenClaims: () => Promise<any>, logout?: () => void) => {
   return async (url: string, options: RequestInit = {}) => {
     try {
       // Get the ID token from claims
@@ -28,8 +29,15 @@ export const createAuthenticatedFetch = (getIdTokenClaims: () => Promise<any>) =
       });
 
       if (!response.ok) {
+        // Handle 401 Unauthorized errors by logging out
+        if (response.status === 401 && logout) {
+          console.log('Received 401 response, logging out...');
+          logout();
+          window.location.href = '/'; // This will redirect to login due to Auth0 setup
+          return null;
+        }
+
         const error = new Error('An error occurred while fetching the data.');
-        // Add status to error object for handling 401 in components
         (error as any).status = response.status;
         throw error;
       }
@@ -48,6 +56,6 @@ export const createAuthenticatedFetch = (getIdTokenClaims: () => Promise<any>) =
  * Must be used within a component wrapped by Auth0Provider
  */
 export const useAuthenticatedFetcher = () => {
-  const { getIdTokenClaims } = useAuth0();
-  return createAuthenticatedFetch(getIdTokenClaims);
+  const { getIdTokenClaims, logout } = useAuth0();
+  return createAuthenticatedFetch(getIdTokenClaims, logout);
 };

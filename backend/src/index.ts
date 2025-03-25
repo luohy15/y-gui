@@ -13,6 +13,8 @@ interface Env {
   CHAT_KV: KVNamespace;
   CHAT_R2: R2Bucket;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
+  OPENROUTER_BASE_URL: string;
+  OPENROUTER_FREE_KEY: string;
 }
 
 export default {

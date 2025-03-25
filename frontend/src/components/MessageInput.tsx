@@ -1,4 +1,4 @@
-import React, { KeyboardEvent, useState } from 'react';
+import React, { KeyboardEvent, useState, useRef, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuthenticatedSWR } from '../utils/api';
 import { BotConfig } from '@shared/types';
@@ -97,6 +97,20 @@ export default function MessageInput({
   };
 
   const [showBotDropdown, setShowBotDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowBotDropdown(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className={`${isFixed ? 'fixed bottom-6 left-0 right-0' : ''} z-10 flex justify-center px-4`}>
@@ -126,7 +140,7 @@ export default function MessageInput({
           />
 
           <div className="absolute right-2 flex items-center space-x-2">
-            <div className="relative">
+            <div ref={dropdownRef} className="relative">
               <button
                 type="button"
                 onClick={() => setShowBotDropdown(!showBotDropdown)}

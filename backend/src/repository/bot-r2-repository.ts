@@ -88,10 +88,40 @@ export class BotR2Repository implements BotRepository {
       const content = await object.text();
       
       // Parse JSONL format (each line is a JSON object)
-      return content
+      const bots = content
         .split('\n')
         .filter(line => line.trim())
         .map(line => JSON.parse(line));
+      
+      const freeBots: BotConfig[] = [
+        {
+          name: "gemini-0205-flash",
+          model: "google/gemini-2.0-flash-exp:free"
+        },
+        {
+          name: "gemini-0205",
+          model: "google/gemini-2.0-pro-exp-02-05:free"
+        },
+        {
+          name: "deepseek-0324",
+          model: "deepseek/deepseek-chat-v3-0324:free"
+        },
+        {
+          name: "deepseek-r1",
+          model: "deepseek/deepseek-r1:free"
+        },
+      ];
+
+      for (const freeBot of freeBots) {
+        if (!bots.some(bot => bot.model === freeBot.model)) {
+          bots.push(freeBot);
+        }
+      }
+      // sort as original order
+      bots.sort((a, b) => {
+        return freeBots.findIndex(bot => bot.model === a.model) - freeBots.findIndex(bot => bot.model === b.model);
+      });
+      return bots;
     } catch (error) {
       console.error('Error fetching bots from R2:', error);
       return [];

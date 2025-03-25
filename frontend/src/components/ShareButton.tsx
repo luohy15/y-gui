@@ -70,11 +70,11 @@ export default function ShareButton({ chatId }: ShareButtonProps) {
       <button
         onClick={handleShare}
         disabled={isSharing}
-        className={`p-2 rounded-md transition-colors ${
+        className={`p-2 rounded-full transition-all transform ${
           isDarkMode
-            ? 'hover:bg-gray-700 text-gray-300'
-            : 'hover:bg-gray-200 text-gray-600'
-        }`}
+            ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300 active:scale-90 active:bg-gray-700'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800 active:scale-90 active:bg-gray-200'
+        } ${isSharing ? 'cursor-not-allowed opacity-75' : ''}`}
         title={isCopied ? "Copied!" : "Share"}
       >
         {isSharing ? (

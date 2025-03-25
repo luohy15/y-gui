@@ -9,6 +9,44 @@ import CompactMarkdown from './Markdown';
 import { useApi, useAuthenticatedSWR } from '../utils/api';
 import { useAuth0 } from '@auth0/auth0-react';
 import ShareButton from './ShareButton';
+import MessageActions from './MessageActions';
+
+// Copy button component
+const CopyButton = ({ content, isDarkMode, isRight }: { content: string; isDarkMode: boolean; isRight: boolean }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`absolute ${isRight ? '-right-12' : '-left-12'} top-0 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100
+        ${isDarkMode
+          ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+          : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+      title={copied ? 'Copied!' : 'Copy message'}
+    >
+      {copied ? (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+        </svg>
+      )}
+    </button>
+  );
+};
 
 export default function ChatView() {
 	const { isDarkMode } = useTheme();
@@ -484,10 +522,15 @@ export default function ChatView() {
 							)}
 						</div>
 						<div className={`max-w-full flex-1 space-y-2 ${msg.role === 'user' && !msg.tool ? 'items-end' : 'items-start'}`}>
-							<div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${msg.role === 'user' && !msg.tool
+							<div className={`group relative rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${msg.role === 'user' && !msg.tool
 									? 'bg-[#4285f4] text-white ml-auto'
 									: isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-50 text-gray-700'
 								}`}>
+								<CopyButton
+									content={typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2)}
+									isDarkMode={isDarkMode}
+									isRight={!!(msg.role === 'assistant' || msg.tool)}
+								/>
 								{/* assistant info */}
 								<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-2 sm:space-y-0">
 									<div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
@@ -646,10 +689,15 @@ export default function ChatView() {
 						</div>
 					</div>
 				))}
-				{/* Add ShareButton below the last message */}
+				{/* Add MessageActions below the last message */}
 				{chat.messages.length > 0 && (
-					<div className="mt-4 ml-14">
-						<ShareButton chatId={id} />
+					<div className="ml-14">
+						<MessageActions
+							chatId={id}
+							messageContent={typeof chat.messages[chat.messages.length - 1].content === 'string'
+								? chat.messages[chat.messages.length - 1].content
+								: JSON.stringify(chat.messages[chat.messages.length - 1].content)}
+						/>
 					</div>
 				)}
 				<div ref={messagesEndRef} />

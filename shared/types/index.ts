@@ -51,9 +51,9 @@ export interface ChatRepository {
 export interface BotConfig {
   name: string;
   model: string;
-  base_url: string;
-  api_key: string;
-  print_speed: number;
+  base_url?: string;
+  api_key?: string;
+  print_speed?: number;
   mcp_servers?: string[];
   openrouter_config?: Record<string, any>;
   api_type?: string;

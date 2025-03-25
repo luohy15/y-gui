@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 interface Env {
   CHAT_KV: KVNamespace;
   CHAT_R2: R2Bucket;
+  OPENROUTER_BASE_URL: string;
+  OPENROUTER_FREE_KEY: string;
 }
 
 export async function handleChatsRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
