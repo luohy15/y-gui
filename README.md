@@ -17,7 +17,7 @@ Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
 
 ## Demo
 
-[chat history](https://mcp.1u0hy.com/share/9051ccc5)
+[chat history](https://mcp.1u0hy.com/share/09952e1b)
 
 ## Architecture
 
