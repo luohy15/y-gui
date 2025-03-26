@@ -3,6 +3,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { BotConfig, McpServerRepository } from '../../../shared/types';
 import { BotR2Repository } from '../repository/bot-r2-repository';
 import { FetchLikeInit } from 'eventsource';
+import { writeMcpStatus } from '../utils/writer';
 
 /**
  * Manager for MCP server connections and tool execution
@@ -21,7 +22,7 @@ export class McpManager {
    * @param serverNames Optional list of server names to connect to
    * @returns Promise resolving when connections are established
    */
-  async connectToServers(serverNames?: string[]): Promise<void> {
+  async connectToServers(serverNames?: string[], writer?: WritableStreamDefaultWriter): Promise<void> {
     try {
       const mcpServers = await this.mcpServerConfigRepository.getMcpServers();
       
@@ -29,6 +30,9 @@ export class McpManager {
       const serversToConnect = serverNames 
         ? mcpServers.filter(server => serverNames.includes(server.name))
         : [];
+      
+      const serverList = serversToConnect.map(s => s.name).join(', ');
+      await writeMcpStatus(writer, "connecting", `Connecting to MCP servers: ${serverList || 'None configured'}`);
       
       // Connect to each server that's not already connected
       for (const server of serversToConnect) {
@@ -41,6 +45,7 @@ export class McpManager {
         try {
           if (!server.url) {
             console.error(`Error connecting to MCP server ${server.name}: No URL provided`);
+            await writeMcpStatus(writer, "error", `Failed to connect to ${server.name}: No URL provided`, server.name);
             continue;
           }
 
@@ -84,16 +89,38 @@ export class McpManager {
             }
           );
           
-          await client.connect(transport);
-          this.sessions[server.name] = client;
+          // Connect with timeout
+          await Promise.race([
+            client.connect(transport),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error(`Connection timeout for ${server.name}`)), 5000)
+            )
+          ]);
           
+          this.sessions[server.name] = client;
+          await writeMcpStatus(writer, "connected", `Connected to MCP server: ${server.name}`, server.name);
           console.log(`Connected to MCP server: ${server.name}`);
         } catch (error) {
           console.error(`Failed to connect to MCP server ${server.name}:`, error);
+          await writeMcpStatus(
+            writer, 
+            "error", 
+            `Failed to connect to ${server.name}: ${error instanceof Error ? error.message : String(error)}`,
+            server.name
+          );
         }
       }
+
+      // Final connection status summary
+      const connectedServers = Object.keys(this.sessions).join(', ');
+      await writeMcpStatus(writer, "summary", `Connected MCP servers: ${connectedServers || 'None'}`);
     } catch (error) {
       console.error(`Error connecting to MCP servers:`, error);
+      await writeMcpStatus(
+        writer, 
+        "error", 
+        `Error connecting to MCP servers: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
   
@@ -101,22 +128,28 @@ export class McpManager {
    * Format MCP server information for the system prompt
    * @returns Formatted server information string
    */
-  async format_server_info(): Promise<string> {
+  async format_server_info(writer?: WritableStreamDefaultWriter): Promise<string> {
     if (Object.keys(this.sessions).length === 0) {
+      await writeMcpStatus(writer, "info", "No MCP servers currently connected");
       return "(No MCP servers currently connected)";
     }
 
     const serverSections = [];
 
     for (const [serverName, client] of Object.entries(this.sessions)) {
-      // Get server information
       let toolsSection = "";
-      let templatesSection = "";
-      let resourcesSection = "";
 
       try {
-        // Get and format tools section
-        const toolsResponse = await client.listTools();
+        await writeMcpStatus(writer, "info", `Getting tools from ${serverName}...`, serverName);
+        
+        // Get and format tools section with timeout
+        const toolsResponse = await Promise.race([
+          client.listTools(),
+          new Promise<null>((_, reject) => 
+            setTimeout(() => reject(new Error(`Timeout listing tools for ${serverName}`)), 5000)
+          )
+        ]);
+
         if (toolsResponse && toolsResponse.tools && toolsResponse.tools.length > 0) {
           const tools = [];
           for (const tool of toolsResponse.tools) {
@@ -129,18 +162,23 @@ export class McpManager {
             tools.push(`- ${tool.name}: ${tool.description}${schemaStr}`);
           }
           toolsSection = "\n\n### Available Tools\n" + tools.join("\n\n");
+          
+          await writeMcpStatus(writer, "info", `Found ${toolsResponse.tools.length} tools in ${serverName}`, serverName);
+        } else {
+          await writeMcpStatus(writer, "info", `No tools found in ${serverName}`, serverName);
         }
       } catch (error) {
         console.error(`Error listing tools for ${serverName}:`, error);
+        await writeMcpStatus(
+          writer, 
+          "error", 
+          `Error listing tools for ${serverName}: ${error instanceof Error ? error.message : String(error)}`,
+          serverName
+        );
       }
 
       // Combine all sections
-      const serverSection = 
-        `## ${serverName}` +
-        `${toolsSection}` +
-        `${templatesSection}` +
-        `${resourcesSection}`;
-      
+      const serverSection = `## ${serverName}${toolsSection}`;
       serverSections.push(serverSection);
     }
 
@@ -152,7 +190,7 @@ export class McpManager {
    * @param bot The bot to initialize MCP servers for
    * @returns Promise resolving when connections are established
    */
-  async initMcpServersForBot(bot: BotConfig): Promise<void> {
+  async initMcpServersForBot(bot: BotConfig, writer?: WritableStreamDefaultWriter): Promise<void> {
     try {
       // If the bot has mcp_servers property, use those servers
       // Otherwise, connect to all available servers
@@ -160,11 +198,16 @@ export class McpManager {
       console.log(`Initializing MCP servers for bot: ${bot.name} ${serverNames}`);
       
       // Connect to the specified servers
-      await this.connectToServers(serverNames);
+      await this.connectToServers(serverNames, writer);
       
       console.log(`Initialized MCP servers for bot: ${bot.name}`);
     } catch (error) {
       console.error(`Error initializing MCP servers for bot ${bot.name}:`, error);
+      await writeMcpStatus(
+        writer, 
+        "error", 
+        `Error initializing MCP servers for bot ${bot.name}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
   

@@ -82,7 +82,20 @@ export default function ChatView() {
 	}>({
 		content: undefined,
 		server: undefined
-	})
+	});
+
+	// State for MCP status logs
+	const [mcpLogs, setMcpLogs] = useState<Array<{
+		status: "connecting" | "connected" | "error" | "info" | "summary";
+		message: string;
+		timestamp: string;
+	}>>([]);
+	const [isLogVisible, setIsLogVisible] = useState(false);
+	const [serverStatus, setServerStatus] = useState<Record<string, {
+		status: "connected" | "connecting" | "error" | "disconnected";
+		lastUpdated: string;
+		message?: string;
+	}>>({});
 
 	const { data: chat, error } = useAuthenticatedSWR<Chat>(
 		id ? `/api/chats/${id}` : null,
@@ -94,6 +107,18 @@ export default function ChatView() {
 		'/api/mcp-servers',
 		swrConfig
 	);
+
+	// Get the bot data for the selected bot
+	const selectedBotData = React.useMemo(() => {
+		if (!selectedBot || !mcpServers?.length) return null;
+		return mcpServers.find(b => b.name === selectedBot);
+	}, [selectedBot, mcpServers]);
+
+	// Filter for relevant MCP servers
+	const relevantMcpServers = React.useMemo(() => {
+		if (!selectedBotData || !mcpServers?.length) return [];
+		return mcpServers;
+	}, [selectedBotData, mcpServers]);
 	const messagesEndRef = React.useRef<HTMLDivElement>(null);
 	const [collapsedReasoning, setCollapsedReasoning] = React.useState<{ [key: string]: boolean }>({});
 	const [collapsedToolInfo, setCollapsedToolInfo] = React.useState<{ [key: string]: boolean }>({});
@@ -429,19 +454,47 @@ export default function ChatView() {
 									break;
 								}
 
-								// Handle the new SSE data format
-								if (parsedData.choices && parsedData.choices[0]?.delta?.content) {
-									// Update the message directly with the new content
-									await updateLastMessageChunk(parsedData.choices[0].delta.content);
-								}
+                // Handle MCP status messages
+                if (parsedData.type === "mcp_status") {
+                  type McpStatus = "connecting" | "connected" | "error" | "info" | "summary";
+                  const status = parsedData.status as McpStatus;
+                  const serverName = parsedData.server || "unknown";
+                  const timestamp = new Date().toLocaleTimeString();
 
-								// Set model and provider info if not already set
-								const model = parsedData.model;
-								const provider = parsedData.provider;
-								await updateLastMessage('', undefined, { model, provider });
+                  // Update server status
+                  setServerStatus(prev => ({
+                    ...prev,
+                    [serverName]: {
+                      status: status === "connected" ? "connected" :
+                              status === "connecting" ? "connecting" :
+                              status === "error" ? "error" : "disconnected",
+                      lastUpdated: timestamp,
+                      message: parsedData.message
+                    }
+                  }));
 
-								// Assistant message has tool info
-								if (parsedData.server) {
+                  setMcpLogs(prev => [...prev, {
+                    status,
+                    message: parsedData.message,
+                    timestamp
+                  }]);
+                  setIsLogVisible(true); // Show log area when new message arrives
+                }
+                // Handle the new SSE data format
+                else if (parsedData.choices && parsedData.choices[0]?.delta?.content) {
+                  // Update the message directly with the new content
+                  await updateLastMessageChunk(parsedData.choices[0].delta.content);
+                  // Auto-close log when real message content starts
+                  setIsLogVisible(false);
+                }
+
+                // Set model and provider info if not already set
+                const model = parsedData.model;
+                const provider = parsedData.provider;
+                await updateLastMessage('', undefined, { model, provider });
+
+                // Assistant message has tool info
+                if (parsedData.server && !parsedData.type) {
 									let plain_content = parsedData.plainContent;
 									let server = parsedData.server;
 									let tool = parsedData.tool;
@@ -573,7 +626,91 @@ export default function ChatView() {
 	}
 
 	return (
-		<div className={`flex flex-col ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+		<div className={`flex flex-col relative ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+			{/* MCP Status Log Area */}
+			{isLogVisible && (
+				<div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-80 h-64">
+					<div className={`relative w-full h-full rounded-lg shadow-lg overflow-hidden ${
+						isDarkMode ? 'bg-gray-800' : 'bg-white'
+					}`}>
+						<div className={`absolute top-0 left-0 right-0 p-2 flex justify-between items-center ${
+							isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
+						}`}>
+							<span className={`text-sm font-medium ${
+								isDarkMode ? 'text-gray-200' : 'text-gray-700'
+							}`}>
+								MCP Status Logs
+							</span>
+							<div className="flex items-center space-x-2">
+								<button
+									onClick={() => setIsLogVisible(false)}
+									className={`p-1 rounded hover:bg-opacity-20 ${
+										isDarkMode ? 'hover:bg-white text-gray-300' : 'hover:bg-black text-gray-600'
+									}`}
+									title="Close"
+								>
+									<svg
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+
+						<div className={`absolute top-10 bottom-0 left-0 right-0 overflow-y-auto p-2 ${
+							isDarkMode ? 'bg-gray-800' : 'bg-white'
+						}`}>
+							{mcpLogs.map((log, index) => {
+								const statusEmoji: Record<typeof log.status, string> = {
+									"connecting": "🔄",
+									"connected": "✅",
+									"error": "❌",
+									"info": "ℹ️",
+									"summary": "📊"
+								};
+
+								return (
+									<div
+										key={index}
+										className={`mb-2 p-2 rounded text-sm ${
+											isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
+										} ${
+											log.status === 'error'
+												? isDarkMode
+													? 'text-red-300'
+													: 'text-red-600'
+												: isDarkMode
+													? 'text-gray-200'
+													: 'text-gray-700'
+										}`}
+									>
+										<div className="flex items-center justify-between">
+											<span className="flex items-center gap-2">
+												{statusEmoji[log.status]}
+												<span className="truncate">{log.message}</span>
+											</span>
+											<span className={`text-xs ${
+												isDarkMode ? 'text-gray-400' : 'text-gray-500'
+											}`}>
+												{log.timestamp}
+											</span>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+				</div>
+			)}
 			<div className={`flex-1 px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto`}>
 				{chat.messages.map((msg, index) => (
 					<div
@@ -781,16 +918,53 @@ export default function ChatView() {
 				<div className="pb-12"></div>
 				<div ref={messagesEndRef} />
 			</div>
-			<MessageInput
-				message={message}
-				setMessage={setMessage}
-				selectedBot={selectedBot}
-				setSelectedBot={setSelectedBot}
-				isLoading={isStreaming}
-				handleSubmit={handleSubmit}
-				isFixed={true} // Keep this input fixed at the bottom of the screen
-				onStop={handleStopGeneration} // Add onStop handler to cancel the request
-			/>
+			<div className="flex flex-col">
+				<MessageInput
+					message={message}
+					setMessage={setMessage}
+					selectedBot={selectedBot}
+					setSelectedBot={setSelectedBot}
+					isLoading={isStreaming}
+					handleSubmit={handleSubmit}
+					isFixed={true} // Keep this input fixed at the bottom of the screen
+					onStop={handleStopGeneration} // Add onStop handler to cancel the request
+				/>
+
+				{/* MCP Servers Information - Below Input Box */}
+				{selectedBot && mcpServers && mcpServers.length > 0 && (
+					<div className={`w-full mt-2 mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+						<div className={`rounded-lg p-2 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+							<div className="flex flex-wrap gap-2">
+								{mcpServers.map((server) => (
+									<div key={server.name} className={`rounded-md p-1.5 text-xs ${isDarkMode ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>
+										<div className="flex items-center gap-2">
+											{/* Status indicator */}
+											<div className={`w-2 h-2 rounded-full ${
+												serverStatus[server.name]?.status === "connected" ? "bg-green-500" :
+												serverStatus[server.name]?.status === "connecting" ? "bg-yellow-500" :
+												serverStatus[server.name]?.status === "error" ? "bg-red-500" :
+												"bg-gray-500"
+											}`}
+											title={serverStatus[server.name]?.message || "Unknown status"}
+											/>
+
+											<span className={`font-medium truncate ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+												{server.name}
+											</span>
+
+											{serverStatus[server.name] && (
+												<span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+													{serverStatus[server.name].lastUpdated}
+												</span>
+											)}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }

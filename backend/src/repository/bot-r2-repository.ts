@@ -95,13 +95,13 @@ export class BotR2Repository implements BotRepository {
       
       const freeBots: BotConfig[] = [
         {
-          name: "gemini-0205-flash",
-          model: "google/gemini-2.0-flash-exp:free",
+          name: "deepseek-0324",
+          model: "deepseek/deepseek-chat-v3-0324",
           mcp_servers: ["amap"]
         },
         {
-          name: "deepseek-0324",
-          model: "deepseek/deepseek-chat-v3-0324",
+          name: "gemini-0205-flash",
+          model: "google/gemini-2.0-flash-exp:free",
           mcp_servers: ["amap"]
         },
       ];

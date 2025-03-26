@@ -58,7 +58,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
       // Create the chat service
       const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, resultBotConfig);
 
-      await chatService.initializeChat();
+      await chatService.initializeChat(writer);
 
       // Create the user message
       const userMessage: Message = createMessage('user', content, { server: completionData.server });

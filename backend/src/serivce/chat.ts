@@ -21,10 +21,10 @@ export class ChatService {
     this.systemPrompt = '';
   }
 
-  async initializeChat() {
+  async initializeChat(writer?: WritableStreamDefaultWriter) {
     this.chat = await this.storage.getOrCreateChat(this.chatId);
-    await this.mcpManager.initMcpServersForBot(this.botConfig);
-    this.systemPrompt = await getSystemPrompt(this.mcpManager);
+    await this.mcpManager.initMcpServersForBot(this.botConfig, writer);
+    this.systemPrompt = await getSystemPrompt(this.mcpManager, writer);
   }
 
   async processUserMessage(userMessage: Message, writer: WritableStreamDefaultWriter) {
