@@ -25,7 +25,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
     content: string;
     botName: string;
     chatId: string;
-    tool?: string;
+    server?: string;
   }
   const completionData = await request.json() as CompletionRequest;
   const { content, botName, chatId } = completionData;
@@ -67,7 +67,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
       await chatService.initializeChat();
 
       // Create the user message
-      const userMessage: Message = createMessage('user', content, { tool: completionData.tool });
+      const userMessage: Message = createMessage('user', content, { server: completionData.server });
 
       // Process the user message
       await chatService.processUserMessage(userMessage, writer);
@@ -75,9 +75,11 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
       // Close the writer
       await writer.write(encoder.encode(`data: [DONE]\n\n`));
       await writer.close();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error processing stream:', error);
-      writer.abort(error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      await writer.write(encoder.encode(`data: {"error": "${errorMessage}"}\n\n`));
+      await writer.close();
     }
   })();
   

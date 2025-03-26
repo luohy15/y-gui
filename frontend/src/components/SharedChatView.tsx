@@ -52,6 +52,43 @@ export default function SharedChatView() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat?.messages]);
 
+		// Handle tool information default display
+		useEffect(() => {
+			// Only proceed if we have messages and MCP servers data
+			if (!chat?.messages.length) return;
+
+			// Create new state objects to update all at once
+			const newToolInfoState = { ...collapsedToolInfo };
+			const newToolResultsState = { ...collapsedToolResults };
+			let stateChanged = false;
+
+			// Process all messages with tool information
+			chat.messages.forEach(msg => {
+				// Only process assistant messages with tool info
+				if (msg.server) {
+					const messageId = msg.unix_timestamp.toString();
+
+					// Ensure tool info are always collapsed initially
+					if (newToolInfoState[messageId] !== true) {
+						newToolInfoState[messageId] = true; // Collapsed
+						stateChanged = true;
+					}
+
+					// Ensure tool results are always collapsed initially
+					if (newToolResultsState[messageId] !== true) {
+						newToolResultsState[messageId] = true; // Collapsed
+						stateChanged = true;
+					}
+				}
+			});
+
+			// Only update state if changes were made
+			if (stateChanged) {
+				setCollapsedToolInfo(newToolInfoState);
+				setCollapsedToolResult(newToolResultsState);
+			}
+		}, [chat?.messages]);
+
   const toggleReasoning = (messageId: string) => {
     setCollapsedReasoning(prev => ({
       ...prev,
@@ -119,10 +156,10 @@ export default function SharedChatView() {
         {chat.messages.map((msg, index) => (
           <div
             key={`${msg.unix_timestamp}-${index}`}
-            className={`flex items-start space-x-4 ${msg.role === 'user' && !msg.tool ? 'flex-row-reverse space-x-reverse' : ''}`}
+            className={`flex items-start space-x-4 ${msg.role === 'user' && !msg.server ? 'flex-row-reverse space-x-reverse' : ''}`}
           >
             <div className="flex-shrink-0">
-              {msg.role === 'user' && !msg.tool ? (
+              {msg.role === 'user' && !msg.server ? (
                 <div className={`h-10 w-10 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} flex items-center justify-center`}>
                   <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>U</span>
                 </div>
@@ -130,21 +167,21 @@ export default function SharedChatView() {
                 <AssistantAvatar model={msg.model} />
               )}
             </div>
-            <div className={`max-w-full flex-1 space-y-2 ${msg.role === 'user' && !msg.tool ? 'items-end' : 'items-start'}`}>
-              <div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${msg.role === 'user' && !msg.tool
+            <div className={`max-w-full flex-1 space-y-2 ${msg.role === 'user' && !msg.server ? 'items-end' : 'items-start'}`}>
+              <div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${msg.role === 'user' && !msg.server
                   ? 'bg-[#4285f4] text-white ml-auto'
                   : isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-50 text-gray-700'
                 }`}>
                 {/* assistant info */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-2 sm:space-y-0">
                   <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-                    <span className="text-sm font-medium">{msg.role === 'user' && !msg.tool ? 'User' : 'Assistant'}</span>
+                    <span className="text-sm font-medium">{msg.role === 'user' && !msg.server ? 'User' : 'Assistant'}</span>
                     <span className="text-xs opacity-75">
                       {new Date(msg.timestamp).toLocaleString()}
                     </span>
                     <div className="flex flex-wrap items-center gap-1">
                       {msg.model && (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.tool
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.server
                             ? 'bg-blue-400 text-white'
                             : isDarkMode ? 'bg-purple-900 text-purple-100' : 'bg-purple-100 text-purple-800'
                           }`}>
@@ -152,7 +189,7 @@ export default function SharedChatView() {
                         </span>
                       )}
                       {msg.provider && (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.tool
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.server
                             ? 'bg-blue-400 text-white'
                             : isDarkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
                           }`}>
@@ -164,7 +201,7 @@ export default function SharedChatView() {
                 </div>
                 {/* reasoning content */}
                 {msg.reasoning_content && (
-                  <div className={`mb-3 text-sm ${msg.role === 'user' && !msg.tool
+                  <div className={`mb-3 text-sm ${msg.role === 'user' && !msg.server
                       ? 'border-blue-400 text-blue-100'
                       : isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'
                     }`}>
@@ -191,7 +228,7 @@ export default function SharedChatView() {
                   </div>
                 )}
                 {/* content */}
-                {msg.role === 'user' && msg.tool ? (
+                {msg.role === 'user' && msg.server ? (
                   <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     <button
                       onClick={() => toggleToolResult(msg.unix_timestamp.toString())}
@@ -226,7 +263,7 @@ export default function SharedChatView() {
                 ) : (
                 <CompactMarkdown
                   content={typeof msg.content === 'string' ? msg.content : ''}
-                  className={msg.role === 'user' && !msg.tool ? 'prose-invert' : 'prose-gray'}
+                  className={msg.role === 'user' && !msg.server ? 'prose-invert' : 'prose-gray'}
                 />
                 )}
                 {/* Tool information */}

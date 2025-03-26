@@ -3,8 +3,8 @@ export interface Chat {
   messages: Message[];
   create_time: string;
   update_time: string;
-  contentHash?: string;
-  shareId?: string;
+  content_hash?: string;
+  share_id?: string;
 }
 
 export interface ContentBlock {
@@ -69,6 +69,7 @@ export interface McpServerConfig {
   env: Record<string, string> | null;
   url: string | null;           // URL for the server
   token?: string | null;        // Optional token for authentication
+  need_confirm: string[] | null; // List of tool names that require confirmation, if not specified or empty, no confirmation needed
 }
 
 export interface BotRepository {

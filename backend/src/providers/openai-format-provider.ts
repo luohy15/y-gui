@@ -1,7 +1,7 @@
 import { BaseProvider, ProviderResponseChunk } from './provider-interface';
 import { BotConfig, Chat, Message, ContentBlock } from '../../../shared/types';
 
-// Define interfaces for message content blocks
+// Define interfaces for message content blocks and error handling
 interface TextContentBlock {
   type: 'text';
   text: string;
@@ -9,6 +9,19 @@ interface TextContentBlock {
 }
 
 type MessageContentBlock = TextContentBlock;
+
+interface OpenRouterErrorResponse {
+  error?: {
+    status?: number;
+    message?: string;
+    type?: string;
+  };
+}
+
+interface OpenRouterError extends Error {
+  type: 'auth_error' | 'credits_error' | 'rate_limit' | 'provider_error' | 'timeout_error' | 'unknown_error';
+  status: number;
+}
 
 /**
  * OpenAI Format Provider implementation
@@ -159,55 +172,122 @@ export class OpenAIFormatProvider implements BaseProvider {
     const baseUrl = this.botConfig.base_url;
     const apiPath = this.botConfig.custom_api_path || '/chat/completions';
     
-    const response = await fetch(`${baseUrl}${apiPath}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://luohy15.com',
-        'X-Title': 'y-gui',
-        'Accept': 'text/event-stream'
-      },
-      body: JSON.stringify(body)
-    });
+    // Set up timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    try {
+      const response = await fetch(`${baseUrl}${apiPath}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://luohy15.com',
+          'X-Title': 'y-gui',
+          'Accept': 'text/event-stream'
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId); // Clear timeout if request succeeds
     
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as OpenRouterErrorResponse;
+        
+        // Log error details for debugging
+        console.error('OpenRouter API Error:', {
+          httpStatus: response.status,
+          errorStatus: errorData.error?.status,
+          errorMessage: errorData.error?.message
+        });
+        
+        // Create custom error with type
+        const message = errorData.error?.message || `API error: ${response.status} ${response.statusText}`;
+        const error = new Error(message) as OpenRouterError;
+        error.status = response.status;
+        
+        // Set appropriate error type based on status code
+        switch (response.status) {
+          case 401:
+            error.type = 'auth_error';
+            error.message = 'Authentication failed: Please check your API key';
+            break;
+          case 402:
+            error.type = 'credits_error';
+            error.message = 'Insufficient credits: Please add credits to your account';
+            break;
+          case 429:
+            error.type = 'rate_limit';
+            error.message = 'Rate limit exceeded: Please try again later';
+            break;
+          case 408:
+            error.type = 'timeout_error';
+            error.message = 'Request timeout: The model took too long to respond';
+            break;
+          default:
+            error.type = 'provider_error';
+            // Use the API provided message or fallback
+            error.message = message;
+        }
+        
+        throw error;
+      }
     
-    const reader = response.body!.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
-  
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-  
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n\n');
-  
-      for (let i = 0; i < lines.length - 1; i++) {
-        const event = lines[i];
-        if (event.startsWith('data:')) {
-          const data = event.replace('data:', '').trim();
-          if (data === '[DONE]') {
-            reader.cancel();
-            return;
-          } else {
-            try {
-              const jsonData = JSON.parse(data);
-              const responseData = this.extractChunk(jsonData);
-              if (responseData) {
-                yield responseData;
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+    
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+    
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+    
+        for (let i = 0; i < lines.length - 1; i++) {
+          const event = lines[i];
+          if (event.startsWith('data:')) {
+            const data = event.replace('data:', '').trim();
+            if (data === '[DONE]') {
+              reader.cancel();
+              return;
+            } else {
+              try {
+                const jsonData = JSON.parse(data);
+                const responseData = this.extractChunk(jsonData);
+                if (responseData) {
+                  yield responseData;
+                }
+              } catch (error) {
+                console.error('Error in json parse', error);
               }
-            } catch (error) {
-              console.error('Error in json parse', error);
             }
           }
         }
+    
+        buffer = lines[lines.length - 1];
       }
-  
-      buffer = lines[lines.length - 1];
+    } catch (error: unknown) {
+      clearTimeout(timeoutId); // Clean up timeout
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          const timeoutError = error as OpenRouterError;
+          timeoutError.type = 'timeout_error';
+          timeoutError.status = 408;
+          timeoutError.message = 'Request timeout: The AI provider took too long to respond (>10s)';
+          throw timeoutError;
+        }
+        // If it's already an OpenRouterError, re-throw it
+        if ((error as OpenRouterError).type) {
+          throw error;
+        }
+      }
+      // For unknown errors
+      const unknownError = new Error('An unknown error occurred') as OpenRouterError;
+      unknownError.type = 'unknown_error';
+      unknownError.status = 500;
+      throw unknownError;
     }
   }
   

@@ -51,12 +51,12 @@ export async function handleShareRequest(request: Request, env: Env, userPrefix?
       }
 
       // Generate MD5 hash of the current chat content
-      const currentContentHash = await generateChatContentHash(chat);
+      const current_content_hash = await generateChatContentHash(chat);
       
       // Check if this chat has been shared before and the content hasn't changed
-      if (chat.contentHash === currentContentHash && chat.shareId) {
+      if (chat.content_hash === current_content_hash && chat.share_id) {
         // Content hasn't changed, return the existing share ID
-        return new Response(JSON.stringify({ shareId: chat.shareId }), {
+        return new Response(JSON.stringify({ shareId: chat.share_id }), {
           headers: { 
             'Content-Type': 'application/json',
             ...corsHeaders
@@ -65,23 +65,23 @@ export async function handleShareRequest(request: Request, env: Env, userPrefix?
       }
 
       // Content has changed or hasn't been shared before, generate a new share ID
-      const shareId = uuidv4().substring(0, 8);
+      const share_id = uuidv4().substring(0, 8);
       
-      // Store the hash and shareId in the original chat
-      chat.contentHash = currentContentHash;
-      chat.shareId = shareId;
+      // Store the hash and share_id in the original chat
+      chat.content_hash = current_content_hash;
+      chat.share_id = share_id;
       
-      // Save the updated original chat with hash and shareId
+      // Save the updated original chat with hash and share_id
       await chatRepository.saveChat(chat);
       
       // Create a copy for public sharing
       const sharedChat = { ...chat };
-      sharedChat.id = shareId; // Update the chat ID to the share ID
+      sharedChat.id = share_id; // Update the chat ID to the share ID
       
       // Save the shared chat copy
       await publicChatRepository.saveChat(sharedChat);
       
-      return new Response(JSON.stringify({ shareId }), {
+      return new Response(JSON.stringify({ shareId: share_id }), {
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -91,16 +91,16 @@ export async function handleShareRequest(request: Request, env: Env, userPrefix?
     
     // Get a shared chat (public endpoint, no authentication required)
     if (path.startsWith('/api/share/')  && request.method === 'GET') {
-      const shareId = path.split('/').pop();
-      if (!shareId) {
+      const share_id = path.split('/').pop();
+      if (!share_id) {
         return new Response('Invalid share ID', { 
           status: 400,
           headers: corsHeaders
         });
       }
 
-      // Find the chat with the matching shareId
-      const chat = await publicChatRepository.getChat(shareId);
+      // Find the chat with the matching share_id
+      const chat = await publicChatRepository.getChat(share_id);
       
       if (!chat) {
         return new Response('Shared chat not found', { 

@@ -99,16 +99,8 @@ export class BotR2Repository implements BotRepository {
           model: "google/gemini-2.0-flash-exp:free"
         },
         {
-          name: "gemini-0205",
-          model: "google/gemini-2.0-pro-exp-02-05:free"
-        },
-        {
           name: "deepseek-0324",
-          model: "deepseek/deepseek-chat-v3-0324:free"
-        },
-        {
-          name: "deepseek-r1",
-          model: "deepseek/deepseek-r1:free"
+          model: "deepseek/deepseek-chat-v3-0324"
         },
       ];
 

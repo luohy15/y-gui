@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Chat, Message } from '@shared/types';
+import { Chat, Message, McpServerConfig } from '@shared/types';
 import MessageInput from './MessageInput';
 import useSWR, { SWRConfiguration, mutate } from 'swr';
 import { useTheme } from '../contexts/ThemeContext';
@@ -13,39 +13,39 @@ import MessageActions from './MessageActions';
 
 // Copy button component
 const CopyButton = ({ content, isDarkMode, isRight }: { content: string; isDarkMode: boolean; isRight: boolean }) => {
-  const [copied, setCopied] = useState(false);
+	const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
+	const handleCopy = async () => {
+		try {
+			await navigator.clipboard.writeText(content);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch (err) {
+			console.error('Failed to copy:', err);
+		}
+	};
 
-  return (
-    <button
-      onClick={handleCopy}
-      className={`absolute ${isRight ? '-right-12' : '-left-12'} top-0 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100
+	return (
+		<button
+			onClick={handleCopy}
+			className={`absolute ${isRight ? '-right-12' : '-left-12'} top-0 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100
         ${isDarkMode
-          ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-          : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
-      title={copied ? 'Copied!' : 'Copy message'}
-    >
-      {copied ? (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-        </svg>
-      ) : (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-        </svg>
-      )}
-    </button>
-  );
+					? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+					: 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'}`}
+			title={copied ? 'Copied!' : 'Copy message'}
+		>
+			{copied ? (
+				<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+				</svg>
+			) : (
+				<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+						d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+				</svg>
+			)}
+		</button>
+	);
 };
 
 export default function ChatView() {
@@ -54,7 +54,7 @@ export default function ChatView() {
 	const { id } = useParams<{ id: string }>();
 	// Configure SWR options for proper revalidation
 	const swrConfig: SWRConfiguration = {
-		revalidateOnFocus: true,
+		revalidateOnFocus: false,
 		revalidateOnReconnect: true,
 		refreshInterval: 0, // Disable auto refresh
 		dedupingInterval: 2000, // Dedupe requests within 2 seconds
@@ -63,57 +63,42 @@ export default function ChatView() {
 	// State for message input
 	const [message, setMessage] = useState('');
 	const [selectedBot, setSelectedBot] = useState<string>('');
-	const [isLoading, setIsLoading] = useState(false);
 	const [isStreaming, setIsStreaming] = useState(false);
-
-	// StreamBuffer for character-by-character printing
-	const [printSpeed, setPrintSpeed] = useState<number>(1000); // Default speed: 100 chars per second
-	const streamBufferRef = React.useRef<{
-		buffer: string;
-		maxCharsPerSecond: number;
-		lastUpdateTime: number;
-		lastPosition: number;
-
-		addContent: (content: string) => void;
-		getNextChunk: () => string;
-		hasMoreContent: () => boolean;
+	const abortControllerRef = React.useRef<AbortController | null>(null);
+	const [toolInfoState, setToolInfoState] = useState<{
+		plain_content: string | undefined;
+		server: string | undefined;
+		tool: string | undefined;
+		arguments: any | undefined;
 	}>({
-		buffer: "",
-		maxCharsPerSecond: 50,
-		lastUpdateTime: Date.now(),
-		lastPosition: 0,
-
-		addContent(content: string) {
-			this.buffer += content;
-		},
-
-		getNextChunk() {
-			const currentTime = Date.now();
-			const timeDiff = (currentTime - this.lastUpdateTime) / 1000; // Convert to seconds
-			const maxChars = Math.floor(this.maxCharsPerSecond * timeDiff);
-
-			if (maxChars > 0) {
-				const chunk = this.buffer.substring(this.lastPosition, this.lastPosition + maxChars);
-				this.lastPosition += chunk.length;
-				this.lastUpdateTime = currentTime;
-				return chunk;
-			}
-			return "";
-		},
-
-		hasMoreContent() {
-			return this.lastPosition < this.buffer.length;
-		}
+		plain_content: undefined,
+		server: undefined,
+		tool: undefined,
+		arguments: undefined
 	});
+	const [toolResultState, setToolResultState] = useState<{
+		content: string | undefined;
+		server: string | undefined;
+	}>({
+		content: undefined,
+		server: undefined
+	})
 
 	const { data: chat, error } = useAuthenticatedSWR<Chat>(
 		id ? `/api/chats/${id}` : null,
 		swrConfig
 	);
+
+	// Fetch MCP servers to check need_confirm list
+	const { data: mcpServers } = useAuthenticatedSWR<McpServerConfig[]>(
+		'/api/mcp-servers',
+		swrConfig
+	);
 	const messagesEndRef = React.useRef<HTMLDivElement>(null);
 	const [collapsedReasoning, setCollapsedReasoning] = React.useState<{ [key: string]: boolean }>({});
 	const [collapsedToolInfo, setCollapsedToolInfo] = React.useState<{ [key: string]: boolean }>({});
-	const [collapsedToolResults, setCollapsedToolResult] = React.useState<{ [key: string]: boolean }>({});
+	// Initialize tool results as collapsed by default
+	const [collapsedToolResults, setCollapsedToolResult] = React.useState<{ [key: string]: boolean }>(() => ({}));
 
 	// Common method to add messages to chat
 	const addMessageToChat = async (
@@ -217,59 +202,16 @@ export default function ChatView() {
 		);
 	};
 
+	// Check for 404 error and redirect to home
 	useEffect(() => {
 		if (error?.status === 404) {
 			navigate('/');
 		}
 	}, [error, navigate]);
 
-	// Scroll to bottom when messages change
+	// Check for new chat: data in localStorage or handle existing chat with no assistant response
 	useEffect(() => {
-		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-	}, [chat?.messages]);
-
-	// StreamBuffer effect with small delay when no content
-	useEffect(() => {
-		if (!id) return;
-
-		// Update the streamBuffer's max chars per second when printSpeed changes
-		streamBufferRef.current.maxCharsPerSecond = printSpeed;
-
-		let isRunning = true;
-		let collectionTaskDone = false;
-
-		const updateDisplay = async () => {
-			while (isRunning) {
-				if (collectionTaskDone) {
-					break;
-				}
-
-				const chunk = streamBufferRef.current.getNextChunk();
-				if (chunk) {
-					await updateLastMessageChunk(chunk);
-				} else {
-					// Small delay only when no content to display
-					await new Promise(resolve => setTimeout(resolve, 50)); // 0.05 seconds
-				}
-
-				// Check if we've processed all content and streaming is complete
-				if (!streamBufferRef.current.hasMoreContent() && !isStreaming) {
-					collectionTaskDone = true;
-				}
-			}
-		};
-
-		// Start the update loop
-		updateDisplay();
-
-		return () => {
-			isRunning = false; // Stop the loop when component unmounts
-		};
-	}, [id, printSpeed, isStreaming]);
-
-	// Check for new chat data in localStorage or handle existing chat with no assistant response
-	useEffect(() => {
-		if (!chat || !id || isLoading || isStreaming) return;
+		if (!chat || !id || isStreaming) return;
 
 		// Only proceed if we're not already loading or streaming
 		(async () => {
@@ -281,10 +223,13 @@ export default function ChatView() {
 				// Set the selected bot
 				setSelectedBot(storedBot);
 
+				// Save to the format MessageInput expects
+				localStorage.setItem(`chat_${id}_selectedBot`, storedBot);
+
 				// Add user message to chat
 				await addMessageToChat(storedMessage, 'user');
 
-				// Add empty assistant message to start streaming into
+				// Add empty assistant message to start streaming
 				await addMessageToChat('', 'assistant');
 
 				// Start streaming the response
@@ -299,10 +244,104 @@ export default function ChatView() {
 				localStorage.removeItem(`newChat_${id}_bot`);
 			}
 		})();
-	}, [chat, id, isLoading, isStreaming]);
+	}, [chat, id, isStreaming]);
+
+	// Scroll to bottom when messages change
+	useEffect(() => {
+		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+	}, [chat?.messages]);
+
+
+	// Check for auto tool call
+	useEffect(() => {
+		if (isStreaming) return;
+		(async () => {
+			if (!toolInfoState.server || !toolInfoState.tool || !toolInfoState.arguments) return;
+			// Check if tool needs confirmation
+			if (!needsConfirmation(toolInfoState.server, toolInfoState.tool)) {
+				await handleToolConfirmation(
+					toolInfoState.server,
+					toolInfoState.tool,
+					toolInfoState.arguments
+				);
+			}
+			// Reset tool state
+			setToolInfoState({
+				plain_content: undefined,
+				server: undefined,
+				tool: undefined,
+				arguments: undefined
+			});
+		})();
+	}, [isStreaming]);
+
+	// Check for auto user message
+	useEffect(() => {
+		if (isStreaming) return;
+		(async () => {
+			// Check if tool needs confirmation
+			if (!toolResultState.content) return;
+			// Send tool result as user input
+			await handleUserMessage(toolResultState.content, { server: toolResultState.server });
+			// Reset tool result state
+			setToolResultState({ content: undefined, server: undefined });
+		})();
+
+	}, [isStreaming]);
+
+	// Handle tool information default display
+	useEffect(() => {
+		// Only proceed if we have messages and MCP servers data
+		if (!chat?.messages.length || !mcpServers) return;
+
+		// Create new state objects to update all at once
+		const newToolInfoState = { ...collapsedToolInfo };
+		const newToolResultsState = { ...collapsedToolResults };
+		let stateChanged = false;
+
+		// Process all messages with tool information
+		chat.messages.forEach(msg => {
+			// Only process assistant messages with tool info
+			if (msg.server) {
+				const messageId = msg.unix_timestamp.toString();
+
+				// Ensure tool info are always collapsed initially
+				if (newToolInfoState[messageId] !== true) {
+					newToolInfoState[messageId] = true; // Collapsed
+					stateChanged = true;
+				}
+
+				// Ensure tool results are always collapsed initially
+				if (newToolResultsState[messageId] !== true) {
+					newToolResultsState[messageId] = true; // Collapsed
+					stateChanged = true;
+				}
+			}
+		});
+
+		// Only update state if changes were made
+		if (stateChanged) {
+			setCollapsedToolInfo(newToolInfoState);
+			setCollapsedToolResult(newToolResultsState);
+		}
+	}, [chat?.messages, mcpServers]);
+
+
 
 	// Get the API utility for authenticated requests
 	const { getIdTokenClaims } = useAuth0();
+
+	// Function to handle stopping the stream
+	const handleStopGeneration = () => {
+		// Cancel the fetch request if it's active
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+			abortControllerRef.current = null;
+		}
+
+		// Set streaming to false
+		setIsStreaming(false);
+	};
 
 	// Function to stream response from API
 	const streamResponse = async (url: string, body: string) => {
@@ -310,11 +349,15 @@ export default function ChatView() {
 
 		setIsStreaming(true);
 
+		// Create a new AbortController for this request
+		abortControllerRef.current = new AbortController();
+		const signal = abortControllerRef.current.signal;
+
 		try {
 			// Get Auth0 token
 			const claims = await getIdTokenClaims();
 			if (!claims || !claims.__raw) {
-			throw new Error('Failed to get ID token');
+				throw new Error('Failed to get ID token');
 			}
 
 			const idToken = claims.__raw;
@@ -326,7 +369,8 @@ export default function ChatView() {
 					'Content-Type': 'application/json',
 					'Authorization': `Bearer ${idToken}`
 				},
-				body: body
+				body: body,
+				signal // Add the AbortController signal to make the request abortable
 			});
 
 			if (!response.ok) {
@@ -376,25 +420,43 @@ export default function ChatView() {
 								// Parse the JSON data
 								const parsedData = JSON.parse(data);
 
+								// Check for error messages in the response
+								if (parsedData.error) {
+									const errorMessage = `**Error:** ${parsedData.error.message || 'Unknown error occurred'}`;
+									await updateLastMessage(errorMessage);
+									// Cancel stream reading on error
+									reader.cancel();
+									break;
+								}
+
 								// Handle the new SSE data format
 								if (parsedData.choices && parsedData.choices[0]?.delta?.content) {
-									// Add content to the stream buffer
-									streamBufferRef.current.addContent(parsedData.choices[0].delta.content);
+									// Update the message directly with the new content
+									await updateLastMessageChunk(parsedData.choices[0].delta.content);
 								}
 
 								// Set model and provider info if not already set
 								const model = parsedData.model;
 								const provider = parsedData.provider;
-								await updateLastMessage('', undefined, {model, provider});
+								await updateLastMessage('', undefined, { model, provider });
 
-								// Assistant message set tool info
-								if (parsedData.tool) {
-									await updateLastMessage(parsedData.plainContent, undefined, {tool: parsedData.tool, server: parsedData.server, arguments: parsedData.arguments});
+								// Assistant message has tool info
+								if (parsedData.server) {
+									let plain_content = parsedData.plainContent;
+									let server = parsedData.server;
+									let tool = parsedData.tool;
+									let tool_args = parsedData.arguments;
+									await updateLastMessage(plain_content, 'assistant', {
+										server: server,
+										tool: tool,
+										arguments: tool_args
+									});
+									setToolInfoState({ plain_content: plain_content, server: server, tool: tool, arguments: tool_args });
 								}
 
-								// Check if user message appear
+								// Tool result
 								if (parsedData.role && parsedData.role === 'user') {
-									await handleUserMessage(parsedData.content, parsedData);
+									setToolResultState({ content: parsedData.content, server: parsedData.server });
 								}
 							} catch (e) {
 								console.error('Error parsing SSE data:', e);
@@ -439,29 +501,36 @@ export default function ChatView() {
 		}));
 	};
 
+	// Check if a tool requires confirmation based on the MCP server's need_confirm list
+	const needsConfirmation = (serverName: string, toolName: string): boolean => {
+		if (!mcpServers) return true; // Default to requiring confirmation if servers aren't loaded yet
+
+		const server = mcpServers.find(s => s.name === serverName);
+		if (!server) return true; // Default to requiring confirmation if server not found
+
+		// If need_confirm is null or empty array, no confirmation needed
+		if (!server.need_confirm || server.need_confirm.length === 0) {
+			return false;
+		}
+
+		// Check if the tool name is in the need_confirm list
+		return server.need_confirm.includes(toolName);
+	};
+
 	const handleUserMessage = async (messageContent: string,
 		additionalProps: Partial<Message> = {}
 	) => {
-		setIsLoading(true);
+		// Add user message to chat immediately
+		await addMessageToChat(messageContent, 'user', additionalProps);
+		// Add assistant message to chat immediately
+		await addMessageToChat('', 'assistant');
 
-		try {
-			// Add user message to chat immediately
-			await addMessageToChat(messageContent, 'user', additionalProps);
-			// Add assistant message to chat immediately
-			await addMessageToChat('', 'assistant');
-
-			await streamResponse(`/api/chat/completions`, JSON.stringify({
-				content: messageContent,
-				botName: selectedBot,
-				chatId: id,
-				tool: additionalProps ? additionalProps.tool : undefined
-			}));
-		} catch (error) {
-			console.error('Error sending message:', error);
-			// Handle error (could show a toast notification)
-		} finally {
-			setIsLoading(false);
-		}
+		await streamResponse(`/api/chat/completions`, JSON.stringify({
+			content: messageContent,
+			botName: selectedBot,
+			chatId: id,
+			server: additionalProps ? additionalProps.server : undefined
+		}));
 	}
 
 	// Handle sending a message
@@ -482,9 +551,8 @@ export default function ChatView() {
 
 	// Function to handle tool execution confirmation
 	const handleToolConfirmation = async (server?: string, tool?: string, tool_args?: any) => {
+		console.log("Handling tool confirmation");
 		if (!id) return;
-
-		await addMessageToChat('Tool calling ...', 'user', { server, tool, arguments: tool_args });
 
 		await streamResponse(`/api/tool/confirm`, JSON.stringify({
 			chatId: id,
@@ -510,10 +578,10 @@ export default function ChatView() {
 				{chat.messages.map((msg, index) => (
 					<div
 						key={`${msg.unix_timestamp}-${index}`}
-						className={`flex items-start space-x-4 ${msg.role === 'user' && !msg.tool ? 'flex-row-reverse space-x-reverse' : ''}`}
+						className={`flex items-start space-x-4 ${msg.role === 'user' && !msg.server ? 'flex-row-reverse space-x-reverse' : ''}`}
 					>
 						<div className="flex-shrink-0">
-							{msg.role === 'user' && !msg.tool ? (
+							{msg.role === 'user' && !msg.server ? (
 								<div className={`h-10 w-10 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} flex items-center justify-center`}>
 									<span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>U</span>
 								</div>
@@ -521,36 +589,36 @@ export default function ChatView() {
 								<AssistantAvatar model={msg.model} />
 							)}
 						</div>
-						<div className={`max-w-full flex-1 space-y-2 ${msg.role === 'user' && !msg.tool ? 'items-end' : 'items-start'}`}>
-							<div className={`group relative rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${msg.role === 'user' && !msg.tool
-									? 'bg-[#4285f4] text-white ml-auto'
-									: isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-50 text-gray-700'
+						<div className={`max-w-full flex-1 space-y-2 ${msg.role === 'user' && !msg.server ? 'items-end' : 'items-start'}`}>
+							<div className={`group relative rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${msg.role === 'user' && !msg.server
+								? 'bg-[#4285f4] text-white ml-auto'
+								: isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-50 text-gray-700'
 								}`}>
 								<CopyButton
 									content={typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2)}
 									isDarkMode={isDarkMode}
-									isRight={!!(msg.role === 'assistant' || msg.tool)}
+									isRight={!!(msg.role === 'assistant' || msg.server)}
 								/>
 								{/* assistant info */}
 								<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-2 sm:space-y-0">
 									<div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-										<span className="text-sm font-medium">{msg.role === 'user' && !msg.tool ? 'You' : 'Assistant'}</span>
+										<span className="text-sm font-medium">{msg.role === 'user' && !msg.server ? 'You' : 'Assistant'}</span>
 										<span className="text-xs opacity-75">
 											{new Date(msg.timestamp).toLocaleString()}
 										</span>
 										<div className="flex flex-wrap items-center gap-1">
 											{msg.model && (
-												<span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.tool
-														? 'bg-blue-400 text-white'
-														: isDarkMode ? 'bg-purple-900 text-purple-100' : 'bg-purple-100 text-purple-800'
+												<span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.server
+													? 'bg-blue-400 text-white'
+													: isDarkMode ? 'bg-purple-900 text-purple-100' : 'bg-purple-100 text-purple-800'
 													}`}>
 													{msg.model}
 												</span>
 											)}
 											{msg.provider && (
-												<span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.tool
-														? 'bg-blue-400 text-white'
-														: isDarkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
+												<span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${msg.role === 'user' && !msg.server
+													? 'bg-blue-400 text-white'
+													: isDarkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
 													}`}>
 													{msg.provider}
 												</span>
@@ -560,9 +628,9 @@ export default function ChatView() {
 								</div>
 								{/* reasoning content */}
 								{msg.reasoning_content && (
-									<div className={`mb-3 text-sm ${msg.role === 'user' && !msg.tool
-											? 'border-blue-400 text-blue-100'
-											: isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'
+									<div className={`mb-3 text-sm ${msg.role === 'user' && !msg.server
+										? 'border-blue-400 text-blue-100'
+										: isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'
 										}`}>
 										<button
 											onClick={() => toggleReasoning(msg.unix_timestamp.toString())}
@@ -586,8 +654,17 @@ export default function ChatView() {
 										)}
 									</div>
 								)}
+								{/* Loading animation for empty assistant message */}
+								{msg.role === 'assistant' && !msg.content && isStreaming && (
+									<div className="flex items-center space-x-3 h-8 my-2">
+										<span className="animate-pulse text-2xl font-bold">•</span>
+										<span className="animate-pulse text-2xl font-bold animation-delay-200">•</span>
+										<span className="animate-pulse text-2xl font-bold animation-delay-400">•</span>
+									</div>
+								)}
+
 								{/* content */}
-								{msg.role === 'user' && msg.tool ? (
+								{msg.role === 'user' && msg.server ? (
 									<div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
 										<button
 											onClick={() => toggleToolResult(msg.unix_timestamp.toString())}
@@ -620,10 +697,10 @@ export default function ChatView() {
 										)}
 									</div>
 								) : (
-								<CompactMarkdown
-									content={typeof msg.content === 'string' ? msg.content : ''}
-									className={msg.role === 'user' && !msg.tool ? 'prose-invert' : 'prose-gray'}
-								/>
+									<CompactMarkdown
+										content={typeof msg.content === 'string' ? msg.content : ''}
+										className={msg.role === 'user' && !msg.server ? 'prose-invert' : 'prose-gray'}
+									/>
 								)}
 								{/* Tool information */}
 								{msg.tool && msg.server && msg.arguments && msg.role === 'assistant' && (
@@ -660,26 +737,27 @@ export default function ChatView() {
 															: JSON.stringify(msg.arguments, null, 2)}
 													</pre>
 												</div>
-												{/* Only show approval buttons for the last assistant message */}
+												{/* Only show approval buttons for the last assistant message if tool needs confirmation */}
 												{index === chat.messages.length - 1 && msg.role === 'assistant' && (
-													<div className="flex space-x-3">
-														<button
-															onClick={() => handleToolConfirmation(msg.server, msg.tool, msg.arguments)}
-															className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
-														>
-															Approve
-														</button>
-														<button
-															onClick={() => handleUserMessage("cancel")}
-															className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-																isDarkMode
-																	? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-																	: 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-															}`}
-														>
-															Deny
-														</button>
-													</div>
+													needsConfirmation(msg.server, msg.tool) && (
+														<div className="flex space-x-3">
+															<button
+																onClick={() => handleToolConfirmation(msg.server, msg.tool, msg.arguments)}
+																className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+															>
+																Approve
+															</button>
+															<button
+																onClick={() => handleUserMessage("cancel")}
+																className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${isDarkMode
+																		? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+																		: 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+																	}`}
+															>
+																Deny
+															</button>
+														</div>
+													)
 												)}
 											</div>
 										)}
@@ -708,9 +786,10 @@ export default function ChatView() {
 				setMessage={setMessage}
 				selectedBot={selectedBot}
 				setSelectedBot={setSelectedBot}
-				isLoading={isLoading}
+				isLoading={isStreaming}
 				handleSubmit={handleSubmit}
 				isFixed={true} // Keep this input fixed at the bottom of the screen
+				onStop={handleStopGeneration} // Add onStop handler to cancel the request
 			/>
 		</div>
 	);

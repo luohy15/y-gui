@@ -12,6 +12,7 @@ interface MessageInputProps {
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   onSendMessage?: (content: string, botName: string) => void;
   isFixed?: boolean; // Controls whether the input is fixed at the bottom of the screen
+  onStop?: () => void; // Callback for stopping message generation
 }
 
 export default function MessageInput({
@@ -22,7 +23,8 @@ export default function MessageInput({
   isLoading,
   handleSubmit,
   onSendMessage,
-  isFixed = true // Default to fixed position for backward compatibility
+  isFixed = true, // Default to fixed position for backward compatibility
+  onStop
 }: MessageInputProps) {
   const { isDarkMode } = useTheme();
 
@@ -123,11 +125,12 @@ export default function MessageInput({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
+            disabled={isLoading}
             className={`flex-1 rounded-2xl py-4 pl-6 pr-16 ${
               isDarkMode
                 ? 'bg-gray-800 text-gray-200 placeholder-gray-500'
                 : 'bg-white text-gray-700 placeholder-gray-400'
-            } focus:outline-none appearance-none`}
+            } focus:outline-none appearance-none ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
             style={{
               WebkitAppearance: 'none',
               MozAppearance: 'none',
@@ -187,19 +190,21 @@ export default function MessageInput({
             </div>
 
             <button
-              type="submit"
-              disabled={isLoading || !message.trim() || !selectedBot}
+              type={isLoading ? "button" : "submit"}
+              onClick={isLoading && onStop ? onStop : undefined}
+              disabled={(!isLoading && (!message.trim() || !selectedBot))}
               className={`rounded-full p-2 ${
-                isLoading || !message.trim() || !selectedBot
+                !isLoading && (!message.trim() || !selectedBot)
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-[#4285f4] hover:bg-blue-600'
+                  : isLoading
+                    ? 'bg-gray-500 hover:bg-gray-600'
+                    : 'bg-[#4285f4] hover:bg-blue-600'
               } text-white focus:outline-none`}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center w-6 h-6">
-                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <rect x="5" y="5" width="10" height="10" />
                   </svg>
                 </span>
               ) : (
