@@ -2,6 +2,8 @@
 
 A web-based graphical interface for AI chat interactions with support for multiple AI models and MCP (Model Context Protocol) servers.
 
+Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
+
 ## ✨ Features
 
 - 💬 Interactive chat interface with AI models
