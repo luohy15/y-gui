@@ -8,8 +8,8 @@ export default function Login() {
   const { isDarkMode } = useTheme();
 
   return (
-    <div className={`min-h-screen flex flex-col justify-center py-16 px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-white text-gray-900'}`}>
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+    <div className={`min-h-screen flex flex-col items-center justify-center py-16 px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-white text-gray-900'}`}>
+      <div className="w-full max-w-md mx-auto">
 				{/* logo shoud be center */}
 				<div className='flex justify-center items-center'>
         	<Logo className='w-16 h-16' />
@@ -22,7 +22,7 @@ export default function Login() {
         </p>
       </div>
 
-      <div className="mt-10 sm:mx-auto w-full max-w-[90%] sm:max-w-[360px]">
+      <div className="mt-10 w-full max-w-[360px] mx-auto">
         <div className="flex flex-col space-y-4">
           {/* Demo Link */}
           <a
