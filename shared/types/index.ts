@@ -64,12 +64,12 @@ export interface BotConfig {
 
 export interface McpServerConfig {
   name: string;
-  command: string | null;
-  args: string[] | null;
-  env: Record<string, string> | null;
-  url: string | null;           // URL for the server
+  command?: string | null;
+  args?: string[] | null;
+  env?: Record<string, string> | null;
+  url?: string | null;           // URL for the server
   token?: string | null;        // Optional token for authentication
-  need_confirm: string[] | null; // List of tool names that require confirmation, if not specified or empty, no confirmation needed
+  need_confirm?: string[] | null; // List of tool names that require confirmation, if not specified or empty, no confirmation needed
 }
 
 export interface BotRepository {

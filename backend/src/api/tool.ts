@@ -4,11 +4,7 @@ import { BotR2Repository } from '../repository/bot-r2-repository';
 import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
 import { Message } from '../../../shared/types';
 import { createMessage } from 'src/utils/message';
-
-interface Env {
-  CHAT_KV: KVNamespace;
-  CHAT_R2: R2Bucket;
-}
+import { Env } from 'worker-configuration';
 
 /**
  * Handle tool execution confirmation
@@ -36,7 +32,7 @@ export async function handleToolConfirmation(request: Request, env: Env, userPre
     try {
       // Initialize repositories and MCP manager
       const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
-      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, userPrefix);
+      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
       const mcpManager = new McpManager(mcpServerRepository);
       
       // Get the bot config

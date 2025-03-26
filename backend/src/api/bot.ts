@@ -1,10 +1,7 @@
 import { BotConfig } from '../../../shared/types';
 import { corsHeaders } from '../middleware/cors';
 import { BotR2Repository } from '../repository/bot-r2-repository';
-
-interface Env {
-  CHAT_R2: R2Bucket;
-}
+import { Env } from 'worker-configuration';
 
 export async function handleBotRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
   const botRepo = new BotR2Repository(env.CHAT_R2, userPrefix);

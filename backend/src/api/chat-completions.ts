@@ -7,13 +7,7 @@ import { McpManager } from '../mcp/mcp-manager';
 import { ChatService } from '../serivce/chat';
 import { createMessage } from 'src/utils/message';
 import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
-
-interface Env {
-  CHAT_KV: KVNamespace;
-  CHAT_R2: R2Bucket;
-  OPENROUTER_BASE_URL: string;
-  OPENROUTER_FREE_KEY: string;
-}
+import { Env } from 'worker-configuration';
 
 /**
  * Handle the chat completions endpoint
@@ -42,7 +36,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
 
       // Get the bot config
       const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
-      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, userPrefix);
+      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
       const bots = await botRepository.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {

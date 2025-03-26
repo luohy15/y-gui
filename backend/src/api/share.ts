@@ -2,6 +2,7 @@ import { Chat } from '../../../shared/types';
 import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
 import { corsHeaders } from '../middleware/cors';
 import { v4 as uuidv4 } from 'uuid';
+import { Env } from 'worker-configuration';
 
 // Function to generate MD5 hash of chat messages
 async function generateChatContentHash(chat: Chat): Promise<string> {
@@ -17,11 +18,6 @@ async function generateChatContentHash(chat: Chat): Promise<string> {
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
   return hashHex;
-}
-
-interface Env {
-  CHAT_KV: KVNamespace;
-  CHAT_R2: R2Bucket;
 }
 
 export async function handleShareRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {

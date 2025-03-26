@@ -3,13 +3,7 @@ import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
 import { corsHeaders } from '../middleware/cors';
 import { handleChatCompletions } from './chat-completions';
 import { v4 as uuidv4 } from 'uuid';
-
-interface Env {
-  CHAT_KV: KVNamespace;
-  CHAT_R2: R2Bucket;
-  OPENROUTER_BASE_URL: string;
-  OPENROUTER_FREE_KEY: string;
-}
+import { Env } from 'worker-configuration';
 
 export async function handleChatsRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
   const chatRepository = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userPrefix);

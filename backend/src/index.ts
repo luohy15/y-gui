@@ -8,14 +8,7 @@ import { handleShareRequest } from './api/share';
 import { validateAuth, extractUserInfo, UserInfo } from './utils/auth';
 import { corsHeaders } from './middleware/cors';
 import { calculateUserPrefix } from './utils/user';
-
-interface Env {
-  CHAT_KV: KVNamespace;
-  CHAT_R2: R2Bucket;
-  ASSETS: { fetch: (request: Request) => Promise<Response> };
-  OPENROUTER_BASE_URL: string;
-  OPENROUTER_FREE_KEY: string;
-}
+import { Env } from './worker-configuration';
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {

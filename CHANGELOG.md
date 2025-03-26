@@ -2,7 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [03270159]
+
+### Added
+- Added default MCP server (amap) integration
+- Added MCP server support for bots (gemini-0324-flash and deepseek-0324)
+- Added MCP server information display in chat UI
+- Added environment configuration for AMAP_URL
+
+### Changed
+- Refactored environment configuration into worker-configuration.d.ts
+- Updated McpServerConfig type to make most fields optional
+- Improved McpServerR2Repository to include default servers
+- Enhanced Home component to display associated MCP servers for selected bot
+
+### Fixed
+- Fixed type definitions for environment variables
+
+## [03270105]
 
 ### Added
 - Added stop generation functionality with UI button to cancel ongoing requests

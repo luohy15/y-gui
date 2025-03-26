@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Chat, ListChatsResult } from '@shared/types';
+import { Chat, ListChatsResult, BotConfig, McpServerConfig } from '@shared/types';
 import { useAuthenticatedSWR, useApi } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -23,12 +23,21 @@ export default function Home({ }: HomeProps) {
   const [isCreatingChat, setIsCreatingChat] = React.useState(false);
   const [isNavigatingToNewChat, setIsNavigatingToNewChat] = React.useState(false);
   const [isProcessingMessage, setIsProcessingMessage] = React.useState(false);
+  const [currentMcpServers, setCurrentMcpServers] = React.useState<McpServerConfig[]>([]);
 
   const [currentPage, setCurrentPage] = React.useState(1);
 
 
   // Get the API utility for authenticated requests
   const api = useApi();
+
+  // Fetch bot configurations
+  const { data: botsData } = useAuthenticatedSWR<BotConfig[]>('/api/bots');
+  const bots = botsData || [];
+
+  // Fetch MCP server configurations
+  const { data: mcpServersData } = useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers');
+  const mcpServers = mcpServersData || [];
 
   // Handle creating a new chat with a message
   const handleNewChatWithMessage = async (content: string, botName: string) => {
@@ -48,9 +57,6 @@ export default function Home({ }: HomeProps) {
       localStorage.setItem(`newChat_${id}_bot`, botName);
 
       // The ChatView component will detect this and handle the streaming
-
-      // Refresh the chat list
-      mutate();
     } catch (error) {
       console.error('Error creating chat with message:', error);
     } finally {
@@ -60,94 +66,25 @@ export default function Home({ }: HomeProps) {
     }
   };
 
-  const { data, error, mutate } = useAuthenticatedSWR<ListChatsResult>(
-    `/api/chats?page=${currentPage}&limit=${limit}`,
-    {
-      onError: (err: any) => {
-        if (err.status === 401) {
-          console.log('Unauthorized');
-        }
+  // Update current MCP servers when selected bot changes
+  React.useEffect(() => {
+    if (selectedBot && bots.length > 0 && mcpServers.length > 0) {
+      // Find the selected bot
+      const bot = bots.find(b => b.name === selectedBot);
+
+      if (bot && bot.mcp_servers && bot.mcp_servers.length > 0) {
+        // Filter MCP servers that are associated with the selected bot
+        const botMcpServers = mcpServers.filter(server =>
+          bot.mcp_servers?.includes(server.name)
+        );
+        setCurrentMcpServers(botMcpServers);
+      } else {
+        setCurrentMcpServers([]);
       }
+    } else {
+      setCurrentMcpServers([]);
     }
-  );
-
-  if (error) {
-    return <div className={isDarkMode ? 'text-red-400' : 'text-red-500'}>Error loading chats</div>;
-  }
-
-  const chats = data?.chats || [];
-
-  // Split chats into pinned and recent (for now, just showing all as recent)
-  const pinnedChats: Chat[] = [];
-
-  const renderChatItem = (chat: Chat, isPinned = false) => (
-    <div
-      key={chat.id}
-      className={`chat-item block rounded-lg cursor-pointer transition-all duration-200 hover:translate-x-1 ${
-        isDarkMode
-          ? 'hover:bg-gray-800 border border-transparent hover:border-gray-700'
-          : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
-      }`}
-      onClick={() => navigate(`/chat/${chat.id}`)}
-    >
-      <div className="flex items-start space-x-4 min-w-0">
-        <div className="flex-shrink-0">
-          <AssistantAvatar model={chat.messages.length > 1 ? chat.messages[1].model : undefined} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'} truncate`}>
-              {chat.messages.length > 0
-                ? (typeof chat.messages[0].content === 'string'
-                   ? chat.messages[0].content.slice(0, 30)
-                   : 'Message content')
-                : 'New Chat'}
-            </p>
-            <div className="flex items-center">
-              {isPinned && (
-                <svg className="h-4 w-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              )}
-              <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                {new Date(chat.update_time).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-          <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
-            {chat.messages.length > 0
-              ? (typeof chat.messages[0].content === 'string'
-                 ? chat.messages[0].content.slice(0, 50) + (chat.messages[0].content.length > 50 ? '...' : '')
-                 : 'Message content')
-              : 'Start a new conversation...'}
-          </p>
-          <div className="mt-2 flex items-center space-x-2">
-            {chat.messages.length > 0 && chat.messages[0].model && (
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                isDarkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-              }`}>
-                {chat.messages[0].model}
-              </span>
-            )}
-            {chat.messages.length > 0 && chat.messages[0].provider && (
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                isDarkMode ? 'bg-purple-900 text-purple-100' : 'bg-purple-100 text-purple-800'
-              }`}>
-                {chat.messages[0].provider}
-              </span>
-            )}
-            {chat.messages.length === 0 && (
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-800'
-              }`}>
-                New
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  }, [selectedBot, bots, mcpServers]);
 
   return (
     <div className={`max-w-full flex flex-col h-full ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
@@ -172,6 +109,51 @@ export default function Home({ }: HomeProps) {
             />
           </div>
         </div>
+
+        {/* MCP Servers Information - Compact Version */}
+        {selectedBot && (
+          <div className={`w-full max-w-3xl mx-auto mt-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <div className={`rounded-lg p-3 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+              <div className="flex items-center text-sm mb-2">
+                <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>MCP Servers:</span>
+                <span className={`ml-1 font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{selectedBot}</span>
+              </div>
+
+              {currentMcpServers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {currentMcpServers.map((server) => (
+                    <div key={server.name} className={`rounded-md p-2 text-xs ${isDarkMode ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>
+                      <div className="flex flex-col">
+                        <span className={`font-medium truncate ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                          {server.name}
+                        </span>
+                        <div className={`text-xs mt-1 truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {server.command ? (
+                            <span className="flex items-center">
+                              <code className={`px-1 py-0.5 rounded text-xs truncate ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                                {server.command} {server.args?.join(' ')}
+                              </code>
+                            </span>
+                          ) : server.url ? (
+                            <span className="flex items-center">
+                              <code className={`px-1 py-0.5 rounded text-xs truncate ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                                {server.url}
+                              </code>
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  No MCP servers configured
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
