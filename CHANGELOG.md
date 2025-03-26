@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [03270536]
+
+### Added
+- Added MCP logging and status display in the header
+- Added new BotContext and McpContext providers for global state management
+- Added McpServerStatus component to display active MCP servers in the header
+- Added custom hook useMcpStatus for managing MCP status logs
+- Added error handling for empty responses from providers
+
+### Changed
+- Major refactoring of ChatView component into smaller, more maintainable components
+- Moved ChatView UI elements into separate components
+- Improved tool execution flow with better error handling
+- Updated bot configurations with new names and models
+- Simplified tool confirmation handling by removing chatId parameter
+- Restructured folder organization for Header and ChatView components
+
+### Fixed
+- Fixed inconsistent bot repository usage in tool confirmation API
+
 ## [03270159]
 
 ### Added

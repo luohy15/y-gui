@@ -1,14 +1,78 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useTheme } from '../contexts/ThemeContext';
-import Logo from './Logo';
-import SearchWindow from './SearchWindow';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useMcp } from '../../contexts/McpContext';
+import { useAuthenticatedSWR } from '../../utils/api';
+import { BotConfig } from '@shared/types';
+import Logo from '../Logo';
+import SearchWindow from '../SearchWindow';
+import McpServerStatus from './McpServerStatus';
 
 
 const Header: React.FC = () => {
 	const { logout, user, isAuthenticated } = useAuth0();
+	const { mcpServers, serverStatus } = useMcp();
 	const navigate = useNavigate();
+	const [selectedBot, setSelectedBot] = useState<string | null>(null);
+
+	// Get the current path
+	const currentPath = window.location.pathname;
+
+	// Get the localStorage key based on current path
+	const storageKey = currentPath === '/'
+		? 'home_page_selected_bot'
+		: `chat_${currentPath.split('/').pop()}_selectedBot`;
+
+	// Watch for changes in localStorage
+	useEffect(() => {
+		// Initial load
+		setSelectedBot(localStorage.getItem(storageKey));
+
+		// Create storage event listener
+		const handleStorageChange = (e: StorageEvent) => {
+			if (e.key === storageKey) {
+				setSelectedBot(e.newValue);
+			}
+		};
+
+		// Add event listener
+		window.addEventListener('storage', handleStorageChange);
+
+		// Cleanup
+		return () => {
+			window.removeEventListener('storage', handleStorageChange);
+		};
+	}, [storageKey]);
+
+	// Fetch bots data
+	const { data: botsData } = useAuthenticatedSWR<BotConfig[]>('/api/bots');
+
+	// Find the selected bot's configuration
+	const selectedBotConfig = botsData?.find(bot => bot.name === selectedBot);
+
+	// Filter MCP servers based on selected bot's configuration
+	const filteredMcpServers = React.useMemo(() => {
+		if (!selectedBotConfig || !mcpServers) return [];
+		return mcpServers.filter(server =>
+			selectedBotConfig.mcp_servers?.includes(server.name)
+		);
+	}, [selectedBotConfig, mcpServers]);
+
+	// Watch for direct changes to localStorage
+	useEffect(() => {
+		const checkLocalStorage = () => {
+			const currentValue = localStorage.getItem(storageKey);
+			if (currentValue !== selectedBot) {
+				setSelectedBot(currentValue);
+			}
+		};
+
+		// Check every 100ms for changes
+		const interval = setInterval(checkLocalStorage, 100);
+
+		return () => clearInterval(interval);
+	}, [storageKey, selectedBot]);
 	const location = useLocation();
 	const { isDarkMode, theme, setTheme } = useTheme();
 	const [showDropdown, setShowDropdown] = useState(false);
@@ -46,6 +110,35 @@ const Header: React.FC = () => {
 							<Logo />
 							<h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>y-mcp</h1>
 						</div>
+						{/* Mobile menu button */}
+						<button
+							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+							className="md:hidden"
+							aria-label="Toggle mobile menu"
+						>
+							<svg
+								className={`h-6 w-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								{mobileMenuOpen ? (
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M6 18L18 6M6 6l12 12"
+									/>
+								) : (
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M4 6h16M4 12h16M4 18h16"
+									/>
+								)}
+							</svg>
+						</button>
 					</div>
 
 					{/* Mobile menu - only visible when open */}
@@ -55,9 +148,30 @@ const Header: React.FC = () => {
 							className={`absolute top-16 left-0 right-0 z-50 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b shadow-lg md:hidden`}
 						>
 							<div className="px-4 py-3 space-y-2">
+								{/* MCP Status for mobile */}
+								{filteredMcpServers.length > 0 && (
+									<McpServerStatus
+										mcpServers={filteredMcpServers}
+										serverStatus={serverStatus}
+										isDarkMode={isDarkMode}
+									/>
+								)}
 							</div>
 						</div>
 					)}
+
+					{/* Center section with MCP Status */}
+					<div className="flex-1 flex justify-center px-4">
+						{filteredMcpServers.length > 0 && (
+							<div className="max-w-md w-full hidden md:block">
+								<McpServerStatus
+									mcpServers={filteredMcpServers}
+									serverStatus={serverStatus}
+									isDarkMode={isDarkMode}
+								/>
+							</div>
+						)}
+					</div>
 
 					{/* Right side icons and dropdown */}
 					<div className="flex items-center space-x-3">

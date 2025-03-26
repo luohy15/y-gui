@@ -56,6 +56,28 @@ export class ChatService {
         await writer.write(encoder.encode(`data: ${JSON.stringify(responseChunk)}\n\n`));
       }
 
+      // Check if any content was received before proceeding
+      if (!accumulatedContent.trim()) {
+        const errorResponse = {
+          error: {
+            message: 'No response content received from provider',
+            type: 'empty_response',
+            status: 500
+          }
+        };
+        await writer.write(encoder.encode(`data: ${JSON.stringify(errorResponse)}\n\n`));
+        
+        // Create error assistant message
+        const errorContent = `Error: No response content received from provider`;
+        const assistantErrorMessage: Message = createMessage('assistant', errorContent, {
+          model: 'error',
+          provider: 'system'
+        });
+        this.chat.messages.push(assistantErrorMessage);
+        await this.storage.saveChat(this.chat);
+        return;
+      }
+
       const assistantMessage: Message = createMessage('assistant', accumulatedContent, { model, provider });
       await this.processAssistantMessage(assistantMessage, writer);
       await this.storage.saveChat(this.chat);

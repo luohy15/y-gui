@@ -3,11 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import Home from './Home';
 import ChatView from './ChatView';
-import SharedChatView from './SharedChatView';
+import SharedChatView from './ChatView/SharedChatView';
 import Login from './Login';
 import { Settings } from './Settings/Settings';
-import Header from './Header';
+import Header from './Header/Header';
 import { ThemeProvider } from '../contexts/ThemeContext';
+import { McpProvider } from '../contexts/McpContext';
+import { BotProvider } from '../contexts/BotContext';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth0();
@@ -25,7 +27,9 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <McpProvider>
+        <BotProvider>
+        <BrowserRouter>
         {/* Public routes that don't require authentication */}
 
         {!isAuthenticated ? (
@@ -48,7 +52,9 @@ export default function App() {
             </div>
           </div>
         )}
-      </BrowserRouter>
+        </BrowserRouter>
+        </BotProvider>
+      </McpProvider>
     </ThemeProvider>
   );
 }

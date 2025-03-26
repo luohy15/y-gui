@@ -14,7 +14,6 @@ import { Env } from 'worker-configuration';
 export async function handleToolConfirmation(request: Request, env: Env, userPrefix?: string): Promise<Response> {
   // Parse request body
   interface ConfirmationRequest {
-    chatId: string;
     botName: string;
     server: string;
     tool: string;
@@ -22,7 +21,7 @@ export async function handleToolConfirmation(request: Request, env: Env, userPre
   }
   
   const confirmationData = await request.json() as ConfirmationRequest;
-  const { chatId, botName, server, tool, args } = confirmationData;
+  const { botName, server, tool, args } = confirmationData;
 
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -31,13 +30,12 @@ export async function handleToolConfirmation(request: Request, env: Env, userPre
   (async () => {
     try {
       // Initialize repositories and MCP manager
-      const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
       const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
       const mcpManager = new McpManager(mcpServerRepository);
       
       // Get the bot config
-      const configStorage = new BotR2Repository(env.CHAT_R2, userPrefix);
-      const bots = await configStorage.getBots();
+      const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
+      const bots = await botRepository.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {
         return new Response('Bot not found', { status: 404, headers: corsHeaders });

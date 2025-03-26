@@ -6,8 +6,8 @@ import { BotConfig } from '@shared/types';
 interface MessageInputProps {
   message: string;
   setMessage: React.Dispatch<React.SetStateAction<string>>;
-  selectedBot: string;
-  setSelectedBot: React.Dispatch<React.SetStateAction<string>>;
+  selectedBot: string | undefined;
+  setSelectedBot: React.Dispatch<React.SetStateAction<string | undefined>>;
   isLoading: boolean;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   onSendMessage?: (content: string, botName: string) => void;
@@ -36,22 +36,19 @@ export default function MessageInput({
   // Set default bot to first in the array if not already selected
   // Or load from localStorage if available
   React.useEffect(() => {
-    // Get the current chat ID from URL
-    const chatId = window.location.pathname.split('/').pop();
+    // Get the current path
+    const currentPath = window.location.pathname;
 
-    if (chatId) {
-      // Try to get the selected bot from localStorage for this chat
-      const savedBot = localStorage.getItem(`chat_${chatId}_selectedBot`);
+    // Try to get the selected bot from localStorage
+    const savedBot = currentPath === '/'
+      ? localStorage.getItem('home_page_selected_bot')  // Special key for home page
+      : localStorage.getItem(`chat_${currentPath.split('/').pop()}_selectedBot`);  // Chat-specific key
 
-      if (savedBot) {
-        // If we have a saved bot for this chat, use it
-        setSelectedBot(savedBot);
-      } else if (bots.length > 0) {
-        // Otherwise use the first bot in the list
-        setSelectedBot(bots[0].name);
-      }
+    if (savedBot) {
+      // If we have a saved bot, use it
+      setSelectedBot(savedBot);
     } else if (bots.length > 0) {
-      // If no chat ID (unlikely), fall back to first bot
+      // Otherwise use the first bot in the list
       setSelectedBot(bots[0].name);
     }
   }, [bots, setSelectedBot]); // Removed selectedBot from dependencies to prevent infinite loop
@@ -59,12 +56,14 @@ export default function MessageInput({
   // Save selected bot to localStorage whenever it changes
   React.useEffect(() => {
     if (selectedBot) {
-      // Get the current chat ID from URL
-      const chatId = window.location.pathname.split('/').pop();
+      // Get the current path
+      const currentPath = window.location.pathname;
 
-      if (chatId) {
-        // Save the selected bot for this chat
-        localStorage.setItem(`chat_${chatId}_selectedBot`, selectedBot);
+      // Save the selected bot
+      if (currentPath === '/') {
+        localStorage.setItem('home_page_selected_bot', selectedBot);  // Special key for home page
+      } else {
+        localStorage.setItem(`chat_${currentPath.split('/').pop()}_selectedBot`, selectedBot);  // Chat-specific key
       }
     }
   }, [selectedBot]);
@@ -74,7 +73,7 @@ export default function MessageInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      if (message.trim() && selectedBot) {
+      if (message.trim() && selectedBot !== undefined) {
         onSubmit(e as unknown as React.FormEvent);
       }
     }
@@ -84,12 +83,12 @@ export default function MessageInput({
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!message.trim() || !selectedBot) {
+    if (!message.trim() || selectedBot === undefined) {
       return;
     }
 
     if (onSendMessage) {
-      onSendMessage(message, selectedBot);
+            onSendMessage(message, selectedBot || '');
       setMessage('');
       return;
     }

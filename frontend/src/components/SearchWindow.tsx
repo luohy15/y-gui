@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Chat, ListChatsResult } from '@shared/types';
 import { useAuthenticatedSWR } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
-import AssistantAvatar from './AssistantAvatar';
+import AssistantAvatar from './ChatView/AssistantAvatar';
 
 interface SearchWindowProps {
   isOpen: boolean;
