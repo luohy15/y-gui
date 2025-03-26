@@ -275,7 +275,6 @@ export class OpenAIFormatProvider implements BaseProvider {
           const timeoutError = error as OpenRouterError;
           timeoutError.type = 'timeout_error';
           timeoutError.status = 408;
-          timeoutError.message = 'Request timeout: The AI provider took too long to respond (>10s)';
           throw timeoutError;
         }
         // If it's already an OpenRouterError, re-throw it
