@@ -4,6 +4,7 @@ import { useAuthenticatedSWR, useApi } from '../../utils/api';
 import { McpServerFormModal } from './McpServerForm';
 import { ConfirmationDialog } from './Confirm';
 import { ActionMenu } from './ActionMenu';
+import { useMcp } from '../../contexts/McpContext';
 
 interface McpServerSectionProps {
   isDarkMode: boolean;
@@ -28,6 +29,9 @@ export const McpServerSection: React.FC<McpServerSectionProps> = ({
 
   // API functions
   const api = useApi();
+
+  // Get MCP context
+  const mcpContext = useMcp();
 
   // Fetch configurations using authenticated SWR
   const { data: mcpServers, error: mcpError, isLoading: mcpLoading, mutate: mutateMcpServers } =
@@ -124,6 +128,26 @@ export const McpServerSection: React.FC<McpServerSectionProps> = ({
       </div>
 
       <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-6 text-sm md:text-base`}>Manage your MCP server configurations</p>
+
+      {/* MCP Logs Display Settings */}
+      <div className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'} border rounded-lg overflow-hidden mb-6 p-4`}>
+        <h3 className={`font-medium mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>MCP Logs Display</h3>
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="showMcpLogs"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+            checked={mcpContext.showMcpLogs}
+            onChange={(e) => mcpContext.setShowMcpLogs(e.target.checked)}
+          />
+          <label htmlFor="showMcpLogs" className={`ml-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            Show MCP server logs in chat view
+          </label>
+        </div>
+        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+          When enabled, MCP server status logs will be displayed in the chat interface when MCP tools are used
+        </p>
+      </div>
 
       <div className={`${isDarkMode ? 'bg-[#1a1a1a] border-gray-700' : 'bg-white border-gray-200'} border rounded-lg overflow-hidden`}>
         {mcpLoading ? (

@@ -9,6 +9,7 @@ import { writeMcpStatus } from '../utils/writer';
  * Manager for MCP server connections and tool execution
  */
 export class McpManager {
+  // Store any active connections (will be short-lived in Cloudflare Workers due to stateless nature)
   private sessions: Record<string, Client> = {};
 
   /**
@@ -18,109 +19,128 @@ export class McpManager {
   constructor(private mcpServerConfigRepository: McpServerRepository) {}
   
   /**
-   * Connect to specified MCP servers or all if no names provided
-   * @param serverNames Optional list of server names to connect to
-   * @returns Promise resolving when connections are established
+   * Disconnect all MCP server sessions
+   * @returns Promise resolving when all disconnections are complete
    */
-  async connectToServers(serverNames?: string[], writer?: WritableStreamDefaultWriter): Promise<void> {
+  private async disconnectAll(): Promise<void> {
+    for (const [name, client] of Object.entries(this.sessions)) {
+      try {
+        await client.close();
+        console.log(`Disconnected from MCP server: ${name}`);
+      } catch (err) {
+        console.error(`Error disconnecting from ${name}:`, err);
+      }
+    }
+    this.sessions = {};
+  }
+  
+  /**
+   * Disconnect a specific MCP server session
+   * @param serverName Name of the MCP server to disconnect
+   * @returns Promise resolving when disconnection is complete
+   */
+  private async disconnectServer(serverName: string): Promise<void> {
+    if (this.sessions[serverName]) {
+      try {
+        await this.sessions[serverName].close();
+        console.log(`Disconnected from MCP server: ${serverName}`);
+        delete this.sessions[serverName];
+      } catch (err) {
+        console.error(`Error disconnecting from ${serverName}:`, err);
+      }
+    }
+  }
+  
+  /**
+   * Connect to a specific MCP server on-demand (just-in-time)
+   * @param serverName Name of the MCP server to connect to
+   * @param writer Optional writer for status updates
+   * @returns Promise resolving to the connected client or null if connection fails
+   */
+  private async connectOnDemand(serverName: string, writer?: WritableStreamDefaultWriter): Promise<Client | null> {
+    // First disconnect any existing connections to ensure we only have one active connection
+    await this.disconnectAll();
+    
     try {
       const mcpServers = await this.mcpServerConfigRepository.getMcpServers();
+      const server = mcpServers.find(s => s.name === serverName);
       
-      // Filter servers by name if serverNames is provided
-      const serversToConnect = serverNames 
-        ? mcpServers.filter(server => serverNames.includes(server.name))
-        : [];
+      if (!server) {
+        console.error(`MCP server '${serverName}' not found in configuration`);
+        await writeMcpStatus(writer, "error", `MCP server '${serverName}' not found`, serverName);
+        return null;
+      }
       
-      const serverList = serversToConnect.map(s => s.name).join(', ');
-      await writeMcpStatus(writer, "connecting", `Connecting to MCP servers: ${serverList || 'None configured'}`);
-      
-      // Connect to each server that's not already connected
-      for (const server of serversToConnect) {
-        // Skip if already connected
-        if (this.sessions[server.name]) {
-          console.log(`MCP server '${server.name}' already connected`);
-          continue;
-        }
-        
-        try {
-          if (!server.url) {
-            console.error(`Error connecting to MCP server ${server.name}: No URL provided`);
-            await writeMcpStatus(writer, "error", `Failed to connect to ${server.name}: No URL provided`, server.name);
-            continue;
-          }
-
-          // Create a URL from the server configuration
-          const serverUrl = new URL(server.url);
-          // Create transport with token if available
-          const transportOptions = {
-            eventSourceInit: {
-              fetch: (input: string | URL, init?: FetchLikeInit) => {
-                if (init) {
-                  init.mode = undefined;
-                  init.cache = undefined;
-                }
-                if (server.token) {
-                  if (!init) {
-                    init = {};
-                  }
-                  if (!init.headers) {
-                    init.headers = {};
-                  }
-                  init.headers["Authorization"] = `Bearer ${server.token}`;
-                }
-                return fetch(input, init as RequestInit);
-              }
-            }
-          }
-        
-          const transport = new SSEClientTransport(serverUrl, transportOptions);
-
-          const client = new Client(
-            {
-              name: "example-client",
-              version: "1.0.0"
-            },
-            {
-              capabilities: {
-                prompts: {},
-                resources: {},
-                tools: {}
-              }
-            }
-          );
-          
-          // Connect with timeout
-          await Promise.race([
-            client.connect(transport),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error(`Connection timeout for ${server.name}`)), 5000)
-            )
-          ]);
-          
-          this.sessions[server.name] = client;
-          await writeMcpStatus(writer, "connected", `Connected to MCP server: ${server.name}`, server.name);
-          console.log(`Connected to MCP server: ${server.name}`);
-        } catch (error) {
-          console.error(`Failed to connect to MCP server ${server.name}:`, error);
-          await writeMcpStatus(
-            writer, 
-            "error", 
-            `Failed to connect to ${server.name}: ${error instanceof Error ? error.message : String(error)}`,
-            server.name
-          );
-        }
+      if (!server.url) {
+        console.error(`Error connecting to MCP server ${serverName}: No URL provided`);
+        await writeMcpStatus(writer, "error", `Failed to connect to ${serverName}: No URL provided`, serverName);
+        return null;
       }
 
-      // Final connection status summary
-      const connectedServers = Object.keys(this.sessions).join(', ');
-      await writeMcpStatus(writer, "summary", `Connected MCP servers: ${connectedServers || 'None'}`);
+      await writeMcpStatus(writer, "connecting", `Connecting to MCP server: ${serverName}`, serverName);
+
+      // Create a URL from the server configuration
+      const serverUrl = new URL(server.url);
+      // Create transport with token if available
+      const transportOptions = {
+        eventSourceInit: {
+          fetch: (input: string | URL, init?: FetchLikeInit) => {
+            if (init) {
+              init.mode = undefined;
+              init.cache = undefined;
+            }
+            if (server.token) {
+              if (!init) {
+                init = {};
+              }
+              if (!init.headers) {
+                init.headers = {};
+              }
+              init.headers["Authorization"] = `Bearer ${server.token}`;
+            }
+            return fetch(input, init as RequestInit);
+          }
+        }
+      };
+    
+      const transport = new SSEClientTransport(serverUrl, transportOptions);
+
+      const client = new Client(
+        {
+          name: "example-client",
+          version: "1.0.0"
+        },
+        {
+          capabilities: {
+            prompts: {},
+            resources: {},
+            tools: {}
+          }
+        }
+      );
+      
+      // Connect with timeout
+      await Promise.race([
+        client.connect(transport),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Connection timeout for ${serverName}`)), 5000)
+        )
+      ]);
+      
+      this.sessions[serverName] = client;
+      await writeMcpStatus(writer, "connected", `Connected to MCP server: ${serverName}`, serverName);
+      console.log(`Connected to MCP server: ${serverName}`);
+      
+      return client;
     } catch (error) {
-      console.error(`Error connecting to MCP servers:`, error);
+      console.error(`Failed to connect to MCP server ${serverName}:`, error);
       await writeMcpStatus(
         writer, 
         "error", 
-        `Error connecting to MCP servers: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to connect to ${serverName}: ${error instanceof Error ? error.message : String(error)}`,
+        serverName
       );
+      return null;
     }
   }
   
@@ -128,86 +148,94 @@ export class McpManager {
    * Format MCP server information for the system prompt
    * @returns Formatted server information string
    */
-  async format_server_info(writer?: WritableStreamDefaultWriter): Promise<string> {
-    if (Object.keys(this.sessions).length === 0) {
-      await writeMcpStatus(writer, "info", "No MCP servers currently connected");
-      return "(No MCP servers currently connected)";
-    }
-
-    const serverSections = [];
-
-    for (const [serverName, client] of Object.entries(this.sessions)) {
-      let toolsSection = "";
-
-      try {
-        await writeMcpStatus(writer, "info", `Getting tools from ${serverName}...`, serverName);
-        
-        // Get and format tools section with timeout
-        const toolsResponse = await Promise.race([
-          client.listTools(),
-          new Promise<null>((_, reject) => 
-            setTimeout(() => reject(new Error(`Timeout listing tools for ${serverName}`)), 5000)
-          )
-        ]);
-
-        if (toolsResponse && toolsResponse.tools && toolsResponse.tools.length > 0) {
-          const tools = [];
-          for (const tool of toolsResponse.tools) {
-            let schemaStr = "";
-            if (tool.inputSchema) {
-              const schemaJson = JSON.stringify(tool.inputSchema, null, 2);
-              const schemaLines = schemaJson.split("\n");
-              schemaStr = "\n    Input Schema:\n    " + schemaLines.join("\n    ");
-            }
-            tools.push(`- ${tool.name}: ${tool.description}${schemaStr}`);
-          }
-          toolsSection = "\n\n### Available Tools\n" + tools.join("\n\n");
-          
-          await writeMcpStatus(writer, "info", `Found ${toolsResponse.tools.length} tools in ${serverName}`, serverName);
-        } else {
-          await writeMcpStatus(writer, "info", `No tools found in ${serverName}`, serverName);
-        }
-      } catch (error) {
-        console.error(`Error listing tools for ${serverName}:`, error);
-        await writeMcpStatus(
-          writer, 
-          "error", 
-          `Error listing tools for ${serverName}: ${error instanceof Error ? error.message : String(error)}`,
-          serverName
-        );
+  async format_server_info(mcp_servers?: string[], writer?: WritableStreamDefaultWriter): Promise<string> {
+    try {
+      // Get the list of configured MCP servers
+      let mcpServers = await this.mcpServerConfigRepository.getMcpServers();
+      
+      if (mcpServers.length === 0) {
+        await writeMcpStatus(writer, "info", "No MCP servers configured");
+        return "(No MCP servers configured)";
       }
 
-      // Combine all sections
-      const serverSection = `## ${serverName}${toolsSection}`;
-      serverSections.push(serverSection);
-    }
-
-    return serverSections.join("\n\n");
-  }
-
-  /**
-   * Initialize MCP servers for a specific bot
-   * @param bot The bot to initialize MCP servers for
-   * @returns Promise resolving when connections are established
-   */
-  async initMcpServersForBot(bot: BotConfig, writer?: WritableStreamDefaultWriter): Promise<void> {
-    try {
-      // If the bot has mcp_servers property, use those servers
-      // Otherwise, connect to all available servers
-      const serverNames = bot.mcp_servers;
-      console.log(`Initializing MCP servers for bot: ${bot.name} ${serverNames}`);
+      // Filter servers if specified
+      if (mcp_servers && mcp_servers.length > 0) {
+        mcpServers = mcpServers.filter(s => mcp_servers.includes(s.name));
+      } else {
+        await writeMcpStatus(writer, "info", "No MCP servers configured");
+        return "(No MCP servers configured)";
+      }
       
-      // Connect to the specified servers
-      await this.connectToServers(serverNames, writer);
+      const serverSections = [];
       
-      console.log(`Initialized MCP servers for bot: ${bot.name}`);
+      // In Cloudflare Workers (stateless environment), we always use on-demand connections
+      // Connect to each server one at a time, get tools, then disconnect
+      for (const server of mcpServers) {
+        let toolsSection = "";
+        const serverName = server.name;
+        
+        try {
+          // Connect to this server
+          await writeMcpStatus(writer, "info", `Connecting to ${serverName} to list tools...`, serverName);
+          const client = await this.connectOnDemand(serverName, writer);
+          
+          if (!client) {
+            await writeMcpStatus(writer, "error", `Failed to connect to ${serverName} to list tools`, serverName);
+            serverSections.push(`## ${serverName}\n\n(Could not connect to server)`);
+            continue;
+          }
+          
+          await writeMcpStatus(writer, "info", `Getting tools from ${serverName}...`, serverName);
+          
+          // Get and format tools section with timeout
+          const toolsResponse = await Promise.race([
+            client.listTools(),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error(`Timeout listing tools for ${serverName}`)), 5000)
+            )
+          ]);
+
+          if (toolsResponse && toolsResponse.tools && toolsResponse.tools.length > 0) {
+            const tools = [];
+            for (const tool of toolsResponse.tools) {
+              let schemaStr = "";
+              if (tool.inputSchema) {
+                const schemaJson = JSON.stringify(tool.inputSchema, null, 2);
+                const schemaLines = schemaJson.split("\n");
+                schemaStr = "\n    Input Schema:\n    " + schemaLines.join("\n    ");
+              }
+              tools.push(`- ${tool.name}: ${tool.description}${schemaStr}`);
+            }
+            toolsSection = "\n\n### Available Tools\n" + tools.join("\n\n");
+            
+            await writeMcpStatus(writer, "info", `Found ${toolsResponse.tools.length} tools in ${serverName}`, serverName);
+          } else {
+            await writeMcpStatus(writer, "info", `No tools found in ${serverName}`, serverName);
+          }
+          
+          // Disconnect from this server before moving to the next one
+          await this.disconnectServer(serverName);
+          
+        } catch (error) {
+          console.error(`Error listing tools for ${serverName}:`, error);
+          await writeMcpStatus(
+            writer, 
+            "error", 
+            `Error listing tools for ${serverName}: ${error instanceof Error ? error.message : String(error)}`,
+            serverName
+          );
+        }
+
+        // Combine all sections
+        const serverSection = `## ${serverName}${toolsSection}`;
+        serverSections.push(serverSection);
+      }
+      
+      return serverSections.join("\n\n");
     } catch (error) {
-      console.error(`Error initializing MCP servers for bot ${bot.name}:`, error);
-      await writeMcpStatus(
-        writer, 
-        "error", 
-        `Error initializing MCP servers for bot ${bot.name}: ${error instanceof Error ? error.message : String(error)}`
-      );
+      console.error("Error formatting server info:", error);
+      await writeMcpStatus(writer, "error", `Error retrieving MCP server information: ${error instanceof Error ? error.message : String(error)}`);
+      return "(Error retrieving MCP server information)";
     }
   }
   
@@ -220,19 +248,16 @@ export class McpManager {
    */
   async executeTool(serverName: string, toolName: string, args: any): Promise<string> {
     try {
-      // Check if we have an active session for this server
-      if (!this.sessions[serverName]) {
-        // Try to connect to the server if not already connected
-        await this.connectToServers([serverName]);
-        
-        // If still not connected, return error
-        if (!this.sessions[serverName]) {
-          return `Error: MCP server '${serverName}' not found or could not connect`;
-        }
+      let client: Client | null = null;
+      
+      // Connect on-demand (always just-in-time in Cloudflare Workers)
+      client = await this.connectOnDemand(serverName);
+      if (!client) {
+        return `Error: Could not establish connection to MCP server '${serverName}'`;
       }
       
       // Execute the tool using the client
-      const response = await this.sessions[serverName].callTool({
+      const response = await client.callTool({
         name: toolName,
         arguments: args
       });
@@ -247,9 +272,16 @@ export class McpManager {
         }
       }
       
+      // Always disconnect after use in Cloudflare Workers (stateless environment)
+      await this.disconnectServer(serverName);
+      
       return result || "Tool execution completed successfully";
     } catch (error) {
       console.error(`Error executing MCP tool:`, error);
+      
+      // Always clean up connection in Cloudflare Workers (stateless environment)
+      await this.disconnectServer(serverName);
+      
       return `Error executing MCP tool: ${error instanceof Error ? error.message : String(error)}`;
     }
   }

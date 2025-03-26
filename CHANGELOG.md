@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [03270735]
+
+### Added
+- Added automatic disconnection of MCP servers after use in Cloudflare Workers environment
+- Added on-demand/just-in-time connection strategy for MCP servers
+- Added showMcpLogs setting with localStorage persistence
+- Added UI toggle for showing/hiding MCP logs in Settings
+- Added auto-scrolling to MCP logs display when near bottom
+
+### Changed
+- Refactored MCP Manager to optimize for stateless Cloudflare Workers environment
+- Replaced persistent connections with on-demand connection strategy
+- Increased MCP logs display size for better visibility
+- Improved MCP logs display behavior with clear rounds of operations
+- Modified getSystemPrompt to accept specific mcp_servers parameter
+- Improved assistant message handling with default text for empty messages
+- Enhanced Header component to better display MCP server status
+- Improved error handling and resource cleanup in executeTool method
+
+### Fixed
+- Fixed potential resource leaks by ensuring MCP connections are closed after use
+- Fixed UI inconsistencies in the Header's MCP server status display
+
 ## [03270536]
 
 ### Added

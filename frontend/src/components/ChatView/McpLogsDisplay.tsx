@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useMcp } from '../../contexts/McpContext';
 
 interface McpLog {
   status: "connecting" | "connected" | "error" | "info" | "summary";
@@ -14,7 +15,10 @@ interface McpLogsDisplayProps {
 }
 
 export default function McpLogsDisplay({ logs, isVisible, onClose, isDarkMode }: McpLogsDisplayProps) {
-  if (!isVisible) return null;
+  const { showMcpLogs } = useMcp();
+
+  // Don't show logs if either isVisible is false or showMcpLogs is false
+  if (!isVisible || !showMcpLogs) return null;
 
   const statusEmoji: Record<McpLog['status'], string> = {
     "connecting": "🔄",
@@ -24,8 +28,21 @@ export default function McpLogsDisplay({ logs, isVisible, onClose, isDarkMode }:
     "summary": "📊"
   };
 
+  const logsContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (logsContainerRef.current) {
+      const container = logsContainerRef.current;
+      // Only autoscroll if user is already near the bottom (within 100px)
+      const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
+      if (isNearBottom) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+  }, [logs]); // Re-run when logs change
+
   return (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-80 h-64">
+    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[32rem] h-[32rem]">
       <div className={`relative w-full h-full rounded-lg shadow-lg overflow-hidden ${
         isDarkMode ? 'bg-gray-800' : 'bg-white'
       }`}>
@@ -62,9 +79,12 @@ export default function McpLogsDisplay({ logs, isVisible, onClose, isDarkMode }:
           </div>
         </div>
 
-        <div className={`absolute top-10 bottom-0 left-0 right-0 overflow-y-auto p-2 ${
-          isDarkMode ? 'bg-gray-800' : 'bg-white'
-        }`}>
+        <div
+          ref={logsContainerRef}
+          className={`absolute top-10 bottom-0 left-0 right-0 overflow-y-auto p-2 ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}
+        >
           {logs.map((log, index) => (
             <div
               key={index}

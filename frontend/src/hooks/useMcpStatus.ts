@@ -16,15 +16,24 @@ export interface ServerStatus {
 export function useMcpStatus() {
   const [mcpLogs, setMcpLogs] = useState<McpLog[]>([]);
   const [isLogVisible, setIsLogVisible] = useState(false);
-  const [hasRealContent, setHasRealContent] = useState(false);
+  const [newRound, setNewRound] = useState(false);
   const { serverStatus, setServerStatus } = useMcp();
 
   const handleMcpStatus = (status: string, server: string, message: string, isRealContent?: boolean) => {
-    // Reset hasRealContent when a new MCP status comes in
-    if (!isRealContent) {
-      setHasRealContent(false);
-    }
     const timestamp = new Date().toLocaleTimeString();
+
+    // Detect the start of a new round when connecting status appears
+    if (status === "connecting" && !newRound) {
+      setNewRound(true);
+      setMcpLogs([]); // Clear previous logs for new round
+      setIsLogVisible(true); // Always show logs at start of round
+    }
+
+    // Close logs if real content is detected
+    if (isRealContent) {
+			setIsLogVisible(false);
+			setNewRound(false);
+    }
 
     // Update server status in global context
 		if (status !== "info" && status !== "summary") {
@@ -47,13 +56,6 @@ export function useMcpStatus() {
       timestamp
     }]);
 
-    // Show log area when new message arrives, but close it if real content is coming
-    if (isRealContent) {
-      setHasRealContent(true);
-      setIsLogVisible(false);
-    } else if (!hasRealContent) {
-      setIsLogVisible(true);
-    }
   };
 
   const closeLog = () => {
@@ -71,7 +73,6 @@ export function useMcpStatus() {
     handleMcpStatus,
     closeLog,
     clearLogs,
-    setIsLogVisible,
-    setHasRealContent
+    setIsLogVisible
   };
 }

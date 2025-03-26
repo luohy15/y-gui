@@ -172,7 +172,6 @@ export class OpenAIFormatProvider implements BaseProvider {
     const baseUrl = this.botConfig.base_url;
     const apiPath = this.botConfig.custom_api_path || '/chat/completions';
     
-    // Set up timeout handling
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 

@@ -23,8 +23,7 @@ export class ChatService {
 
   async initializeChat(writer?: WritableStreamDefaultWriter) {
     this.chat = await this.storage.getOrCreateChat(this.chatId);
-    await this.mcpManager.initMcpServersForBot(this.botConfig, writer);
-    this.systemPrompt = await getSystemPrompt(this.mcpManager, writer);
+    this.systemPrompt = await getSystemPrompt(this.mcpManager, this.botConfig.mcp_servers, writer);
   }
 
   async processUserMessage(userMessage: Message, writer: WritableStreamDefaultWriter) {
@@ -133,7 +132,8 @@ export class ChatService {
     const [plainContent, toolContent] = splitContent(content);
 
     // Update the assistant message with only the plain text part
-    assistantMessage.content = plainContent;
+    // If plainContent is blank, use default text
+    assistantMessage.content = plainContent.trim() ? plainContent : "I'll execute this operation for you.";
 
     // Reuse the existing mcpManager instance for tool execution
     const mcpTool = extractMcpToolUse(toolContent!);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { McpServerConfig } from '@shared/types';
 import { useAuthenticatedSWR } from '../utils/api';
 
@@ -12,12 +12,24 @@ interface McpContextType {
   mcpServers: McpServerConfig[] | undefined;
   serverStatus: Record<string, ServerStatus>;
   setServerStatus: React.Dispatch<React.SetStateAction<Record<string, ServerStatus>>>;
+  showMcpLogs: boolean;
+  setShowMcpLogs: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const McpContext = createContext<McpContextType | undefined>(undefined);
 
 export function McpProvider({ children }: { children: React.ReactNode }) {
   const [serverStatus, setServerStatus] = useState<Record<string, ServerStatus>>({});
+  const [showMcpLogs, setShowMcpLogs] = useState<boolean>(() => {
+    // Initialize from localStorage or default to true
+    const saved = localStorage.getItem('showMcpLogs');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  // Save to localStorage whenever the value changes
+  useEffect(() => {
+    localStorage.setItem('showMcpLogs', showMcpLogs.toString());
+  }, [showMcpLogs]);
 
   const { data: mcpServers } = useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers', {
     revalidateOnFocus: false,
@@ -27,7 +39,7 @@ export function McpProvider({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <McpContext.Provider value={{ mcpServers, serverStatus, setServerStatus }}>
+    <McpContext.Provider value={{ mcpServers, serverStatus, setServerStatus, showMcpLogs, setShowMcpLogs }}>
       {children}
     </McpContext.Provider>
   );

@@ -163,7 +163,7 @@ const Header: React.FC = () => {
 					{/* Center section with MCP Status */}
 					<div className="flex-1 flex justify-center px-4">
 						{filteredMcpServers.length > 0 && (
-							<div className="max-w-md w-full hidden md:block">
+							<div className="max-w-md w-full hidden md:flex md:flex-row md:items-center md:justify-center">
 								<McpServerStatus
 									mcpServers={filteredMcpServers}
 									serverStatus={serverStatus}
