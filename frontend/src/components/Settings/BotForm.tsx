@@ -31,10 +31,15 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 	);
 	const [error, setError] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [showCustomKey, setShowCustomKey] = useState(false);
+	const [showOptionalFields, setShowOptionalFields] = useState(false);
 
 	useEffect(() => {
 		if (initialBot) {
 			setFormData(initialBot);
+			// Set the checkbox states based on initial values
+			setShowCustomKey(!!(initialBot.base_url || initialBot.api_key));
+			setShowOptionalFields(!!(initialBot.api_type || initialBot.custom_api_path || initialBot.max_tokens || initialBot.print_speed !== 1000));
 		}
 	}, [initialBot]);
 
@@ -125,50 +130,6 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 								/>
 							</div>
 
-							{/* <div>
-								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									Base URL
-								</label>
-								<input
-									type="text"
-									name="base_url"
-									value={formData.base_url}
-									onChange={handleChange}
-									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-								/>
-							</div>
-
-							<div>
-								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									API Key
-								</label>
-								<input
-									type="password"
-									name="api_key"
-									value={formData.api_key}
-									onChange={handleChange}
-									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-								/>
-								<p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-									Your key is visible to site admin, please provide key with Credit limit
-								</p>
-							</div> */}
-
-							<div>
-								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									Print Speed
-								</label>
-								<input
-									type="number"
-									name="print_speed"
-									value={formData.print_speed}
-									onChange={handleChange}
-									min="100"
-									max="1000"
-									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-								/>
-							</div>
-
 							{mcpServers && mcpServers.length > 0 && (
 								<div>
 									<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
@@ -195,42 +156,130 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 							)}
 
 							<div>
-								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									API Type (Optional)
-								</label>
-								<input
-									type="text"
-									name="api_type"
-									value={formData.api_type || ''}
-									onChange={handleChange}
-									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-								/>
+								<div className="flex items-center mb-2">
+									<input
+										type="checkbox"
+										id="showCustomKey"
+										checked={showCustomKey}
+										onChange={(e) => setShowCustomKey(e.target.checked)}
+										className={`mr-2 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+									/>
+									<label
+										htmlFor="showCustomKey"
+										className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										Provide your own key
+									</label>
+								</div>
+
+								{showCustomKey && (
+									<>
+										<div className="mt-3">
+											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+												Base URL
+											</label>
+											<input
+												type="text"
+												name="base_url"
+												value={formData.base_url || ''}
+												onChange={handleChange}
+												className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+											/>
+										</div>
+
+										<div className="mt-3">
+											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+												API Key
+											</label>
+											<input
+												type="password"
+												name="api_key"
+												value={formData.api_key || ''}
+												onChange={handleChange}
+												className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+											/>
+											<p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+												Your key is visible to site admin, please provide key with Credit limit
+											</p>
+										</div>
+									</>
+								)}
 							</div>
 
 							<div>
-								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									Custom API Path (Optional)
-								</label>
-								<input
-									type="text"
-									name="custom_api_path"
-									value={formData.custom_api_path || ''}
-									onChange={handleChange}
-									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-								/>
-							</div>
+								<div className="flex items-center mb-2">
+									<input
+										type="checkbox"
+										id="showOptionalFields"
+										checked={showOptionalFields}
+										onChange={(e) => setShowOptionalFields(e.target.checked)}
+										className={`mr-2 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
+									/>
+									<label
+										htmlFor="showOptionalFields"
+										className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										Optional settings
+									</label>
+								</div>
 
-							<div>
-								<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-									Max Tokens (Optional)
-								</label>
-								<input
-									type="number"
-									name="max_tokens"
-									value={formData.max_tokens || ''}
-									onChange={handleChange}
-									className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-								/>
+								{showOptionalFields && (
+									<>
+										<div className="mt-3">
+											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+												Print Speed
+											</label>
+											<input
+												type="number"
+												name="print_speed"
+												value={formData.print_speed}
+												onChange={handleChange}
+												min="100"
+												max="1000"
+												className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+											/>
+										</div>
+
+										<div className="mt-3">
+											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+												API Type
+											</label>
+											<input
+												type="text"
+												name="api_type"
+												value={formData.api_type || ''}
+												onChange={handleChange}
+												className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+											/>
+										</div>
+
+										<div className="mt-3">
+											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+												Custom API Path
+											</label>
+											<input
+												type="text"
+												name="custom_api_path"
+												value={formData.custom_api_path || ''}
+												onChange={handleChange}
+												className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+											/>
+										</div>
+
+										<div className="mt-3">
+											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+												Max Tokens
+											</label>
+											<input
+												type="number"
+												name="max_tokens"
+												value={formData.max_tokens || ''}
+												onChange={handleChange}
+												className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+											/>
+										</div>
+									</>
+								)}
 							</div>
 						</div>
 
