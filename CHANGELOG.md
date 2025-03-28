@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [03280036]
+
+### Added
+- Added new ToolStyles.css for consistent styling of tool sections
+- Added tool result display directly within tool information sections
+- Added visual indicators including server/tool badges and status indicators
+- Added toolResults prop to MessageItem component for tracking results
+
+### Changed
+- Changed default state of thinking blocks from expanded to collapsed
+- Improved UI for tool information with clearer visual hierarchy
+- Enhanced tool execution display with server and tool badges
+- Refactored how tool results are associated with assistant messages
+- Modified message filtering to hide server/tool messages in chat view
+- Replaced separate ToolResult component with integrated display in ToolInformation
+
+### Removed
+- Removed ToolResult.tsx component in favor of consolidated approach
+
 ## [03270735]
 
 ### Added

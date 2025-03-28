@@ -1,0 +1,49 @@
+/* Tool section styling for visual continuity */
+
+/* Common styles for tool section */
+.tool-section, .tool-result {
+  margin-top: 0.75rem;
+  position: relative;
+}
+
+/* Dark mode styles */
+.tool-section.dark button, .tool-result.dark button {
+  color: #a0aec0;
+}
+
+.tool-section.dark button:hover, .tool-result.dark button:hover {
+  color: #cbd5e0;
+}
+
+/* Light mode styles */
+.tool-section.light button, .tool-result.light button {
+  color: #4a5568;
+}
+
+.tool-section.light button:hover, .tool-result.light button:hover {
+  color: #1a202c;
+}
+
+/* Add a connecting line between tool sections when they're adjacent */
+.tool-section:not(.collapsed) + .tool-result:not(.collapsed)::before,
+.tool-result:not(.collapsed) + .tool-section:not(.collapsed)::before {
+  content: '';
+  position: absolute;
+  top: -0.5rem;
+  left: 0.5rem;
+  width: calc(100% - 1rem);
+  height: 1px;
+  background-color: rgba(156, 163, 175, 0.3);
+}
+
+/* Highlight active tool sections */
+.tool-section button:focus, .tool-result button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+  border-radius: 0.25rem;
+}
+
+/* Animation for expansion/collapse */
+.tool-section > div, .tool-result > div {
+  transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out;
+}

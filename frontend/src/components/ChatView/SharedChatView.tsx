@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Chat } from '@shared/types';
+import { Chat, Message } from '@shared/types';
 import { useTheme } from '../../contexts/ThemeContext';
 import SharedMessageItem from './SharedMessageItem';
 import useSWR, { SWRConfiguration } from 'swr';
@@ -110,7 +110,9 @@ export default function SharedChatView() {
 
       {/* Chat messages */}
       <div className={`flex-1 px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto`}>
-        {chat.messages.map((msg, index) => (
+        {chat.messages
+				.filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
+				.map((msg, index) => (
           <SharedMessageItem
             key={`${msg.unix_timestamp}-${index}`}
             message={msg}

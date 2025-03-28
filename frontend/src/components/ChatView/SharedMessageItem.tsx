@@ -4,7 +4,6 @@ import AssistantAvatar from './AssistantAvatar';
 import CompactMarkdown from './Markdown';
 import CopyButton from './CopyButton';
 import ToolInformation from './ToolInformation';
-import ToolResult from './ToolResult';
 
 interface SharedMessageItemProps {
   message: Message;
@@ -80,20 +79,10 @@ export default function SharedMessageItem({
           </div>
 
           {/* Message content */}
-          {message.role === 'user' && message.server ? (
-            <ToolResult
-              messageId={messageId}
-              content={message.content}
-              isCollapsed={!expandedToolResults[messageId]}
-              onToggle={onToggleToolResult}
-              isDarkMode={isDarkMode}
-            />
-          ) : (
-            <CompactMarkdown
-              content={typeof message.content === 'string' ? message.content : ''}
-              className={isUserMessage ? 'prose-invert' : 'prose-gray'}
-            />
-          )}
+					<CompactMarkdown
+						content={typeof message.content === 'string' ? message.content : ''}
+						className={isUserMessage ? 'prose-invert' : 'prose-gray'}
+					/>
 
           {/* Tool information */}
           {message.tool && message.server && message.arguments && message.role === 'assistant' && (

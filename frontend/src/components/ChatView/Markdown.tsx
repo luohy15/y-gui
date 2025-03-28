@@ -6,7 +6,7 @@ import { Components } from 'react-markdown';
 
 // ThinkingBlock component for toggling thinking content
 const ThinkingBlock: React.FC<{ content: string }> = ({ content }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="my-2 border-l-4 border-gray-300 dark:border-gray-700">

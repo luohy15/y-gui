@@ -41,20 +41,27 @@ export default function ChatView() {
     server: string | undefined;
     tool: string | undefined;
     arguments: any | undefined;
+    messageId: string | undefined;
   }>({
     plain_content: undefined,
     server: undefined,
     tool: undefined,
-    arguments: undefined
+    arguments: undefined,
+    messageId: undefined
   });
 
   const [toolResultState, setToolResultState] = useState<{
     content: string | undefined;
     server: string | undefined;
+    targetMessageId: string | undefined;
   }>({
     content: undefined,
-    server: undefined
+    server: undefined,
+    targetMessageId: undefined
   });
+
+  // Store tool results mapped to the assistant message IDs
+  const [toolResults, setToolResults] = useState<Record<string, string | object>>({});
 
   const [expandedToolInfo, setExpandedToolInfo] = useState<Record<string, boolean>>({});
   const [expandedToolResults, setExpandedToolResults] = useState<Record<string, boolean>>({});
@@ -220,17 +227,38 @@ export default function ChatView() {
     tool: string,
     args: any
   ) => {
+    // Find the latest assistant message ID (this will be associated with tool results)
+    let messageId: string | undefined = undefined;
+    if (chat && chat.messages.length > 0) {
+      const assistantMessages = chat.messages.filter(m => m.role === 'assistant');
+      if (assistantMessages.length > 0) {
+        const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
+        messageId = lastAssistantMessage.unix_timestamp.toString();
+      }
+    }
+
     setToolInfoState({
       plain_content: plainContent,
       server: server,
       tool: tool,
-      arguments: args
+      arguments: args,
+      messageId
     });
   };
 
   // Handle tool result
   const handleToolResult = async (content: string, server: string) => {
-    setToolResultState({ content, server });
+    // Find the target message ID from the last tool info state
+    const targetMessageId = toolInfoState.messageId;
+    setToolResultState({ content, server, targetMessageId });
+
+    // If we have a target message ID, associate this result with it
+    if (targetMessageId) {
+      setToolResults(prev => ({
+        ...prev,
+        [targetMessageId]: content
+      }));
+    }
   };
 
   // Process tool info when streaming ends
@@ -256,7 +284,8 @@ export default function ChatView() {
             plain_content: undefined,
             server: undefined,
             tool: undefined,
-            arguments: undefined
+            arguments: undefined,
+            messageId: undefined
           });
         }
       }
@@ -282,7 +311,8 @@ export default function ChatView() {
         // Clear the tool result state
         setToolResultState({
           content: undefined,
-          server: undefined
+          server: undefined,
+          targetMessageId: undefined
         });
       }
     };
@@ -523,6 +553,44 @@ export default function ChatView() {
    * Initialization and Effects
    ****************************/
 
+  // Initialize tool results when chat loads
+  useEffect(() => {
+    if (!chat) return;
+
+    const newToolResults: Record<string, string | object> = {};
+    const assistantMessages = chat.messages.filter(msg => msg.role === 'assistant' && msg.tool && msg.server);
+
+    // For each assistant message with tool information
+    assistantMessages.forEach(assistantMsg => {
+      const assistantIndex = chat.messages.findIndex(msg =>
+        msg.unix_timestamp === assistantMsg.unix_timestamp
+      );
+
+      // Look for the next user message that could be a tool result
+      if (assistantIndex >= 0 && assistantIndex < chat.messages.length - 1) {
+        // Check messages after this assistant message for a possible tool result
+        for (let i = assistantIndex + 1; i < chat.messages.length; i++) {
+          const msg = chat.messages[i];
+
+          // If we find a user message with a server property, it's likely a tool result
+          if (msg.role === 'user' && msg.server) {
+            const assistantId = assistantMsg.unix_timestamp.toString();
+            newToolResults[assistantId] = msg.content;
+            break; // Found a result for this assistant message, move to the next one
+          }
+
+          // If we encounter another assistant message, stop looking
+          if (msg.role === 'assistant' && i > assistantIndex + 1) {
+            break;
+          }
+        }
+      }
+    });
+
+    // Set the tool results
+    setToolResults(newToolResults);
+  }, [chat]);
+
   // Initialize new chat if data exists in localStorage
   useEffect(() => {
     const initializeNewChat = async () => {
@@ -585,7 +653,9 @@ export default function ChatView() {
 
       {/* Messages */}
       <div className={`flex-1 px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto`}>
-        {chat.messages.map((msg: Message, index: number) => (
+                {chat.messages
+								.filter((msg: Message) => msg.role === 'assistant' || !msg.server)
+								.map((msg: Message, index: number) => (
           <MessageItem
             key={`${msg.unix_timestamp}-${index}`}
             message={msg}
@@ -602,6 +672,7 @@ export default function ChatView() {
             onToggleToolInfo={toggleToolInfo}
             onToggleToolResult={toggleToolResult}
             isStreaming={isStreaming}
+            toolResults={toolResults}
           />
         ))}
 

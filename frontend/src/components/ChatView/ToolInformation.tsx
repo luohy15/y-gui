@@ -12,6 +12,7 @@ interface ToolInformationProps {
   isDarkMode: boolean;
   needsConfirmation?: boolean;
   isLastMessage?: boolean;
+  toolResult?: string | object;
 }
 
 export default function ToolInformation({
@@ -25,7 +26,8 @@ export default function ToolInformation({
   onDeny,
   isDarkMode,
   needsConfirmation,
-  isLastMessage
+  isLastMessage,
+  toolResult
 }: ToolInformationProps) {
   return (
     <div className={`mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -41,7 +43,49 @@ export default function ToolInformation({
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
         </svg>
-        <span>{isLastMessage ? 'Tool Execution Request' : 'Tool Information'}</span>
+
+        {/* Server badge with status indicator */}
+        <div className="flex items-center ml-1">
+          <div
+            className="w-2 h-2 rounded-full bg-green-500 mr-1"
+          />
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+            isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+          }`}>
+            {server}
+          </span>
+        </div>
+
+        {/* Tool badge with wrench icon */}
+        <div className="flex items-center ml-1">
+          <svg
+            className="h-3.5 w-3.5 mr-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+          </svg>
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+            isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+          }`}>
+            {tool}
+          </span>
+        </div>
+
+        {/* Add checkmark when toolResult exists */}
+        {toolResult && (
+          <div className="flex items-center ml-1">
+            <svg
+              className="h-3.5 w-3.5 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        )}
       </button>
       {!isCollapsed && (
         <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
@@ -61,6 +105,23 @@ export default function ToolInformation({
                 : JSON.stringify(toolArgs, null, 2)}
             </pre>
           </div>
+
+          {/* Tool Result Section */}
+          {toolResult && (
+            <div className="mb-3">
+              <span className="text-sm font-semibold">Result:</span>
+              <div className={`mt-1 p-2 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                {(typeof toolResult === 'object' || (typeof toolResult === 'string' && toolResult.trim().startsWith('{') && toolResult.trim().endsWith('}'))) ? (
+                  <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                    {typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2)}
+                  </pre>
+                ) : (
+                  <div className="whitespace-pre-wrap text-sm">{toolResult}</div>
+                )}
+              </div>
+            </div>
+          )}
+
           {isLastMessage && needsConfirmation && onApprove && onDeny && (
             <div className="flex space-x-3">
               <button

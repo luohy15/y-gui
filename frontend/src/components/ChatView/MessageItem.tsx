@@ -4,7 +4,7 @@ import AssistantAvatar from './AssistantAvatar';
 import CompactMarkdown from './Markdown';
 import CopyButton from './CopyButton';
 import ToolInformation from './ToolInformation';
-import ToolResult from './ToolResult';
+import './ToolStyles.css';
 
 interface MessageItemProps {
   message: Message;
@@ -18,6 +18,7 @@ interface MessageItemProps {
   onToggleToolInfo: (messageId: string) => void;
   onToggleToolResult: (messageId: string) => void;
   isStreaming: boolean;
+  toolResults?: Record<string, string | object>;
 }
 
 export default function MessageItem({
@@ -31,7 +32,8 @@ export default function MessageItem({
   expandedToolResults,
   onToggleToolInfo,
   onToggleToolResult,
-  isStreaming
+  isStreaming,
+  toolResults
 }: MessageItemProps) {
   const messageId = message.unix_timestamp.toString();
   const isUserMessage = message.role === 'user' && !message.server;
@@ -99,36 +101,29 @@ export default function MessageItem({
           )}
 
           {/* Message content */}
-          {message.role === 'user' && message.server ? (
-            <ToolResult
-              messageId={messageId}
-              content={message.content}
-              isCollapsed={!expandedToolResults[messageId]}
-              onToggle={onToggleToolResult}
-              isDarkMode={isDarkMode}
-            />
-          ) : (
-            <CompactMarkdown
-              content={typeof message.content === 'string' ? message.content : ''}
-              className={isUserMessage ? 'prose-invert' : 'prose-gray'}
-            />
-          )}
+					<CompactMarkdown
+						content={typeof message.content === 'string' ? message.content : ''}
+						className={isUserMessage ? 'prose-invert' : 'prose-gray'}
+					/>
 
-          {/* Tool information */}
+          {/* Tool information - Added custom classes for visual styling */}
           {message.tool && message.server && message.arguments && message.role === 'assistant' && (
-            <ToolInformation
-              messageId={messageId}
-              server={message.server}
-              tool={message.tool}
-              arguments={message.arguments}
-              isCollapsed={!expandedToolInfo[messageId]}
-              onToggle={onToggleToolInfo}
-              onApprove={() => onToolConfirm(message.server!, message.tool!, message.arguments!)}
-              onDeny={onToolDeny}
-              isDarkMode={isDarkMode}
-              needsConfirmation={needsConfirmation(message.server, message.tool)}
-              isLastMessage={isLastMessage}
-            />
+            <div className={`tool-section ${isDarkMode ? 'dark' : 'light'} ${!expandedToolInfo[messageId] ? 'collapsed' : ''}`}>
+              <ToolInformation
+                messageId={messageId}
+                server={message.server}
+                tool={message.tool}
+                arguments={message.arguments}
+                isCollapsed={!expandedToolInfo[messageId]}
+                onToggle={onToggleToolInfo}
+                onApprove={() => onToolConfirm(message.server!, message.tool!, message.arguments!)}
+                onDeny={onToolDeny}
+                isDarkMode={isDarkMode}
+                needsConfirmation={needsConfirmation(message.server, message.tool)}
+                isLastMessage={isLastMessage}
+                toolResult={toolResults && toolResults[messageId]}
+              />
+            </div>
           )}
         </div>
       </div>
