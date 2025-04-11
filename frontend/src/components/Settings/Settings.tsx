@@ -62,7 +62,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
   return (
     <div className={`max-w-full flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Mobile header with sections dropdown */}
-      <div className="md:hidden flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="sm:hidden flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <h1 className="text-xl font-semibold">Settings</h1>
         <div className="relative" ref={menuRef}>
           <button
@@ -154,7 +154,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - hidden on mobile */}
-        <div className={`hidden md:block w-56 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-200'} border-r p-4`}>
+        <div className={`hidden sm:block w-56 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-200'} border-r p-4`}>
           <nav>
             <ul>
               <li className="mb-1">
@@ -210,12 +210,12 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
         </div>
 
         {/* Main content */}
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-8 overflow-y-auto">
           {/* General settings section */}
           {activeSection === 'general' && (
             <div className="mb-12">
-              <h2 className={`text-xl md:text-2xl font-medium mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'} md:hidden`}>General</h2>
-              <h2 className={`hidden md:block text-2xl font-medium mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>General</h2>
+              <h2 className={`text-xl sm:text-2xl font-medium mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'} sm:hidden`}>General</h2>
+              <h2 className={`hidden sm:block text-2xl font-medium mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>General</h2>
 
               <div className="max-w-3xl">
                 {/* User Information Section */}

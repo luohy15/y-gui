@@ -113,7 +113,7 @@ const Header: React.FC = () => {
 						{/* Mobile menu button */}
 						<button
 							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-							className="md:hidden"
+							className="sm:hidden"
 							aria-label="Toggle mobile menu"
 						>
 							<svg
@@ -145,7 +145,7 @@ const Header: React.FC = () => {
 					{mobileMenuOpen && (
 						<div
 							ref={mobileMenuRef}
-							className={`absolute top-16 left-0 right-0 z-50 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b shadow-lg md:hidden`}
+							className={`absolute top-16 left-0 right-0 z-50 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} border-b shadow-lg sm:hidden`}
 						>
 							<div className="px-4 py-3 space-y-2">
 								{/* MCP Status for mobile */}
@@ -163,7 +163,7 @@ const Header: React.FC = () => {
 					{/* Center section with MCP Status */}
 					<div className="flex-1 flex justify-center px-4">
 						{filteredMcpServers.length > 0 && (
-							<div className="max-w-md w-full hidden md:flex md:flex-row md:items-center md:justify-center">
+							<div className="max-w-md w-full hidden sm:flex sm:flex-row sm:items-center sm:justify-center">
 								<McpServerStatus
 									mcpServers={filteredMcpServers}
 									serverStatus={serverStatus}

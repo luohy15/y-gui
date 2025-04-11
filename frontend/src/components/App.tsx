@@ -2,8 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import Home from './Home';
-import ChatView from './ChatView';
-import SharedChatView from './ChatView/SharedChatView';
+import ChatView from './ChatView/ChatView';
 import Login from './Login';
 import { Settings } from './Settings/Settings';
 import Header from './Header/Header';
@@ -34,17 +33,17 @@ export default function App() {
 
         {!isAuthenticated ? (
           <Routes>
-            <Route path="/share/:id" element={<SharedChatView />} />
+            <Route path="/share/:id" element={<ChatView />} />
             <Route path="*" element={<Login />} />
           </Routes>
         ) : (
           <div className='h-screen flex flex-col'>
             <Header />
-            <div className='flex-1 overflow-auto'>
+            <div className='flex-1 overflow-x-hidden overflow-y-auto'>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/chat/:id" element={<ChatView />} />
-                <Route path="/share/:id" element={<SharedChatView />} />
+                <Route path="/share/:id" element={<ChatView />} />
                 <Route path="/settings" element={<Navigate to="/settings/general" replace />} />
                 <Route path="/settings/:section" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

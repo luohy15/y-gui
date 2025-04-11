@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useBot } from '../../contexts/BotContext';
 import { useAuthenticatedSWR } from '../../utils/api';
 import { Chat, Message, McpServerConfig } from '@shared/types';
 import { mutate } from 'swr';
+import useSWR, { SWRConfiguration } from 'swr';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMcp } from '../../contexts/McpContext';
 import { useMcpStatus } from '../../hooks/useMcpStatus';
@@ -16,9 +17,14 @@ import McpLogsDisplay from './McpLogsDisplay';
 export default function ChatView() {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getIdTokenClaims } = useAuth0();
+
+  // Determine if we're in shared mode based on URL path
+  const isSharedMode = location.pathname.startsWith('/share/');
+
   // State for message input and bot selection
   const [message, setMessage] = useState('');
   const { selectedBot, setSelectedBot } = useBot();
@@ -67,19 +73,46 @@ export default function ChatView() {
   const [expandedToolResults, setExpandedToolResults] = useState<Record<string, boolean>>({});
 
   // Configure SWR options
-  const swrConfig = {
+  const swrConfig: SWRConfiguration = {
     revalidateOnFocus: false,
-    revalidateOnReconnect: true,
+    revalidateOnReconnect: isSharedMode ? false : true,
     refreshInterval: 0,
     dedupingInterval: 2000,
   };
 
-  // Fetch chat and MCP servers data
-  const { data: chat, error } = useAuthenticatedSWR<Chat>(
-    id ? `/api/chats/${id}` : null,
-    swrConfig
-  );
-  const { data: mcpServers } = useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers', swrConfig);
+  // Non-authenticated fetcher for public access in shared mode
+  const publicFetcher = async (url: string) => {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = new Error('An error occurred while fetching the data.');
+      (error as any).status = response.status;
+      throw error;
+    }
+
+    return response.json();
+  };
+
+  // Fetch chat data based on mode
+  const { data: chat, error } = isSharedMode
+    ? useSWR<Chat>(
+        id ? `/api/share/${id}` : null,
+        publicFetcher,
+        swrConfig
+      )
+    : useAuthenticatedSWR<Chat>(
+        id ? `/api/chats/${id}` : null,
+        swrConfig
+      );
+
+  // Only fetch MCP servers in regular mode
+  const { data: mcpServers } = !isSharedMode
+    ? useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers', swrConfig)
+    : { data: undefined };
 
   // Debug selectedBot changes
   useEffect(() => {
@@ -631,6 +664,18 @@ export default function ChatView() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat?.messages]);
 
+  // Error handling for shared mode
+  if (isSharedMode && error) {
+    return (
+      <div className={`flex items-center justify-center h-screen ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-white text-gray-800'}`}>
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Chat Not Found</h2>
+          <p>This shared chat may have been removed or the link is invalid.</p>
+        </div>
+      </div>
+    );
+  }
+
   // Render loading state while chat is being fetched
   if (!chat) {
     return (
@@ -640,44 +685,76 @@ export default function ChatView() {
     );
   }
 
+  // Dummy functions for tool handling in shared mode
+  const handleToolConfirmShared = () => {};
+  const handleToolDenyShared = () => {};
+  const checkNeedsConfirmationShared = () => false;
+
   // Main component render
   return (
     <div className={`flex flex-col relative ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
-      {/* MCP Status Logs */}
-      <McpLogsDisplay
-        logs={mcpLogs}
-        isVisible={isLogVisible}
-        onClose={closeLog}
-        isDarkMode={isDarkMode}
-      />
+      {/* Shared Mode Header */}
+      {isSharedMode && (
+        <div className={`py-4 px-6 border-b ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-gray-50 border-gray-200 text-gray-800'}`}>
+          <div className="flex flex-col items-center space-y-3">
+            <h1 className="text-xl font-semibold">Shared Chat</h1>
+            <Link
+              to="/"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                isDarkMode
+                  ? 'bg-blue-600 text-white hover:bg-blue-500 hover:shadow-md'
+                  : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md'
+              }`}
+            >
+              Go to Yovy home page
+            </Link>
+            <div className="text-sm opacity-75">
+              {new Date(chat.create_time).toLocaleDateString()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MCP Status Logs - Only in regular mode */}
+      {!isSharedMode && (
+        <McpLogsDisplay
+          logs={mcpLogs}
+          isVisible={isLogVisible}
+          onClose={closeLog}
+          isDarkMode={isDarkMode}
+        />
+      )}
 
       {/* Messages */}
-      <div className={`md:w-[60%] mx-auto flex-1 px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto`}>
-                {chat.messages
-								.filter((msg: Message) => msg.role === 'assistant' || !msg.server)
-								.map((msg: Message, index: number) => (
+      <div className={`w-[95%] sm:w-[60%] mx-auto px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto}`}>
+        {chat.messages
+        .filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
+        .map((msg: Message, index: number) => (
           <MessageItem
             key={`${msg.unix_timestamp}-${index}`}
             message={msg}
             isLastMessage={index === chat.messages.length - 1}
             isDarkMode={isDarkMode}
-            onToolConfirm={(server, tool, args) => {
-              if (!id) return;
-              executeToolConfirm(server, tool, args);
-            }}
-            onToolDeny={handleToolDeny}
-            needsConfirmation={needsConfirmation}
+            onToolConfirm={isSharedMode
+              ? handleToolConfirmShared
+              : (server, tool, args) => {
+                  if (!id) return;
+                  executeToolConfirm(server, tool, args);
+                }
+            }
+            onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
+            needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
             expandedToolInfo={expandedToolInfo}
             expandedToolResults={expandedToolResults}
             onToggleToolInfo={toggleToolInfo}
             onToggleToolResult={toggleToolResult}
-            isStreaming={isStreaming}
+            isStreaming={isSharedMode ? false : isStreaming}
             toolResults={toolResults}
           />
         ))}
 
-        {/* Message Actions */}
-        {chat.messages.length > 0 && (
+        {/* Message Actions - Only in regular mode */}
+        {!isSharedMode && chat.messages.length > 0 && (
           <div className="ml-14">
             <MessageActions
               chatId={id!}
@@ -694,19 +771,40 @@ export default function ChatView() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="flex flex-col">
-        <MessageInput
-          message={message}
-          setMessage={setMessage}
-          selectedBot={selectedBot}
-          setSelectedBot={setSelectedBot}
-          isLoading={isStreaming}
-          handleSubmit={handleSubmit}
-          isFixed={true}
-          onStop={handleStopGeneration}
-        />
-      </div>
+      {/* Shared Mode Footer */}
+      {isSharedMode && (
+        <div className={`py-3 px-6 border-t ${isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+          <div className="text-center">
+            <p className="mb-4">This is a shared chat view. The content is read-only.</p>
+            <Link
+              to="/"
+              className={`inline-flex items-center justify-center px-4 py-2 rounded-md text-base font-medium transition-all duration-200 ${
+                isDarkMode
+                  ? 'bg-blue-600 text-white hover:bg-blue-500 hover:shadow-md'
+                  : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md'
+              }`}
+            >
+              Go to Yovy home page
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Message Input - Only in regular mode */}
+      {!isSharedMode && (
+        <div>
+          <MessageInput
+            message={message}
+            setMessage={setMessage}
+            selectedBot={selectedBot}
+            setSelectedBot={setSelectedBot}
+            isLoading={isStreaming}
+            handleSubmit={handleSubmit}
+            isFixed={true}
+            onStop={handleStopGeneration}
+          />
+        </div>
+      )}
     </div>
   );
 }
