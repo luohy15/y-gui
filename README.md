@@ -19,7 +19,7 @@ Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
 
 ![demo](https://cdn.luohy15.com/y-gui-demo.png)
 
-[chat history](https://mcp.1u0hy.com/share/09952e1b)
+[chat history](https://yovy.app/share/09952e1b)
 
 ## Architecture
 
