@@ -1,8 +1,7 @@
-import React from 'react';
 import { Message } from '@shared/types';
-import AssistantAvatar from './AssistantAvatar';
-import CompactMarkdown from './Markdown';
+import React from 'react';
 import CopyButton from './CopyButton';
+import CompactMarkdown from './Markdown';
 import ToolInformation from './ToolInformation';
 import './ToolStyles.css';
 
@@ -40,17 +39,8 @@ export default function MessageItem({
 
   return (
     <div className={`flex items-start space-x-4 ${isUserMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
-      <div className="flex-shrink-0">
-        {isUserMessage ? (
-          <div className={`h-10 w-10 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} flex items-center justify-center`}>
-            <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>U</span>
-          </div>
-        ) : (
-          <AssistantAvatar model={message.model} />
-        )}
-      </div>
-      <div className={`max-w-full flex-1 space-y-2 ${isUserMessage ? 'items-end' : 'items-start'}`}>
-        <div className={`group relative rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap max-w-[85%] ${
+      <div className={`flex-1 space-y-2 ${isUserMessage ? 'items-end' : 'items-start'}`}>
+        <div className={`group relative rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words whitespace-pre-wrap ${
           isUserMessage
             ? 'bg-[#4285f4] text-white ml-auto'
             : isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-50 text-gray-700'

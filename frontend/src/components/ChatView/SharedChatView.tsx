@@ -100,7 +100,7 @@ export default function SharedChatView() {
                 : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md'
             }`}
           >
-            Go to y-mcp home page
+            Go to Yovy home page
           </Link>
           <div className="text-sm opacity-75">
             {new Date(chat.create_time).toLocaleDateString()}
@@ -139,7 +139,7 @@ export default function SharedChatView() {
                 : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md'
             }`}
           >
-            Go to y-mcp home page
+            Go to Yovy home page
           </Link>
         </div>
       </div>

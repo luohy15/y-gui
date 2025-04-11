@@ -652,7 +652,7 @@ export default function ChatView() {
       />
 
       {/* Messages */}
-      <div className={`flex-1 px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto`}>
+      <div className={`w-[60%] mx-auto flex-1 px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto`}>
                 {chat.messages
 								.filter((msg: Message) => msg.role === 'assistant' || !msg.server)
 								.map((msg: Message, index: number) => (

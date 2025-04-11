@@ -15,7 +15,7 @@ export default function Login() {
         	<Logo className='w-16 h-16' />
 				</div>
         <h2 className="mt-6 text-center text-2xl font-light tracking-tight">
-          y-mcp Chat
+          Yovy Chat
         </h2>
         <p className="mt-3 text-center text-sm text-gray-400">
           Sign in to access your chats

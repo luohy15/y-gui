@@ -108,7 +108,7 @@ const Header: React.FC = () => {
 							onClick={() => navigate('/')}
 						>
 							<Logo />
-							<h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>y-mcp</h1>
+							<h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Yovy</h1>
 						</div>
 						{/* Mobile menu button */}
 						<button
