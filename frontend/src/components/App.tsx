@@ -9,6 +9,7 @@ import Header from './Header/Header';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { McpProvider } from '../contexts/McpContext';
 import { BotProvider } from '../contexts/BotContext';
+import { TocProvider } from '../contexts/TocContext';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth0();
@@ -28,6 +29,7 @@ export default function App() {
     <ThemeProvider>
       <McpProvider>
         <BotProvider>
+        <TocProvider>
         <BrowserRouter>
         {/* Public routes that don't require authentication */}
 
@@ -52,6 +54,7 @@ export default function App() {
           </div>
         )}
         </BrowserRouter>
+        </TocProvider>
         </BotProvider>
       </McpProvider>
     </ThemeProvider>

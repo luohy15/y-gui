@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useBot } from '../../contexts/BotContext';
+import { useToc } from '../../contexts/TocContext';
 import { useAuthenticatedSWR } from '../../utils/api';
 import { Chat, Message, McpServerConfig } from '@shared/types';
 import { mutate } from 'swr';
@@ -13,6 +14,8 @@ import MessageInput from '../MessageInput';
 import MessageActions from './MessageActions';
 import MessageItem from './MessageItem';
 import McpLogsDisplay from './McpLogsDisplay';
+import TableOfContents from './TableOfContents';
+import TableOfContentsDrawer from './TableOfContentsDrawer';
 
 export default function ChatView() {
   const { isDarkMode } = useTheme();
@@ -21,6 +24,8 @@ export default function ChatView() {
   const { id } = useParams<{ id: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getIdTokenClaims } = useAuth0();
+  const { isTocOpen, setIsTocOpen, currentMessageId, setCurrentMessageId } = useToc();
+  const messageRefs = useRef<Record<string, HTMLDivElement>>({});
 
   // Determine if we're in shared mode based on URL path
   const isSharedMode = location.pathname.startsWith('/share/');
@@ -659,6 +664,45 @@ export default function ChatView() {
     }
   }, [error, navigate]);
 
+  // Scroll to a specific message by ID
+  const scrollToMessage = useCallback((messageId: string) => {
+    if (messageRefs.current[messageId]) {
+      messageRefs.current[messageId].scrollIntoView({ behavior: 'smooth' });
+      setCurrentMessageId(messageId);
+    }
+  }, [setCurrentMessageId]);
+
+  // Track visible messages on scroll
+  useEffect(() => {
+    if (!chat) return;
+
+    const handleScroll = () => {
+      // Find which message is most visible in the viewport
+      const messageElements = Object.entries(messageRefs.current);
+      if (messageElements.length === 0) return;
+
+      let bestVisibleMessage = null;
+      let bestVisibleArea = 0;
+
+      messageElements.forEach(([id, element]) => {
+        const rect = element.getBoundingClientRect();
+        const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+
+        if (visibleHeight > bestVisibleArea) {
+          bestVisibleArea = visibleHeight;
+          bestVisibleMessage = id;
+        }
+      });
+
+      if (bestVisibleMessage && bestVisibleMessage !== currentMessageId) {
+        setCurrentMessageId(bestVisibleMessage);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [chat, currentMessageId, setCurrentMessageId]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -693,6 +737,15 @@ export default function ChatView() {
   // Main component render
   return (
     <div className={`flex flex-col relative ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+      {/* Table of Contents Drawer (Mobile) */}
+      <TableOfContentsDrawer
+        isOpen={isTocOpen}
+        onClose={() => setIsTocOpen(false)}
+        messages={chat?.messages || []}
+        isDarkMode={isDarkMode}
+        onScrollToMessage={scrollToMessage}
+        currentMessageId={currentMessageId}
+      />
       {/* Shared Mode Header */}
       {isSharedMode && (
         <div className={`py-4 px-6 border-b ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-gray-50 border-gray-200 text-gray-800'}`}>
@@ -725,50 +778,74 @@ export default function ChatView() {
         />
       )}
 
-      {/* Messages */}
-      <div className={`w-[95%] sm:w-[60%] mx-auto px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto}`}>
-        {chat.messages
-        .filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
-        .map((msg: Message, index: number) => (
-          <MessageItem
-            key={`${msg.unix_timestamp}-${index}`}
-            message={msg}
-            isLastMessage={index === chat.messages.length - 1}
-            isDarkMode={isDarkMode}
-            onToolConfirm={isSharedMode
-              ? handleToolConfirmShared
-              : (server, tool, args) => {
-                  if (!id) return;
-                  executeToolConfirm(server, tool, args);
+      {/* Main content with messages and TOC */}
+      <div className="flex flex-row">
+        {/* Empty space on the left (desktop only) */}
+        <div className="hidden sm:block sm:w-[20%] lg:w-[20%]"></div>
+
+        {/* Messages (centered) */}
+        <div className={`w-full sm:w-[60%] px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto}`}>
+          {chat.messages
+          .filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
+          .map((msg: Message, index: number) => (
+            <div
+              key={`${msg.unix_timestamp}-${index}`}
+              ref={el => {
+                if (el && msg.role === 'user') {
+                  messageRefs.current[msg.unix_timestamp.toString()] = el;
                 }
-            }
-            onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
-            needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
-            expandedToolInfo={expandedToolInfo}
-            expandedToolResults={expandedToolResults}
-            onToggleToolInfo={toggleToolInfo}
-            onToggleToolResult={toggleToolResult}
-            isStreaming={isSharedMode ? false : isStreaming}
-            toolResults={toolResults}
+              }}
+            >
+              <MessageItem
+                message={msg}
+                isLastMessage={index === chat.messages.length - 1}
+                isDarkMode={isDarkMode}
+                onToolConfirm={isSharedMode
+                  ? handleToolConfirmShared
+                  : (server, tool, args) => {
+                      if (!id) return;
+                      executeToolConfirm(server, tool, args);
+                    }
+                }
+                onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
+                needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
+                expandedToolInfo={expandedToolInfo}
+                expandedToolResults={expandedToolResults}
+                onToggleToolInfo={toggleToolInfo}
+                onToggleToolResult={toggleToolResult}
+                isStreaming={isSharedMode ? false : isStreaming}
+                toolResults={toolResults}
+              />
+            </div>
+          ))}
+
+          {/* Message Actions - Only in regular mode */}
+          {!isSharedMode && chat.messages.length > 0 && (
+            <div className="ml-14">
+              <MessageActions
+                chatId={id!}
+                messageContent={
+                  typeof chat.messages[chat.messages.length - 1].content === 'string'
+                    ? chat.messages[chat.messages.length - 1].content
+                    : JSON.stringify(chat.messages[chat.messages.length - 1].content)
+                }
+              />
+            </div>
+          )}
+
+          <div className="pb-12" />
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Table of Contents (Desktop) */}
+        <div className="hidden sm:block sm:w-[20%] lg:w-[20%] h-[calc(100vh-64px)] sticky top-16">
+          <TableOfContents
+            messages={chat.messages}
+            isDarkMode={isDarkMode}
+            onScrollToMessage={scrollToMessage}
+            currentMessageId={currentMessageId}
           />
-        ))}
-
-        {/* Message Actions - Only in regular mode */}
-        {!isSharedMode && chat.messages.length > 0 && (
-          <div className="ml-14">
-            <MessageActions
-              chatId={id!}
-              messageContent={
-                typeof chat.messages[chat.messages.length - 1].content === 'string'
-                  ? chat.messages[chat.messages.length - 1].content
-                  : JSON.stringify(chat.messages[chat.messages.length - 1].content)
-              }
-            />
-          </div>
-        )}
-
-        <div className="pb-12" />
-        <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Shared Mode Footer */}
