@@ -30,10 +30,6 @@ interface DecodedToken {
   };
 }
 
-// Cache JWKS for better performance
-let jwksCache: JwksResponse | undefined = undefined;
-let jwksCacheTime: number = 0;
-const JWKS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const AUTH0_DOMAIN = 'mcp.jp.auth0.com';
 
 // Interface for user information extracted from tokens
@@ -47,28 +43,16 @@ export interface UserInfo {
 
 /**
  * Fetches the JSON Web Key Set (JWKS) from Auth0
- * Uses caching to reduce API calls
  */
 export async function fetchJwks(): Promise<JwksResponse> {
-  const now = Date.now();
-  
-  // Return cached JWKS if still valid
-  if (jwksCache && (now - jwksCacheTime < JWKS_CACHE_DURATION)) {
-    return jwksCache;
-  }
-  
   // Fetch fresh JWKS
   const response = await fetch(`https://${AUTH0_DOMAIN}/.well-known/jwks.json`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch JWKS: ${response.status}`);
   }
-  
-  // Update cache
-  jwksCache = await response.json() as JwksResponse;
-  jwksCacheTime = now;
-  
-  return jwksCache;
+
+  return await response.json() as JwksResponse;
 }
 
 /**
@@ -78,14 +62,14 @@ export async function fetchJwks(): Promise<JwksResponse> {
 export function decodeToken(token: string): DecodedToken {
   try {
     const [headerB64, payloadB64] = token.split('.');
-    
+
     // Base64 URL decode and parse JSON
     const decodeBase64 = (str: string): any => {
       const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
       const jsonStr = atob(base64);
       return JSON.parse(jsonStr);
     };
-    
+
     return {
       header: decodeBase64(headerB64),
       payload: decodeBase64(payloadB64)
@@ -103,36 +87,83 @@ export async function verifyToken(token: string): Promise<boolean> {
   try {
     // Decode token to get header (including kid)
     const decoded = decodeToken(token);
-    
+
     // Verify token is not expired
     const now = Math.floor(Date.now() / 1000);
     if (decoded.payload.exp <= now) {
       console.error('Token expired');
       return false;
     }
-    
+
     // Verify issuer
     if (decoded.payload.iss !== `https://${AUTH0_DOMAIN}/`) {
       console.error('Invalid issuer');
       return false;
     }
-    
+
     // Get JWKS and find the key matching the kid in the token header
     const jwks = await fetchJwks();
     const key = jwks.keys.find(k => k.kid === decoded.header.kid);
-    
+
     if (!key) {
       console.error('No matching key found in JWKS');
       return false;
     }
-    
-    // For a complete implementation, we would verify the signature here
-    // using the Web Crypto API. For simplicity, we'll assume the token
-    // is valid if it passes the other checks.
-    // In a production environment, you should use a library like jose
-    // or implement full signature verification.
-    
-    return true;
+
+    // Verify the token signature using Web Crypto API
+    try {
+      // Split the token into parts
+      const [headerB64, payloadB64, signatureB64] = token.split('.');
+
+      // Base64Url decode the signature
+      const signatureBase64 = signatureB64.replace(/-/g, '+').replace(/_/g, '/');
+      const signaturePadding = '='.repeat((4 - signatureBase64.length % 4) % 4);
+      const signatureBytes = new Uint8Array(
+        [...atob(signatureBase64 + signaturePadding)].map(c => c.charCodeAt(0))
+      );
+
+      // Create the signing input (header + "." + payload)
+      const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+
+      // Import the JWK to a CryptoKey
+      const algorithm = decoded.header.alg === 'RS256' ?
+        { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } } :
+        { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-384' } }; // Default to SHA-256, support SHA-384
+
+      // Convert JWK to CryptoKey
+      const publicKey = await crypto.subtle.importKey(
+        'jwk',
+        {
+          kty: key.kty,
+          n: key.n,
+          e: key.e,
+          alg: decoded.header.alg,
+          use: key.use,
+          // kid is not included as it's not part of the standard JsonWebKey type
+        },
+        algorithm,
+        false, // extractable
+        ['verify'] // key usage
+      );
+
+      // Verify the signature
+      const isValid = await crypto.subtle.verify(
+        algorithm,
+        publicKey,
+        signatureBytes,
+        signingInput
+      );
+
+      if (!isValid) {
+        console.error('Invalid token signature');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error verifying token signature:', error);
+      return false;
+    }
   } catch (error) {
     console.error('Token verification error:', error);
     return false;
@@ -147,7 +178,7 @@ export async function validateAuth(request: Request): Promise<boolean> {
   if (!authHeader?.startsWith('Bearer ')) {
     return false;
   }
-  
+
   const token = authHeader.slice(7);
   return await verifyToken(token);
 }
@@ -160,7 +191,7 @@ export function extractUserInfo(token: string): UserInfo {
   try {
     // Decode the ID token to get user info
     const decoded = decodeToken(token);
-    
+
     // Extract user info directly from the token payload
     return {
       sub: decoded.payload.sub,
