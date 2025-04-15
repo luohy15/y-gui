@@ -3,8 +3,8 @@ import { Env } from 'worker-configuration';
 
 export async function handleMigrateChatsRequest(request: Request, env: Env): Promise<Response> {
   try {
-    // List all KV keys with the pattern *:chats
-    const keys = await env.CHAT_KV.list({ prefix: ':chats' });
+    // List all KV keys
+    const keys = await env.CHAT_KV.list();
     
     const migrationResults = [];
     
@@ -18,7 +18,7 @@ export async function handleMigrateChatsRequest(request: Request, env: Env): Pro
       
       if (content) {
         // Write directly to R2
-        const r2Key = `${userPrefix}/chats.jsonl`;
+        const r2Key = `${userPrefix}/chat.jsonl`;
         await env.CHAT_R2.put(r2Key, content);
         
         migrationResults.push({

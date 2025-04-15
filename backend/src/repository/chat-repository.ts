@@ -5,7 +5,7 @@ export class ChatR2Repository implements ChatRepository {
 
   constructor(private r2: R2Bucket, userPrefix?: string) {
     console.log('ChatR2Repository created with user prefix:', userPrefix);
-    this.r2Key = userPrefix ? `${userPrefix}/chats.jsonl` : 'chats.jsonl';
+    this.r2Key = userPrefix ? `${userPrefix}/chat.jsonl` : 'chat.jsonl';
   }
 
   async getOrCreateChat(id: string): Promise<Chat> {
