@@ -1,12 +1,12 @@
 # Project Brief: y-gui
 
 ## Overview
-y-gui is a web-based interface for managing and interacting with AI chat data stored in Cloudflare KV and R2. Built with React and TypeScript, deployed on Cloudflare Workers, it provides an intuitive graphical interface for chat interactions.
+y-gui is a web-based interface for managing and interacting with AI chat data stored in Cloudflare R2. Built with React and TypeScript, deployed on Cloudflare Workers, it provides an intuitive graphical interface for chat interactions.
 
 ## Core Requirements
 
 1. Chat Management
-   - View and interact with chats stored in Cloudflare KV/R2
+   - View and interact with chats stored in Cloudflare R2
    - Create new chats and interact with AI providers
    - Message display with metadata (model, provider, timestamps)
    - Interactive chat sessions

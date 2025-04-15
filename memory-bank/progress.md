@@ -21,8 +21,7 @@
 
 ### Backend Implementation
 - Cloudflare Worker setup
-- KV storage repository
-- R2 backup integration
+- R2 storage repository
 - Basic API endpoints
 - Storage interfaces
 
@@ -69,8 +68,7 @@
 - [ ] Adding new bots and MCP servers
 
 ### Storage Features
-- [ ] Efficient KV access patterns
-- [ ] R2 backup optimization
+- [ ] Efficient R2 access patterns
 - [ ] Data synchronization
 - [ ] Cache management
 - [ ] Performance tuning

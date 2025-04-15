@@ -11,7 +11,7 @@ Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
 - 🔗 MCP (Model Context Protocol) client support with multiple server configurations
 - 🔒 Secure authentication with Auth0 and Google login
 - 🌓 Dark/light theme support
-- 📝 All chat data stored in Cloudflare KV/R2 for easy access and sync
+- 📝 All chat data stored in Cloudflare R2 for easy access and sync
 - 🔄 Real-time updates with SWR
 - 📱 Responsive design for all devices
 
@@ -26,12 +26,11 @@ Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
 y-gui consists of two main components:
 
 1. **Frontend**: React application with TypeScript, Tailwind CSS, and SWR for data fetching
-2. **Backend**: Cloudflare Workers with KV and R2 storage
+2. **Backend**: Cloudflare Workers with R2 storage
 
 ```mermaid
 flowchart TD
     Client[React Client] --> Worker[Cloudflare Worker]
-    Worker --> KV[Cloudflare KV]
     Worker --> R2[Cloudflare R2]
     Worker --> AI[AI Providers]
 
@@ -162,14 +161,13 @@ The backend provides RESTful API endpoints for:
 
 ## 🔄 Data Storage
 
-- Chat data is stored in Cloudflare KV
-- Backup data is stored in Cloudflare R2
+- Chat data is stored in Cloudflare R2
 - Bot and MCP server configurations are stored in Cloudflare R2
 
 ## 🧩 Technologies Used
 
 - **Frontend**: React, TypeScript, Tailwind CSS, SWR, Auth0
-- **Backend**: Cloudflare Workers, KV, R2
+- **Backend**: Cloudflare Workers, R2
 - **Build Tools**: Vite, Wrangler, TypeScript
 
 ## 📚 Documentation

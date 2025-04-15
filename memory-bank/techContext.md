@@ -13,7 +13,6 @@
 
 ### Backend Technologies
 - Cloudflare Workers
-- Cloudflare KV
 - Cloudflare R2
 - Web Crypto API
 
@@ -92,7 +91,7 @@ y-gui/
 
 ### Performance
 - Edge computing limitations
-- KV/R2 access patterns
+- R2 access patterns
 - Network latency handling
 - Bundle size optimization
 - Client-side caching
@@ -121,7 +120,6 @@ y-gui/
 
 ### External Services
 - Cloudflare Workers
-- Cloudflare KV
 - Cloudflare R2
 - AI providers
 
@@ -129,7 +127,6 @@ y-gui/
 
 ### Cloudflare Configuration
 - Worker settings
-- KV namespace bindings
 - R2 bucket bindings
 - Environment variables
 - Deployment settings
@@ -197,7 +194,7 @@ y-gui/
 ### Worker Deployment
 - Wrangler configuration
 - Environment setup
-- KV/R2 bindings
+- R2 bindings
 - Route configuration
 - Error handling
 

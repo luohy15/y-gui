@@ -6,7 +6,6 @@
 ```mermaid
 flowchart TD
     Client[React Client] --> Worker[Cloudflare Worker]
-    Worker --> KV[Cloudflare KV]
     Worker --> R2[Cloudflare R2]
     Worker --> AI[AI Providers]
 
@@ -26,8 +25,8 @@ flowchart TD
 ## Design Patterns
 
 ### Repository Pattern
-- Implemented in KVChatRepository
-- Handles data operations with Cloudflare KV and R2
+- Implemented in ChatRepository
+- Handles data operations with Cloudflare R2
 - Provides consistent interface for data access
 - Manages chat data persistence and retrieval
 
@@ -81,7 +80,6 @@ flowchart LR
     Router --> Config[Configuration Layer]
 
     subgraph "Storage"
-        Storage --> KV[KV Operations]
         Storage --> R2[R2 Operations]
     end
 
@@ -103,7 +101,7 @@ flowchart LR
 
 ### Backend Structure
 - Cloudflare Workers
-- KV and R2 for storage
+- R2 for storage
 - Middleware pattern for auth
 - RESTful API design
 

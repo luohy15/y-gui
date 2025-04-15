@@ -6,7 +6,7 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 ## Recent Changes
 1. Project structure established with React, TypeScript, and Cloudflare Workers
 2. Basic components created (App, Home, ChatView)
-3. Cloudflare Worker implementation for KV/R2 access
+3. Cloudflare Worker implementation for R2 access
 4. Initial API endpoints for chat operations
 5. SWR integration for data fetching
 6. Tailwind CSS setup for styling
@@ -65,8 +65,7 @@ Enhancing the web-based GUI for chat interactions with bot configuration and MCP
 - MCP server configuration
 
 ### Storage
-- KV for active chats
-- R2 for backups
+- R2 for chat data storage
 - Data synchronization
 - Access patterns
 - Performance optimization
