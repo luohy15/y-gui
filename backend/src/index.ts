@@ -5,6 +5,7 @@ import { handleBotRequest } from './api/bot';
 import { handleMcpServerRequest } from './api/mcp-server';
 import { handleApiDocs } from './openapi';
 import { handleShareRequest } from './api/share';
+import { handleMigrateChatsRequest } from './api/migrate-chats';
 import { validateAuth, extractUserInfo, UserInfo } from './utils/auth';
 import { corsHeaders } from './middleware/cors';
 import { calculateUserPrefix } from './utils/user';
@@ -91,6 +92,11 @@ export default {
         // Handle MCP server endpoints
         if (path.startsWith('/api/mcp-server')) {
           return handleMcpServerRequest(request, env, userPrefix);
+        }
+
+        // Handle migration endpoint
+        if (path === '/api/migrate-chats' && request.method === 'GET') {
+          return handleMigrateChatsRequest(request, env);
         }
 
         return new Response('Not Found', {

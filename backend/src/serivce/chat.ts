@@ -1,5 +1,4 @@
-import { BotConfig, Chat, Message } from '../../../shared/types';
-import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
+import { BotConfig, Chat, ChatRepository, Message } from '../../../shared/types';
 import { McpManager } from '../mcp/mcp-manager';
 import { BaseProvider } from 'src/providers/provider-interface';
 import { getSystemPrompt } from '../utils/system-prompt';
@@ -11,7 +10,7 @@ export class ChatService {
   private systemPrompt: string;
 
   constructor(
-    private storage: ChatKVR2Repository,
+    private storage: ChatRepository,
     private provider: BaseProvider,
     private mcpManager: McpManager,
     private chatId: string,

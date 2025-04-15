@@ -1,5 +1,5 @@
 import { Chat, Message } from '../../../shared/types';
-import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
+import { ChatR2Repository } from '../repository/chat-repository';
 import { BotR2Repository } from '../repository/bot-r2-repository';
 import { corsHeaders } from '../middleware/cors';
 import { ProviderFactory } from '../providers/provider-factory';
@@ -32,7 +32,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
     try {
       console.log('User prefix:', userPrefix);
       // Get or create the chat
-      const chatRepository = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userPrefix);
+      const chatRepository = new ChatR2Repository(env.CHAT_R2, userPrefix);
 
       // Get the bot config
       const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);

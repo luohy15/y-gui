@@ -1,5 +1,5 @@
 import { Chat } from '../../../shared/types';
-import { ChatKVR2Repository } from '../repository/chat-kv-r2-repository';
+import { ChatR2Repository } from '../repository/chat-repository';
 import { corsHeaders } from '../middleware/cors';
 import { v4 as uuidv4 } from 'uuid';
 import { Env } from 'worker-configuration';
@@ -21,8 +21,8 @@ async function generateChatContentHash(chat: Chat): Promise<string> {
 }
 
 export async function handleShareRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
-  const chatRepository = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2, userPrefix);
-  const publicChatRepository = new ChatKVR2Repository(env.CHAT_KV, env.CHAT_R2);
+  const chatRepository = new ChatR2Repository(env.CHAT_R2, userPrefix);
+  const publicChatRepository = new ChatR2Repository(env.CHAT_R2);
   const url = new URL(request.url);
   const path = url.pathname;
 
