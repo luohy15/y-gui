@@ -87,13 +87,13 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
 
   return (
     <div
-      className={`w-full sm:w-3/4 h-full overflow-x-hidden overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'} sm:rounded-lg`}
+      className={`w-full sm:w-[80%] h-full overflow-x-hidden overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'} sm:rounded-lg`}
       onScroll={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
       <div className="p-4">
         {conversationRounds.map((round) => (
-          <div key={round.id} className="mb-4">
+          <div key={round.id}>
             {/* User message */}
             <div
               onClick={() => onScrollToMessage(round.id)}
