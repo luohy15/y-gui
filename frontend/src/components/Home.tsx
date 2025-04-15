@@ -62,20 +62,19 @@ export default function Home({ }: HomeProps) {
           <p className="text-2xl text-gray-500">How can I help you today?</p>
         </div>
         {/* New Chat Input */}
-        <div className={`w-full max-w-3xl mx-auto ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <div className="py-4">
-            <MessageInput
-              message={newMessage}
-              setMessage={setNewMessage}
-              selectedBot={selectedBot}
-              setSelectedBot={setSelectedBot}
-              isLoading={isCreatingChat || isProcessingMessage}
-              handleSubmit={async () => Promise.resolve()} // Not used since we're using onSendMessage
-              onSendMessage={handleNewChatWithMessage}
-              isFixed={false} // Don't fix this input to the bottom of the screen
-            />
-          </div>
-        </div>
+				<div className={`py-4`}>
+					{/* Assistant Avatar */}
+					<MessageInput
+						message={newMessage}
+						setMessage={setNewMessage}
+						selectedBot={selectedBot}
+						setSelectedBot={setSelectedBot}
+						isLoading={isCreatingChat || isProcessingMessage}
+						handleSubmit={async () => Promise.resolve()} // Not used since we're using onSendMessage
+						onSendMessage={handleNewChatWithMessage}
+						isFixed={false} // Don't fix this input to the bottom of the screen
+					/>
+				</div>
 
       </main>
     </div>

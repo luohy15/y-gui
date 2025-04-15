@@ -781,7 +781,7 @@ export default function ChatView() {
       {/* Main content with messages and TOC */}
       <div className="flex flex-row">
         {/* Empty space on the left (desktop only) */}
-        <div className="hidden sm:block sm:w-[20%] lg:w-[20%]"></div>
+        <div className="hidden sm:block sm:w-[20%]"></div>
 
         {/* Messages (centered) */}
         <div className={`w-full sm:w-[60%] px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto}`}>
@@ -838,7 +838,9 @@ export default function ChatView() {
         </div>
 
         {/* Table of Contents (Desktop) */}
-        <div className="hidden sm:block sm:w-[20%] lg:w-[20%] h-[calc(100vh-64px)] sticky top-16">
+        <div
+					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] sticky top-8"
+				>
           <TableOfContents
             messages={chat.messages}
             isDarkMode={isDarkMode}

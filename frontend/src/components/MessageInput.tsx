@@ -114,10 +114,10 @@ export default function MessageInput({
   }, []);
 
   return (
-    <div className={`${isFixed ? 'fixed bottom-6 left-0 right-0' : ''} z-10 flex justify-center px-4`}>
-      <form onSubmit={onSubmit} className="w-full max-w-3xl">
+    <div className={`${isFixed ? 'fixed bottom-6 left-0 right-0' : ''} z-10 flex justify-center px-4 sm:w-[60%] max-w-3xl mx-auto`}>
+      <form onSubmit={onSubmit} className="w-full">
         <div className={`relative flex items-center rounded-2xl shadow-lg ${
-          isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+          isDarkMode ? 'text-white bg-gray-800 border border-gray-700' : 'text-gray-800 bg-white border border-gray-200'
         }`}>
           <textarea
             value={message}

@@ -74,7 +74,7 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Replace links with just the text
       .trim();
 
-    return plainText.length > 60 ? plainText.substring(0, 60) + '...' : plainText;
+    return plainText.length > 20 ? plainText.substring(0, 20) + '...' : plainText;
   };
 
   // Format timestamp
@@ -86,22 +86,24 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
   };
 
   return (
-    <div className={`h-full overflow-y-auto ${isDarkMode ? 'bg-[#1a1a1a] text-gray-300' : 'bg-white text-gray-700'}`}>
-      <div className="p-2">
+    <div
+      className={`w-full sm:w-3/4 h-full overflow-x-hidden overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'} sm:rounded-lg`}
+      onScroll={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div className="p-4">
         {conversationRounds.map((round) => (
           <div key={round.id} className="mb-4">
             {/* User message */}
             <div
               onClick={() => onScrollToMessage(round.id)}
-              className={`p-3 rounded-lg cursor-pointer transition-colors ${
+              className={`p-2 rounded-lg cursor-pointer transition-colors ${
                 currentMessageId === round.id
                   ? (isDarkMode ? 'bg-gray-800 text-white' : 'bg-[#4285f4] text-white')
                   : (isDarkMode ? 'hover:bg-gray-800 text-gray-100' : 'hover:bg-gray-50 text-gray-700')
               }`}
             >
-              <p className={`text-sm line-clamp-2`}>
-                {getMessagePreview(round.userMessage)}
-              </p>
+							{getMessagePreview(round.userMessage)}
             </div>
           </div>
         ))}
