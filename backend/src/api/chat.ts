@@ -2,6 +2,7 @@ import { Chat } from '../../../shared/types';
 import { ChatR2Repository } from '../repository/chat-repository';
 import { corsHeaders } from '../middleware/cors';
 import { handleChatCompletions } from './chat-completions';
+import { generateUniqueId } from '../utils/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { Env } from 'worker-configuration';
 
@@ -63,21 +64,12 @@ export async function handleChatsRequest(request: Request, env: Env, userPrefix?
 
     // Get a new unique chat ID
     if (path === '/api/chat/id' && request.method === 'GET') {
-      // Generate a new ID
-      let newId = '';
-      let exists = true;
-      
-      // Keep generating IDs until we find one that doesn't exist
-      while (exists) {
-        newId = Array.from(crypto.getRandomValues(new Uint8Array(3)))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('')
-          .substring(0, 6);
-        
-        // Check if this ID already exists
-        const chat = await chatRepository.getChat(newId);
-        exists = chat !== null;
-      }
+      // Generate a new unique ID using the utility function
+      const existsCheck = async (id: string) => {
+        const chat = await chatRepository.getChat(id);
+        return chat !== null;
+      };
+      const newId = await generateUniqueId(existsCheck);
       
       return new Response(JSON.stringify({ id: newId }), {
         headers: {

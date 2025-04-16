@@ -1,4 +1,5 @@
 import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../../shared/types';
+import { generateUniqueId } from '../utils/chat';
 
 export class ChatR2Repository implements ChatRepository {
   private r2Key: string;
@@ -116,26 +117,33 @@ export class ChatR2Repository implements ChatRepository {
   }
 
   async saveChat(chat: Chat): Promise<Chat> {
+    // set chat update time: update_time: 2023-04-24T14:14:28+08:00
+    chat.update_time = new Date().toISOString();
+
     // Get existing chats
     const existingChats = await this.getChats();
+    const existsCheck = async (id: string) => existingChats.some(c => c.id === id);
+
+    // If chat.id is empty, generate a new unique ID
+    if (!chat.id) {
+      chat.id = await generateUniqueId(existsCheck);
+    }
     
     // Update or add the new chat
     const chatIndex = existingChats.findIndex(c => c.id === chat.id);
     if (chatIndex !== -1) {
       existingChats[chatIndex] = chat;
     } else {
-      // if chat.id is empty, generate a 6 character random hexadecimal id
-      if (!chat.id) {
-        chat.id = Array.from(crypto.getRandomValues(new Uint8Array(3)))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('')
-          .substring(0, 6);
-      }
       existingChats.push(chat);
     }
     
+    // Sort chats by update_time in descending order
+    const sortedChats = existingChats.sort((a, b) =>
+      new Date(b.update_time).getTime() - new Date(a.update_time).getTime()
+    );
+
     // Convert to JSONL format and save to R2
-    const jsonlContent = existingChats.map(c => JSON.stringify(c)).join('\n');
+    const jsonlContent = sortedChats.map(c => JSON.stringify(c)).join('\n');
     await this.r2.put(this.r2Key, jsonlContent);
     
     // return chat with id
