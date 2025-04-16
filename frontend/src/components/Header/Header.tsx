@@ -103,7 +103,7 @@ const Header: React.FC = () => {
 
 	return (
 		<header className={`fixed top-0 z-40 w-screen h-16 sm:h-0 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} `}>
-			<div className="flex items-center justify-between mx-4 mt-2 sm:mx-6 lg:mx-8">
+			<div className="flex items-center justify-between mx-4 mt-2 sm:mx-6 2xl:mx-8">
 				<div className="flex items-center space-x-8">
 					<div
 						className="flex items-center cursor-pointer"
