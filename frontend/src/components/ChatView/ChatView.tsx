@@ -777,11 +777,11 @@ export default function ChatView() {
       )}
 
       {/* Main content with messages and TOC */}
-      <div className="flex flex-row">
+      <div className="flex justify-center">
 
 				{/* Table of Contents (Desktop) */}
         <div
-					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] sticky left-8 top-8"
+					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] fixed left-8 top-20"
 				>
           <TableOfContents
             messages={chat.messages}
@@ -792,7 +792,7 @@ export default function ChatView() {
         </div>
 
         {/* Messages (centered) */}
-        <div className={`w-full sm:w-[60%] px-2 sm:px-4 py-4 space-y-6 sm:space-y-8 ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} overflow-x-hidden overflow-y-auto}`}>
+        <div className={`flex flex-col px-4 sm:px-0 pt-20 pb-28 sm:pt-4 sm:w-[60%] space-y-4`}>
           {chat.messages
           .filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
           .map((msg: Message, index: number) => (
@@ -829,24 +829,18 @@ export default function ChatView() {
 
           {/* Message Actions - Only in regular mode */}
           {!isSharedMode && chat.messages.length > 0 && (
-            <div className="ml-14">
-              <MessageActions
-                chatId={id!}
-                messageContent={
-                  typeof chat.messages[chat.messages.length - 1].content === 'string'
-                    ? chat.messages[chat.messages.length - 1].content
-                    : JSON.stringify(chat.messages[chat.messages.length - 1].content)
-                }
-              />
-            </div>
+						<MessageActions
+							chatId={id!}
+							messageContent={
+								typeof chat.messages[chat.messages.length - 1].content === 'string'
+									? chat.messages[chat.messages.length - 1].content
+									: JSON.stringify(chat.messages[chat.messages.length - 1].content)
+							}
+						/>
           )}
 
-          <div className="pb-12" />
           <div ref={messagesEndRef} />
         </div>
-
-				{/* Empty space on the left (desktop only) */}
-				<div className="hidden sm:block sm:w-[20%]"></div>
 
       </div>
 
@@ -871,7 +865,7 @@ export default function ChatView() {
 
       {/* Message Input - Only in regular mode */}
       {!isSharedMode && (
-        <div>
+        <div className=''>
           <MessageInput
             message={message}
             setMessage={setMessage}

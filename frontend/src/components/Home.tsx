@@ -54,8 +54,8 @@ export default function Home({ }: HomeProps) {
   };
 
   return (
-    <div className={`max-w-full flex flex-col h-full ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
-      <main className="max-w-full mx-4 sm:mx-6 lg:mx-8 flex flex-col h-full justify-center">
+    <div className={`h-full ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+      <main className="flex flex-col h-full justify-center">
         {/* Greeting */}
         <div className={`w-full max-w-3xl mx-auto mb-6 text-center ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
           <h1 className="text-4xl mb-2">Welcome, {user?.name || 'there'}.</h1>

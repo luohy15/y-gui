@@ -39,7 +39,7 @@ export default function App() {
             <Route path="*" element={<Login />} />
           </Routes>
         ) : (
-          <div className='h-screen flex flex-col'>
+          <div className='flex flex-col h-screen'>
             <Header />
             <div className='flex-1 overflow-x-hidden overflow-y-auto'>
               <Routes>
