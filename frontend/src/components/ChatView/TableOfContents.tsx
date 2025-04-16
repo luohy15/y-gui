@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Message } from '@shared/types';
+import { formatDateTime } from '../../utils/formatters';
 
 interface TableOfContentsProps {
   messages: Message[];
@@ -77,13 +78,6 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
     return plainText.length > 20 ? plainText.substring(0, 20) + '...' : plainText;
   };
 
-  // Format timestamp
-  const formatTime = (timestamp: string | number): string => {
-    if (typeof timestamp === 'number') {
-      return new Date(timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
 
   return (
     <div
@@ -103,7 +97,15 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
                   : (isDarkMode ? 'hover:bg-gray-800 text-gray-100' : 'hover:bg-gray-50 text-gray-700')
               }`}
             >
-							{getMessagePreview(round.userMessage)}
+              <div className="flex justify-between items-center">
+                <div className="flex-grow">{getMessagePreview(round.userMessage)}</div>
+                <div className={`text-xs opacity-75 ${
+									currentMessageId === round.id
+										? 'text-white'
+										: (isDarkMode ? 'text-gray-400' : 'text-gray-500')}`}>
+                  {formatDateTime(round.userMessage.unix_timestamp)}
+                </div>
+              </div>
             </div>
           </div>
         ))}

@@ -781,7 +781,7 @@ export default function ChatView() {
 
 				{/* Table of Contents (Desktop) */}
         <div
-					className="hidden sm:block sm:w-[20%] 2xl:w-[15%] h-[calc(50vh)] fixed left-8 top-20 2xl:left-40"
+					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] fixed left-8 top-20 2xl:left-40"
 				>
           <TableOfContents
             messages={chat.messages}

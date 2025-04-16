@@ -4,6 +4,7 @@ import { Chat, ListChatsResult } from '@shared/types';
 import { useAuthenticatedSWR } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
 import AssistantAvatar from './ChatView/AssistantAvatar';
+import { formatDateTime } from '../utils/formatters';
 
 interface SearchWindowProps {
   isOpen: boolean;
@@ -64,7 +65,7 @@ const SearchWindow: React.FC<SearchWindowProps> = ({ isOpen, onClose }) => {
                 : 'New Chat'}
             </p>
             <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              {new Date(chat.update_time).toLocaleDateString()}
+              {formatDateTime(chat.update_time)}
             </span>
           </div>
           <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
