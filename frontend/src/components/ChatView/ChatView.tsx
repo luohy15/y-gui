@@ -23,7 +23,7 @@ export default function ChatView() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { getIdTokenClaims } = useAuth0();
+  const { getAccessTokenSilently } = useAuth0();
   const { isTocOpen, setIsTocOpen, currentMessageId, setCurrentMessageId } = useToc();
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
 
@@ -397,19 +397,17 @@ export default function ChatView() {
 
     try {
       // Get Auth0 token
-      const claims = await getIdTokenClaims();
-      if (!claims || !claims.__raw) {
-        throw new Error('Failed to get ID token');
+      const accessToken = await getAccessTokenSilently();
+      if (!accessToken) {
+        throw new Error('Failed to get access token');
       }
-
-      const idToken = claims.__raw;
 
       // Make the API request
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          'Authorization': `Bearer ${accessToken}`
         },
         body: body,
         signal

@@ -13,8 +13,8 @@ export function useAuthenticatedSWR<Data = any, Error = any>(
   url: string | null,
   options?: SWRConfiguration
 ): SWRResponse<Data, Error> {
-  const { getIdTokenClaims, logout } = useAuth0();
-  const authenticatedFetcher = createAuthenticatedFetch(getIdTokenClaims, logout);
+  const { getAccessTokenSilently, logout } = useAuth0();
+  const authenticatedFetcher = createAuthenticatedFetch(getAccessTokenSilently, logout);
 
   return useSWR<Data, Error>(
     url,
@@ -29,26 +29,24 @@ export function useAuthenticatedSWR<Data = any, Error = any>(
  * @returns Object with methods for making authenticated API requests
  */
 export function useApi() {
-  const { getIdTokenClaims, logout } = useAuth0();
+  const { getAccessTokenSilently, logout } = useAuth0();
 
   const fetchWithAuth = async <T = any>(
     url: string,
     options: RequestInit = {}
   ): Promise<T> => {
     try {
-      // Get the ID token from claims
-      const claims = await getIdTokenClaims();
-      if (!claims || !claims.__raw) {
-        throw new Error('Failed to get ID token');
+      // Get the access token
+      const accessToken = await getAccessTokenSilently();
+      if (!accessToken) {
+        throw new Error('Failed to get access token');
       }
-
-      const idToken = claims.__raw;
 
       const response = await fetch(url, {
         ...options,
         headers: {
           ...options.headers,
-          Authorization: `Bearer ${idToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -57,7 +55,7 @@ export function useApi() {
         // Handle 401 Unauthorized errors by logging out
         if (response.status === 401) {
           console.log('Received 401 response, logging out...');
-          logout();
+          logout({ logoutParams: { returnTo: window.location.origin } });
           window.location.href = '/'; // This will redirect to login due to Auth0 setup
           return null as any;
         }

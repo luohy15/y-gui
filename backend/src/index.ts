@@ -5,7 +5,7 @@ import { handleBotRequest } from './api/bot';
 import { handleMcpServerRequest } from './api/mcp-server';
 import { handleApiDocs } from './openapi';
 import { handleShareRequest } from './api/share';
-import { validateAuth, extractUserInfo, UserInfo } from './utils/auth';
+import { getUserInfo } from './utils/auth';
 import { corsHeaders } from './middleware/cors';
 import { calculateUserPrefix } from './utils/user';
 import { Env } from './worker-configuration';
@@ -29,24 +29,12 @@ export default {
 
       // Handle API routes
       if (path.startsWith('/api/')) {
-        const isAuthenticated = await validateAuth(request);
-        if (!isAuthenticated) {
+        const userInfo = await getUserInfo(request, env);
+        if (!userInfo) {
           return new Response('Unauthorized', {
             status: 401,
             headers: corsHeaders
           });
-        }
-
-        // Extract user email from Auth0 token
-        let userInfo: UserInfo = { sub: '', email: '', picture: '', name: '' };
-        const authHeader = request.headers.get('Authorization');
-        if (authHeader?.startsWith('Bearer ')) {
-          try {
-            const token = authHeader.slice(7);
-            userInfo = extractUserInfo(token);
-          } catch (error) {
-            console.error('Error extracting user info:', error);
-          }
         }
 
         const userPrefix = await calculateUserPrefix(userInfo.email);

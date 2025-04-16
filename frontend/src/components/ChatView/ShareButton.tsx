@@ -10,7 +10,7 @@ export default function ShareButton({ chatId }: ShareButtonProps) {
   const { isDarkMode } = useTheme();
   const [isSharing, setIsSharing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const { getIdTokenClaims } = useAuth0();
+  const { getAccessTokenSilently } = useAuth0();
 
   // Reset copied state after timeout
   useEffect(() => {
@@ -26,19 +26,17 @@ export default function ShareButton({ chatId }: ShareButtonProps) {
     setIsSharing(true);
     try {
       // Get Auth0 token
-      const claims = await getIdTokenClaims();
-      if (!claims || !claims.__raw) {
-        throw new Error('Failed to get ID token');
+      const accessToken = await getAccessTokenSilently();
+      if (!accessToken) {
+        throw new Error('Failed to get access token');
       }
-
-      const idToken = claims.__raw;
 
       // Call the API to generate a share link
       const response = await fetch(`/api/share/${chatId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          'Authorization': `Bearer ${accessToken}`
         }
       });
 

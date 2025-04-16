@@ -16,6 +16,11 @@ binding = "CHAT_R2"
 bucket_name = ""
 preview_bucket_name = ""
 
+[[kv_namespaces]]
+binding = "USER_KV"
+id = ""
+preview_id = ""
+
 # Development settings
 [dev]
 port = 8787

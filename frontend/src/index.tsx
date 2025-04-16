@@ -40,7 +40,7 @@ root.render(
       authorizationParams={{
         redirect_uri: window.location.origin,
         audience: 'https://mcp.jp.auth0.com/api/v2/',
-        scope: 'openid profile email'
+        scope: 'openid profile email offline_access'
       }}
       useRefreshTokens={true}
       cacheLocation="localstorage"

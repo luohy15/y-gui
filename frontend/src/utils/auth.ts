@@ -1,28 +1,26 @@
 import { useAuth0 } from '@auth0/auth0-react';
 
 /**
- * Creates an authenticated fetch function that includes the Auth0 ID token
+ * Creates an authenticated fetch function that includes the Auth0 access token
  * in the Authorization header. Automatically handles 401 errors by logging out
  * and redirecting to login page.
  *
- * @returns A fetch function that includes the Auth0 ID token
+ * @returns A fetch function that includes the Auth0 access token
  */
-export const createAuthenticatedFetch = (getIdTokenClaims: () => Promise<any>, logout?: () => void) => {
+export const createAuthenticatedFetch = (getAccessTokenSilently: () => Promise<any>, logout?: () => void) => {
   return async (url: string, options: RequestInit = {}) => {
     try {
-      // Get the ID token from claims
-      const claims = await getIdTokenClaims();
-      if (!claims || !claims.__raw) {
-        throw new Error('Failed to get ID token');
+      // Get the access token
+      const accessToken = await getAccessTokenSilently();
+      if (!accessToken) {
+        throw new Error('Failed to get access token');
       }
-
-      const idToken = claims.__raw;
 
       const response = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
+          Authorization: `Bearer ${accessToken}`,
           ...options.headers,
         },
         credentials: 'omit', // Don't send cookies for cross-origin requests
@@ -56,6 +54,6 @@ export const createAuthenticatedFetch = (getIdTokenClaims: () => Promise<any>, l
  * Must be used within a component wrapped by Auth0Provider
  */
 export const useAuthenticatedFetcher = () => {
-  const { getIdTokenClaims, logout } = useAuth0();
-  return createAuthenticatedFetch(getIdTokenClaims, logout);
+  const { getAccessTokenSilently, logout } = useAuth0();
+  return createAuthenticatedFetch(getAccessTokenSilently, logout);
 };

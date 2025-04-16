@@ -16,6 +16,11 @@ binding = "CHAT_R2"
 bucket_name = "mcp"
 preview_bucket_name = "mcp"
 
+[[kv_namespaces]]
+binding = "USER_KV"
+id = "e4110deae3dd4f01b328ba80f43a00cd"
+preview_id = "e4110deae3dd4f01b328ba80f43a00cd"
+
 # Development settings
 [dev]
 port = 8787

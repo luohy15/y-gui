@@ -2,6 +2,7 @@
 // After adding bindings to `wrangler.jsonc`, regenerate this interface via `npm run cf-typegen`
 export interface Env {
     CHAT_R2: R2Bucket;
+    USER_KV: KVNamespace;
     ASSETS: { fetch: (request: Request) => Promise<Response> };
     OPENROUTER_BASE_URL: string;
     OPENROUTER_FREE_KEY: string;
