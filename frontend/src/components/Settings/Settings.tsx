@@ -60,7 +60,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
 
 
   return (
-    <div className={`max-w-full flex flex-col h-screen ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`max-w-full flex flex-col pt-16 h-screen ${isDarkMode ? 'bg-[#1a1a1a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Mobile header with sections dropdown */}
       <div className="sm:hidden flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <h1 className="text-xl font-semibold">Settings</h1>
@@ -154,7 +154,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - hidden on mobile */}
-        <div className={`hidden sm:block w-56 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-200'} border-r p-4`}>
+        <div className={`hidden sm:block w-56 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-gray-50 border-gray-200'} border-r p-4`}>
           <nav>
             <ul>
               <li className="mb-1">
