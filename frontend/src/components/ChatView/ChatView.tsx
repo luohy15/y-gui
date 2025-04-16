@@ -781,7 +781,7 @@ export default function ChatView() {
 
 				{/* Table of Contents (Desktop) */}
         <div
-					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] fixed left-8 top-20"
+					className="hidden sm:block sm:w-[20%] lg:w-[15%] h-[calc(50vh)] fixed left-4 top-20 lg:left-40"
 				>
           <TableOfContents
             messages={chat.messages}
@@ -792,7 +792,7 @@ export default function ChatView() {
         </div>
 
         {/* Messages (centered) */}
-        <div className={`flex flex-col px-4 sm:px-0 pt-20 pb-28 sm:pt-4 sm:w-[60%] space-y-4`}>
+        <div className={`flex flex-col px-4 sm:px-0 pt-20 pb-28 sm:pt-4 sm:w-[60%] lg:w-[40%] space-y-4`}>
           {chat.messages
           .filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
           .map((msg: Message, index: number) => (
