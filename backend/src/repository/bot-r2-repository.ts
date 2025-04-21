@@ -97,12 +97,12 @@ export class BotR2Repository implements BotRepository {
         {
           name: "gemini",
           model: "google/gemini-2.0-flash-001",
-          mcp_servers: ["amap"]
+          mcp_servers: []
         },
         {
           name: "deepseek",
           model: "deepseek/deepseek-chat-v3-0324",
-          mcp_servers: ["amap"]
+          mcp_servers: []
         },
       ];
 

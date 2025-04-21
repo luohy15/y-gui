@@ -103,7 +103,7 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
 									currentMessageId === round.id
 										? 'text-white'
 										: (isDarkMode ? 'text-gray-400' : 'text-gray-500')}`}>
-                  {formatDateTime(round.userMessage.unix_timestamp)}
+                  {round.userMessage.unix_timestamp === 0 ? '' : formatDateTime(round.userMessage.unix_timestamp)}
                 </div>
               </div>
             </div>

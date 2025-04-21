@@ -3,12 +3,12 @@ import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useBot } from '../../contexts/BotContext';
 import { useToc } from '../../contexts/TocContext';
+import { useMcp } from '../../contexts/McpContext';
 import { useAuthenticatedSWR } from '../../utils/api';
 import { Chat, Message, McpServerConfig } from '@shared/types';
 import { mutate } from 'swr';
 import useSWR, { SWRConfiguration } from 'swr';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useMcp } from '../../contexts/McpContext';
 import { useMcpStatus } from '../../hooks/useMcpStatus';
 import MessageInput from '../MessageInput';
 import MessageActions from './MessageActions';
@@ -147,7 +147,7 @@ export default function ChatView() {
           role: role,
           content: content,
           timestamp: new Date().toISOString(),
-          unix_timestamp: Math.floor(Date.now() / 1000),
+          unix_timestamp: Date.now(),
           ...additionalProps
         };
 
@@ -744,27 +744,6 @@ export default function ChatView() {
         onScrollToMessage={scrollToMessage}
         currentMessageId={currentMessageId}
       />
-      {/* Shared Mode Header */}
-      {isSharedMode && (
-        <div className={`py-4 px-6 border-b ${isDarkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-gray-50 border-gray-200 text-gray-800'}`}>
-          <div className="flex flex-col items-center space-y-3">
-            <h1 className="text-xl font-semibold">Shared Chat</h1>
-            <Link
-              to="/"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                isDarkMode
-                  ? 'bg-blue-600 text-white hover:bg-blue-500 hover:shadow-md'
-                  : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md'
-              }`}
-            >
-              Go to Yovy home page
-            </Link>
-            <div className="text-sm opacity-75">
-              {new Date(chat.create_time).toLocaleDateString()}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MCP Status Logs - Only in regular mode */}
       {!isSharedMode && (

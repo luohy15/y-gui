@@ -57,13 +57,6 @@ export default function McpServerStatus({ mcpServers, serverStatus, isDarkMode }
                       {server.name}
                     </div>
                     <div className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
-                      {server.command && (
-                        <div className="truncate">
-                          <span className={`px-1 py-0.5 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                            {server.command} {server.args?.join(' ')}
-                          </span>
-                        </div>
-                      )}
                       {server.url && (
                         <div className="truncate">
                           <span className={`px-1 py-0.5 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>

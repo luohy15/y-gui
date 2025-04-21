@@ -20,6 +20,6 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1"
+    "@modelcontextprotocol/sdk": "^1.10.1"
   }
 }

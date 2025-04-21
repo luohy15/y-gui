@@ -1,8 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { BotConfig, McpServerRepository } from '../../../shared/types';
 import { BotR2Repository } from '../repository/bot-r2-repository';
-import { FetchLikeInit } from 'eventsource';
 import { writeMcpStatus } from '../utils/writer';
 
 /**
@@ -17,7 +16,7 @@ export class McpManager {
    * @param configRepo Repository for accessing MCP server configurations
    */
   constructor(private mcpServerConfigRepository: McpServerRepository) {}
-  
+
   /**
    * Disconnect all MCP server sessions
    * @returns Promise resolving when all disconnections are complete
@@ -81,29 +80,33 @@ export class McpManager {
 
       // Create a URL from the server configuration
       const serverUrl = new URL(server.url);
+
       // Create transport with token if available
-      const transportOptions = {
-        eventSourceInit: {
-          fetch: (input: string | URL, init?: FetchLikeInit) => {
-            if (init) {
-              init.mode = undefined;
-              init.cache = undefined;
-            }
-            if (server.token) {
-              if (!init) {
-                init = {};
-              }
-              if (!init.headers) {
-                init.headers = {};
-              }
-              init.headers["Authorization"] = `Bearer ${server.token}`;
-            }
-            return fetch(input, init as RequestInit);
-          }
+      const transportOptions: {
+        requestInit: {
+          headers: HeadersInit;
+        };
+        reconnectionOptions: {
+          initialReconnectionDelay: number;
+          maxReconnectionDelay: number;
+          reconnectionDelayGrowFactor: number;
+          maxRetries: number;
+        };
+      } = {
+        requestInit: {
+          headers: server.token ? 
+            { "Authorization": `Bearer ${server.token}` } :
+            {}
+        },
+        reconnectionOptions: {
+          initialReconnectionDelay: 1000,
+          maxReconnectionDelay: 30000,
+          reconnectionDelayGrowFactor: 1.5,
+          maxRetries: 2
         }
       };
     
-      const transport = new SSEClientTransport(serverUrl, transportOptions);
+      const transport = new StreamableHTTPClientTransport(serverUrl, transportOptions);
 
       const client = new Client(
         {

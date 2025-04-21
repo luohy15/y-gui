@@ -171,7 +171,6 @@ export const McpServerSection: React.FC<McpServerSectionProps> = ({
               <div>
                 <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{server.name}</h3>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {server.command && <div>{server.command} {server.args?.join(' ')}</div>}
                   {server.url && <div>URL: {server.url}</div>}
                 </div>
               </div>

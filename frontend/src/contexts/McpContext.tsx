@@ -21,9 +21,9 @@ const McpContext = createContext<McpContextType | undefined>(undefined);
 export function McpProvider({ children }: { children: React.ReactNode }) {
   const [serverStatus, setServerStatus] = useState<Record<string, ServerStatus>>({});
   const [showMcpLogs, setShowMcpLogs] = useState<boolean>(() => {
-    // Initialize from localStorage or default to true
+    // Initialize from localStorage or default to false
     const saved = localStorage.getItem('showMcpLogs');
-    return saved !== null ? saved === 'true' : true;
+    return saved !== null ? saved === 'true' : false;
   });
 
   // Save to localStorage whenever the value changes

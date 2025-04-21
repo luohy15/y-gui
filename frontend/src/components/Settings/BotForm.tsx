@@ -25,7 +25,6 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 			model: '',
 			base_url: '',
 			api_key: '',
-			print_speed: 1000,
 			mcp_servers: []
 		}
 	);
@@ -39,16 +38,14 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 			setFormData(initialBot);
 			// Set the checkbox states based on initial values
 			setShowCustomKey(!!(initialBot.base_url || initialBot.api_key));
-			setShowOptionalFields(!!(initialBot.api_type || initialBot.custom_api_path || initialBot.max_tokens || initialBot.print_speed !== 1000));
+			setShowOptionalFields(!!(initialBot.api_type || initialBot.custom_api_path || initialBot.max_tokens));
 		}
 	}, [initialBot]);
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
 		const { name, value, type } = e.target;
 
-		if (name === 'print_speed') {
-			setFormData(prev => ({ ...prev, [name]: Number(value) }));
-		} else if (name === 'mcp_servers') {
+		if (name === 'mcp_servers') {
 			// Handle multi-select for MCP servers
 			const select = e.target as HTMLSelectElement;
 			const selectedOptions = Array.from(select.selectedOptions).map(option => option.value);
@@ -161,7 +158,17 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 										type="checkbox"
 										id="showCustomKey"
 										checked={showCustomKey}
-										onChange={(e) => setShowCustomKey(e.target.checked)}
+										onChange={(e) => {
+											setShowCustomKey(e.target.checked);
+											if (!e.target.checked) {
+												// Clear base_url and api_key fields when unchecked
+												setFormData(prev => ({
+													...prev,
+													base_url: '',
+													api_key: ''
+												}));
+											}
+										}}
 										className={`mr-2 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
 									/>
 									<label
@@ -212,7 +219,18 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 										type="checkbox"
 										id="showOptionalFields"
 										checked={showOptionalFields}
-										onChange={(e) => setShowOptionalFields(e.target.checked)}
+										onChange={(e) => {
+											setShowOptionalFields(e.target.checked);
+											if (!e.target.checked) {
+												// Clear optional fields when unchecked
+												setFormData(prev => ({
+													...prev,
+													api_type: '',
+													custom_api_path: '',
+													max_tokens: undefined
+												}));
+											}
+										}}
 										className={`mr-2 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
 									/>
 									<label
@@ -225,21 +243,6 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 
 								{showOptionalFields && (
 									<>
-										<div className="mt-3">
-											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-												Print Speed
-											</label>
-											<input
-												type="number"
-												name="print_speed"
-												value={formData.print_speed}
-												onChange={handleChange}
-												min="100"
-												max="1000"
-												className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-											/>
-										</div>
-
 										<div className="mt-3">
 											<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
 												API Type

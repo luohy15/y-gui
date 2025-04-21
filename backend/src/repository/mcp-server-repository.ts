@@ -29,10 +29,6 @@ export class McpServerR2Repository implements McpServerRepository {
         .map(line => JSON.parse(line));
 
       const default_servers: McpServerConfig[] = [
-        {
-          name: "amap",
-          url: this.env.AMAP_URL
-        },
       ];
 
       for (const default_server of default_servers) {

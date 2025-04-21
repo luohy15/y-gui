@@ -36,9 +36,9 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
         });
       }
       
-      // Validate that either command+args or url is provided
-      if ((!mcpServerConfig.command || !mcpServerConfig.args) && !mcpServerConfig.url) {
-        return new Response(JSON.stringify({ error: 'Either command+args or url must be provided' }), {
+      // Validate that url is provided
+      if (!mcpServerConfig.url) {
+        return new Response(JSON.stringify({ error: 'Url must be provided' }), {
           status: 400,
           headers: { 
             'Content-Type': 'application/json',
@@ -85,9 +85,9 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
         });
       }
       
-      // Validate that either command+args or url is provided
-      if ((!mcpServerConfig.command || !mcpServerConfig.args) && !mcpServerConfig.url) {
-        return new Response(JSON.stringify({ error: 'Either command+args or url must be provided' }), {
+      // Validate that url is provided
+      if (!mcpServerConfig.url) {
+        return new Response(JSON.stringify({ error: 'Url must be provided' }), {
           status: 400,
           headers: { 
             'Content-Type': 'application/json',

@@ -115,7 +115,7 @@ const Header: React.FC = () => {
 				</div>
 
 				{/* Center section with MCP Status */}
-				<div className="flex-1 flex justify-center px-4">
+				{/* <div className="flex-1 flex justify-center px-4">
 					{filteredMcpServers.length > 0 && (
 						<div className="max-w-md w-full hidden sm:flex sm:flex-row sm:items-center sm:justify-center">
 							<McpServerStatus
@@ -125,7 +125,7 @@ const Header: React.FC = () => {
 							/>
 						</div>
 					)}
-				</div>
+				</div> */}
 
 				{/* Right side icons and dropdown */}
 				<div className="flex items-center space-x-3">

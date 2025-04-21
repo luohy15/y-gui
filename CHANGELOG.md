@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [04210935]
+
+### Added
+- Added support for StreamableHTTPClientTransport from MCP SDK v1.10.1
+- Added reconnection options for MCP server connections with configurable retry parameters
+
+### Changed
+- Changed MCP server configuration to require URL-based connections only (removed support for local command+args)
+- Updated MCP SDK from v1.6.1 to v1.10.1
+- Replaced SSEClientTransport with StreamableHTTPClientTransport for better connection handling
+- Changed unix_timestamp to use milliseconds instead of seconds
+- Modified MCP server form to support URL-only configuration
+- Improved API error handling and validation for MCP server configurations
+- Updated bot configuration to clear optional fields when toggles are unchecked
+- Set default showMcpLogs to false for cleaner UI
+
+### Removed
+- Removed default "amap" MCP server from server repository
+- Removed AMAP_URL from worker configuration
+- Removed MCP servers from default bot configurations
+- Removed command+args support from MCP server configurations
+- Removed print_speed from bot configuration
+- Removed shared mode header from chat view
+- Removed MCP server status display from header center section
+
 ## [03280036]
 
 ### Added

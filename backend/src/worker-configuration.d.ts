@@ -6,5 +6,4 @@ export interface Env {
     ASSETS: { fetch: (request: Request) => Promise<Response> };
     OPENROUTER_BASE_URL: string;
     OPENROUTER_FREE_KEY: string;
-    AMAP_URL: string;
 }
