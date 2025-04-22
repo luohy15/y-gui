@@ -468,13 +468,6 @@ export default function ChatView() {
                 // Handle content chunks
                 else if (parsedData.choices?.[0]?.delta?.content) {
                   await updateLastMessageChunk(parsedData.choices[0].delta.content);
-                  // Signal that real content is coming in
-                  handleMcpStatus(
-                    "info",
-                    "system",
-                    "Receiving message content",
-                    true
-                  );
                 }
 
                 // Set model and provider info

@@ -29,6 +29,10 @@ export class McpServerR2Repository implements McpServerRepository {
         .map(line => JSON.parse(line));
 
       const default_servers: McpServerConfig[] = [
+        {
+          name: "default",
+          url: this.env.MCP_SERVER_URL
+        },
       ];
 
       for (const default_server of default_servers) {
