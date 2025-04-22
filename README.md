@@ -17,9 +17,9 @@ Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
 
 ## Demo
 
-![demo](https://cdn.luohy15.com/y-gui-demo.png)
+![demo](https://cdn.luohy15.com/y-gui-demo-0422.png)
 
-[chat history](https://yovy.app/share/09952e1b)
+[chat history](https://yovy.app/share/0d3e6a7e)
 
 ## Architecture
 
