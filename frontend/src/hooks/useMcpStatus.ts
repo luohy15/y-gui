@@ -31,7 +31,6 @@ export function useMcpStatus() {
 
     // Close logs if real content is detected
     if (isRealContent) {
-			setIsLogVisible(false);
 			setNewRound(false);
     }
 

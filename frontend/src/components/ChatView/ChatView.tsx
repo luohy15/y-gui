@@ -747,12 +747,16 @@ export default function ChatView() {
 
       {/* MCP Status Logs - Only in regular mode */}
       {!isSharedMode && (
-        <McpLogsDisplay
-          logs={mcpLogs}
-          isVisible={isLogVisible}
-          onClose={closeLog}
-          isDarkMode={isDarkMode}
-        />
+				<div
+					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] fixed right-8 top-20 2xl:right-40"
+				>
+					<McpLogsDisplay
+						logs={mcpLogs}
+						isVisible={isLogVisible}
+						onClose={closeLog}
+						isDarkMode={isDarkMode}
+					/>
+				</div>
       )}
 
       {/* Main content with messages and TOC */}

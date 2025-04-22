@@ -42,8 +42,8 @@ export default function McpLogsDisplay({ logs, isVisible, onClose, isDarkMode }:
   }, [logs]); // Re-run when logs change
 
   return (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[32rem] h-[32rem]">
-      <div className={`relative w-full h-full rounded-lg shadow-lg overflow-hidden ${
+    <div>
+      <div className={`w-full h-full rounded-lg shadow-lg overflow-hidden ${
         isDarkMode ? 'bg-gray-800' : 'bg-white'
       }`}>
         <div className={`absolute top-0 left-0 right-0 p-2 flex justify-between items-center ${
