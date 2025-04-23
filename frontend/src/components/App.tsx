@@ -6,6 +6,8 @@ import ChatView from './ChatView/ChatView';
 import Login from './Login';
 import { Settings } from './Settings/Settings';
 import Header from './Header/Header';
+import { GoogleCalendarCallback } from './Callback/GoogleCalendarCallback';
+import { GmailCallback } from './Callback/GmailCallback';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { McpProvider } from '../contexts/McpContext';
 import { BotProvider } from '../contexts/BotContext';
@@ -48,6 +50,8 @@ export default function App() {
                 <Route path="/share/:id" element={<ChatView />} />
                 <Route path="/settings" element={<Navigate to="/settings/general" replace />} />
                 <Route path="/settings/:section" element={<Settings />} />
+                <Route path="/callback/google-calendar" element={<GoogleCalendarCallback />} />
+                <Route path="/callback/gmail" element={<GmailCallback />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>

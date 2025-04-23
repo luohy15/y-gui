@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [04240058]
+
+### Added
+- Added Hono framework for backend routing and middleware
+- Added integration system with OAuth support for Google Calendar and Gmail
+- Added integration repository with R2 storage for managing third-party service connections
+- Added OAuth callback components and routes for handling authentication flows
+- Added integration settings section in the frontend UI
+- Added token integration with MCP servers for authorized API access
+- Added environment variables for Google OAuth configuration
+
+### Changed
+- Refactored entire backend API structure to use Hono routers
+- Restructured index.ts to use modular Hono routing approach
+- Updated MCP Manager to support integration access tokens
+- Enhanced authentication middleware with better context handling
+- Improved error handling and response formatting
+- Reorganized API handlers into dedicated router files
+
+### Fixed
+- Fixed CORS headers application for preflight requests
+- Fixed authorization flow for public share endpoints
+
 ## [04210935]
 
 ### Added

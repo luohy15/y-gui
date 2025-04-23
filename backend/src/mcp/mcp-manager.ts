@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { BotConfig, McpServerRepository } from '../../../shared/types';
+import { BotConfig, McpServerRepository, IntegrationRepository } from '../../../shared/types';
 import { BotR2Repository } from '../repository/bot-r2-repository';
 import { writeMcpStatus } from '../utils/writer';
 
@@ -15,7 +15,10 @@ export class McpManager {
    * Create a new MCP Manager
    * @param configRepo Repository for accessing MCP server configurations
    */
-  constructor(private mcpServerConfigRepository: McpServerRepository) {}
+  constructor(
+    private mcpServerConfigRepository: McpServerRepository,
+    private integrationRepository: IntegrationRepository
+  ) {}
 
   /**
    * Disconnect all MCP server sessions
@@ -53,10 +56,15 @@ export class McpManager {
   /**
    * Connect to a specific MCP server on-demand (just-in-time)
    * @param serverName Name of the MCP server to connect to
+   * @param toolName Name of the tool being executed (optional)
    * @param writer Optional writer for status updates
    * @returns Promise resolving to the connected client or null if connection fails
    */
-  private async connectOnDemand(serverName: string, writer?: WritableStreamDefaultWriter): Promise<Client | null> {
+  private async connectOnDemand(
+    serverName: string, 
+    toolName: string = "", 
+    writer?: WritableStreamDefaultWriter
+  ): Promise<Client | null> {
     // First disconnect any existing connections to ensure we only have one active connection
     await this.disconnectAll();
     
@@ -81,6 +89,34 @@ export class McpManager {
       // Create a URL from the server configuration
       const serverUrl = new URL(server.url);
 
+      // Get token from server configuration
+      let token = server.token;
+
+      // Check if we have a tool name and should try to find an integration token
+      if (toolName) {
+        try {
+          const integrations = await this.integrationRepository.getIntegrations();
+          
+          for (const integration of integrations) {
+            // Check if integration type is a prefix of the tool name
+            if (toolName.startsWith(integration.type) && 
+                integration.connected && 
+                integration.credentials?.access_token) {
+              
+              // Log this match
+              console.log(`Using integration token for ${integration.type} when calling tool ${toolName}`);
+              
+              // Use the integration token instead
+              token = integration.credentials.access_token;
+              break;
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching integrations:", error);
+          // Continue with server token if there's an error with integrations
+        }
+      }
+
       // Create transport with token if available
       const transportOptions: {
         requestInit: {
@@ -94,8 +130,8 @@ export class McpManager {
         };
       } = {
         requestInit: {
-          headers: server.token ? 
-            { "Authorization": `Bearer ${server.token}` } :
+          headers: token ? 
+            { "Authorization": `Bearer ${token}` } :
             {}
         },
         reconnectionOptions: {
@@ -180,7 +216,7 @@ export class McpManager {
         try {
           // Connect to this server
           await writeMcpStatus(writer, "info", `Connecting to ${serverName} to list tools...`, serverName);
-          const client = await this.connectOnDemand(serverName, writer);
+          const client = await this.connectOnDemand(serverName, "", writer);
           
           if (!client) {
             await writeMcpStatus(writer, "error", `Failed to connect to ${serverName} to list tools`, serverName);
@@ -254,7 +290,7 @@ export class McpManager {
       let client: Client | null = null;
       
       // Connect on-demand (always just-in-time in Cloudflare Workers)
-      client = await this.connectOnDemand(serverName);
+      client = await this.connectOnDemand(serverName, toolName);
       if (!client) {
         return `Error: Could not establish connection to MCP server '${serverName}'`;
       }

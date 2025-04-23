@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthenticatedSWR } from '../../utils/api';
 import { BotSection } from './BotSection';
 import { McpServerSection } from './McpServerSection';
+import { IntegrationSection } from './IntegrationSection';
 
 interface SettingsProps {
 }
@@ -14,7 +15,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
   const { isDarkMode, setTheme } = useTheme();
 
   // Validate section parameter and default to 'general' if invalid
-  const activeSection = (section === 'general' || section === 'bots' || section === 'mcp-servers')
+  const activeSection = (section === 'general' || section === 'bots' || section === 'mcp-servers' || section === 'integrations')
     ? section
     : 'general';
 
@@ -135,6 +136,21 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
               >
                 MCP Servers
               </Link>
+              <Link
+                to="/settings/integrations"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`block w-full text-left px-4 py-2 text-sm ${
+                  activeSection === 'integrations'
+                    ? isDarkMode
+                      ? 'bg-gray-700 text-white'
+                      : 'bg-blue-50 text-blue-600'
+                    : isDarkMode
+                      ? 'text-gray-300 hover:bg-gray-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Integrations
+              </Link>
             </div>
           )}
         </div>
@@ -203,6 +219,22 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                   }`}
                 >
                   MCP Servers
+                </Link>
+              </li>
+              <li className="mb-1">
+                <Link
+                  to="/settings/integrations"
+                  className={`block w-full text-left px-3 py-2 rounded-md ${
+                    activeSection === 'integrations'
+                      ? isDarkMode
+                        ? 'bg-gray-800 text-white font-medium'
+                        : 'bg-blue-50 text-blue-600 font-medium'
+                      : isDarkMode
+                        ? 'text-gray-300 hover:bg-gray-800'
+                        : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Integrations
                 </Link>
               </li>
             </ul>
@@ -289,6 +321,14 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
           {/* MCP Servers settings section */}
           {activeSection === 'mcp-servers' && (
             <McpServerSection
+              isDarkMode={isDarkMode}
+              setStatusMessage={setStatusMessage}
+            />
+          )}
+
+          {/* Integrations settings section */}
+          {activeSection === 'integrations' && (
+            <IntegrationSection
               isDarkMode={isDarkMode}
               setStatusMessage={setStatusMessage}
             />

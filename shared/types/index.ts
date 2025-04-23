@@ -82,3 +82,21 @@ export interface McpServerRepository {
   updateMcpServer(name: string, mcp_server: McpServerConfig): Promise<void>;
   deleteMcpServer(name: string): Promise<void>;
 }
+
+export interface IntegrationConfig {
+  name: string;
+  type: string; // "google-calendar" or other future integrations
+  connected: boolean;
+  credentials?: {
+    access_token?: string;
+    refresh_token?: string;
+    expiry_date?: number;
+  };
+}
+
+export interface IntegrationRepository {
+  getIntegrations(): Promise<IntegrationConfig[]>;
+  addIntegration(integration: IntegrationConfig): Promise<void>;
+  updateIntegration(name: string, integration: IntegrationConfig): Promise<void>;
+  deleteIntegration(name: string): Promise<void>;
+}

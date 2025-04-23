@@ -2,6 +2,7 @@ import { corsHeaders } from '../middleware/cors';
 import { McpManager } from '../mcp/mcp-manager';
 import { BotR2Repository } from '../repository/bot-r2-repository';
 import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
+import { IntegrationR2Repository } from '../repository/integration-r2-repository';
 import { Message } from '../../../shared/types';
 import { createMessage } from 'src/utils/message';
 import { Env } from 'worker-configuration';
@@ -31,7 +32,8 @@ export async function handleToolConfirmation(request: Request, env: Env, userPre
     try {
       // Initialize repositories and MCP manager
       const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
-      const mcpManager = new McpManager(mcpServerRepository);
+      const integrationRepository = new IntegrationR2Repository(env.CHAT_R2, userPrefix);
+      const mcpManager = new McpManager(mcpServerRepository, integrationRepository);
       
       // Get the bot config
       const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);

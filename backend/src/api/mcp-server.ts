@@ -89,7 +89,7 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
       if (!mcpServerConfig.url) {
         return new Response(JSON.stringify({ error: 'Url must be provided' }), {
           status: 400,
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
           }

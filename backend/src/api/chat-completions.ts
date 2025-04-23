@@ -7,6 +7,7 @@ import { McpManager } from '../mcp/mcp-manager';
 import { ChatService } from '../serivce/chat';
 import { createMessage } from 'src/utils/message';
 import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
+import { IntegrationR2Repository } from '../repository/integration-r2-repository';
 import { Env } from 'worker-configuration';
 
 /**
@@ -37,6 +38,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
       // Get the bot config
       const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
       const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
+      const integrationRepository = new IntegrationR2Repository(env.CHAT_R2, userPrefix);
       const bots = await botRepository.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {
@@ -53,7 +55,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
       const provider = ProviderFactory.createProvider(resultBotConfig);
 
       // Get the MCP manager
-      const mcpManager = new McpManager(mcpServerRepository);
+      const mcpManager = new McpManager(mcpServerRepository, integrationRepository);
 
       // Create the chat service
       const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, resultBotConfig);
