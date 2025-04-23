@@ -6,7 +6,7 @@ Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
 
 ## Demo
 
-![demo](https://cdn.luohy15.com/y-gui-demo-0424.png)
+![demo](https://cdn.luohy15.com/y-gui-demo-4.png)
 
 ### MCP in Action
 See how y-gui uses MCP integrations to extend AI capabilities:
