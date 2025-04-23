@@ -9,7 +9,6 @@ export interface ServerStatus {
 }
 
 interface McpContextType {
-  mcpServers: McpServerConfig[] | undefined;
   serverStatus: Record<string, ServerStatus>;
   setServerStatus: React.Dispatch<React.SetStateAction<Record<string, ServerStatus>>>;
   showMcpLogs: boolean;
@@ -31,15 +30,8 @@ export function McpProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('showMcpLogs', showMcpLogs.toString());
   }, [showMcpLogs]);
 
-  const { data: mcpServers } = useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers', {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    refreshInterval: 0,
-    dedupingInterval: 2000,
-  });
-
   return (
-    <McpContext.Provider value={{ mcpServers, serverStatus, setServerStatus, showMcpLogs, setShowMcpLogs }}>
+    <McpContext.Provider value={{serverStatus, setServerStatus, showMcpLogs, setShowMcpLogs }}>
       {children}
     </McpContext.Provider>
   );

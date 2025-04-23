@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Chat, ListChatsResult } from '@shared/types';
-import { useAuthenticatedSWR } from '../utils/api';
+import { useAuthenticatedSWR, useApi } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
 import AssistantAvatar from './ChatView/AssistantAvatar';
 import { formatDateTime } from '../utils/formatters';
@@ -14,21 +14,41 @@ interface SearchWindowProps {
 const SearchWindow: React.FC<SearchWindowProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
-  const [searchInput, setSearchInput] = React.useState('');
-  const [confirmedSearch, setConfirmedSearch] = React.useState('');
-  const limit = 5;
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [confirmedSearch, setConfirmedSearch] = useState('');
+  const limit = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [data, setData] = useState<ListChatsResult | null>(null);
+  const [error, setError] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data, error } = useAuthenticatedSWR<ListChatsResult>(
-    `/api/chats?search=${encodeURIComponent(confirmedSearch)}&page=${currentPage}&limit=${limit}`,
-    {
-      onError: (err: any) => {
-        if (err.status === 401) {
-          console.log('Unauthorized');
+  // Get the API methods
+  const api = useApi();
+
+  // Separate effect just for handling window open state
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch only on initial open
+      async function initialFetch() {
+        setIsLoading(true);
+        try {
+          const url = `/api/chats?search=${encodeURIComponent(confirmedSearch)}&page=${currentPage}&limit=${limit}`;
+          const result = await api.get<ListChatsResult>(url);
+          setData(result);
+          setError(null);
+        } catch (err: any) {
+          setError(err);
+          if (err.status === 401) {
+            console.log('Unauthorized');
+          }
+        } finally {
+          setIsLoading(false);
         }
       }
+
+      initialFetch();
     }
-  );
+  }, [isOpen, confirmedSearch]);
 
   const handleSearchConfirm = () => {
     setConfirmedSearch(searchInput);
@@ -41,7 +61,7 @@ const SearchWindow: React.FC<SearchWindowProps> = ({ isOpen, onClose }) => {
   const renderChatItem = (chat: Chat) => (
     <div
       key={chat.id}
-      className={`chat-item block rounded-lg cursor-pointer transition-all duration-200 hover:translate-x-1 ${
+      className={`block rounded-lg cursor-pointer transition-all duration-200 hover:translate-x-1 ${
         isDarkMode
           ? 'hover:bg-gray-800 border border-transparent hover:border-gray-700'
           : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
@@ -89,7 +109,7 @@ const SearchWindow: React.FC<SearchWindowProps> = ({ isOpen, onClose }) => {
       />
 
       {/* Search Window */}
-      <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 w-full max-w-2xl
+      <div className={`fixed top-10 left-1/2 transform -translate-x-1/2 w-full max-w-2xl
         ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-200'}
         border rounded-lg shadow-xl z-50 p-4`}
       >
@@ -133,15 +153,20 @@ const SearchWindow: React.FC<SearchWindowProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Results */}
-        <div className="max-h-[60vh] space-y-2">
-          {error && (
-            <div className={isDarkMode ? 'text-red-400' : 'text-red-500'}>Error loading chats</div>
-          )}
-          {chats.map(chat => renderChatItem(chat))}
-          {chats.length === 0 && (
+        <div className="max-h-[90vh] space-y-2">
+          {isLoading ? (
             <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} py-8`}>
-              {searchInput ? 'No chats found' : 'No chats yet'}
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+              Loading chats...
             </div>
+          ) : error ? (
+            <div className={isDarkMode ? 'text-red-400' : 'text-red-500'}>Error loading chats</div>
+          ) : chats.length === 0 ? (
+            <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} py-8`}>
+              {confirmedSearch ? 'No chats found' : 'No chats yet'}
+            </div>
+          ) : (
+            chats.map(chat => renderChatItem(chat))
           )}
         </div>
       </div>

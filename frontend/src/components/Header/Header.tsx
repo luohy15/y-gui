@@ -1,20 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useMcp } from '../../contexts/McpContext';
 import { useToc } from '../../contexts/TocContext';
-import { useAuthenticatedSWR } from '../../utils/api';
-import { BotConfig } from '@shared/types';
+import TocToggleButton from '../ChatView/TocToggleButton';
 import Logo from '../Logo';
 import SearchWindow from '../SearchWindow';
-import McpServerStatus from './McpServerStatus';
-import TocToggleButton from '../ChatView/TocToggleButton';
 
 
 const Header: React.FC = () => {
 	const { logout, user, isAuthenticated } = useAuth0();
-	const { mcpServers, serverStatus } = useMcp();
 	const { toggleToc } = useToc();
 	const navigate = useNavigate();
 	const [selectedBot, setSelectedBot] = useState<string | null>(null);
@@ -47,20 +42,6 @@ const Header: React.FC = () => {
 			window.removeEventListener('storage', handleStorageChange);
 		};
 	}, [storageKey]);
-
-	// Fetch bots data
-	const { data: botsData } = useAuthenticatedSWR<BotConfig[]>('/api/bots');
-
-	// Find the selected bot's configuration
-	const selectedBotConfig = botsData?.find(bot => bot.name === selectedBot);
-
-	// Filter MCP servers based on selected bot's configuration
-	const filteredMcpServers = React.useMemo(() => {
-		if (!selectedBotConfig || !mcpServers) return [];
-		return mcpServers.filter(server =>
-			selectedBotConfig.mcp_servers?.includes(server.name)
-		);
-	}, [selectedBotConfig, mcpServers]);
 
 	// Watch for direct changes to localStorage
 	useEffect(() => {
@@ -113,19 +94,6 @@ const Header: React.FC = () => {
 						<h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Yovy</h1>
 					</div>
 				</div>
-
-				{/* Center section with MCP Status */}
-				{/* <div className="flex-1 flex justify-center px-4">
-					{filteredMcpServers.length > 0 && (
-						<div className="max-w-md w-full hidden sm:flex sm:flex-row sm:items-center sm:justify-center">
-							<McpServerStatus
-								mcpServers={filteredMcpServers}
-								serverStatus={serverStatus}
-								isDarkMode={isDarkMode}
-							/>
-						</div>
-					)}
-				</div> */}
 
 				{/* Right side icons and dropdown */}
 				<div className="flex items-center space-x-3">

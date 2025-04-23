@@ -1,11 +1,9 @@
+import { useAuth0 } from '@auth0/auth0-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Chat, ListChatsResult, BotConfig, McpServerConfig } from '@shared/types';
-import { useAuthenticatedSWR, useApi } from '../utils/api';
-import { useTheme } from '../contexts/ThemeContext';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useBot } from '../contexts/BotContext';
-import AssistantAvatar from './ChatView/AssistantAvatar';
+import { useTheme } from '../contexts/ThemeContext';
+import { useApi } from '../utils/api';
 import MessageInput from './MessageInput';
 
 interface HomeProps {
