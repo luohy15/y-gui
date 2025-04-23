@@ -1,25 +1,34 @@
 # y-gui 🚀
 
-A web-based graphical interface for AI chat interactions with support for multiple AI models and MCP (Model Context Protocol) servers.
+A web-based graphical interface for AI chat interactions with support for multiple AI models and powerful MCP (Model Context Protocol) integrations. Beyond standard chat capabilities, y-gui leverages MCP to connect with Gmail, Google Calendar, image generation services, and more.
 
 Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
+
+## Demo
+
+![demo](https://cdn.luohy15.com/y-gui-demo-0424.png)
+
+### MCP in Action
+See how y-gui uses MCP integrations to extend AI capabilities:
+
+- [Gmail Integration](https://yovy.app/share/053b3990) - Access and manage emails directly through the chat interface
+- [Google Calendar Integration](https://yovy.app/share/fd8e60b5) - Create and manage calendar events via natural language
+- [Image Generation](https://yovy.app/share/0e36ad05) - Generate images directly within your chat conversation
 
 ## ✨ Features
 
 - 💬 Interactive chat interface with AI models
 - 🤖 Support for multiple bot configurations (any base_url/api_key/model combination)
-- 🔗 MCP (Model Context Protocol) client support with multiple server configurations
+- 🔗 Comprehensive MCP (Model Context Protocol) integration system with:
+  - 📧 Gmail access and management
+  - 📅 Google Calendar integration for event scheduling
+  - 🖼️ Image generation capabilities
+  - 🧩 Expandable framework for additional MCP servers and tools
 - 🔒 Secure authentication with Auth0 and Google login
 - 🌓 Dark/light theme support
 - 📝 All chat data stored in Cloudflare R2 for easy access and sync
 - 🔄 Real-time updates with SWR
 - 📱 Responsive design for all devices
-
-## Demo
-
-![demo](https://cdn.luohy15.com/y-gui-demo-2.png)
-
-[chat history](https://yovy.app/share/59a01e61)
 
 ## Architecture
 
@@ -141,14 +150,12 @@ y-gui supports multiple bot configurations with the following properties:
 
 ## 🔗 MCP Server Configuration
 
-MCP (Model Context Protocol) servers can be configured with:
+MCP (Model Context Protocol) servers can be configured with simple:
+- **Name**: Unique identifier for the MCP server
+- **URL**: For remotely hosted MCP services
+- **Token**: Authentication token for secure server access
 
-- Name
-- Command
-- Arguments
-- Environment Variables
-- URL
-- Token
+Current MCP integrations include Gmail, Google Calendar, image generation, and support for custom servers to connect with virtually any API or service.
 
 ## 🌐 API Endpoints
 
@@ -163,11 +170,13 @@ The backend provides RESTful API endpoints for:
 
 - Chat data is stored in Cloudflare R2
 - Bot and MCP server configurations are stored in Cloudflare R2
+- MCP integration data is securely managed through authorized API connections
 
 ## 🧩 Technologies Used
 
 - **Frontend**: React, TypeScript, Tailwind CSS, SWR, Auth0
 - **Backend**: Cloudflare Workers, R2
+- **Integrations**: MCP servers, OAuth2, Gmail API, Google Calendar API, Image Generation APIs
 - **Build Tools**: Vite, Wrangler, TypeScript
 
 ## 📚 Documentation
