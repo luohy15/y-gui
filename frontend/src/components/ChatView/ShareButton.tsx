@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth0 } from '@auth0/auth0-react';
 
@@ -19,6 +19,65 @@ export default function ShareButton({ chatId }: ShareButtonProps) {
       return () => clearTimeout(timer);
     }
   }, [isCopied]);
+
+  // Create a ref for the temporary input element
+  const tempInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Fallback copy function for mobile browsers
+  const fallbackCopyToClipboard = (text: string): boolean => {
+    try {
+      // Create a temporary input if it doesn't exist
+      if (!tempInputRef.current) {
+        const input = document.createElement('input');
+        input.style.position = 'absolute';
+        input.style.left = '-9999px';
+        input.style.fontSize = '12pt'; // Larger font size helps on some mobile devices
+        document.body.appendChild(input);
+        tempInputRef.current = input;
+      }
+
+      const input = tempInputRef.current;
+      input.value = text;
+      input.focus();
+      input.select();
+      input.setSelectionRange(0, text.length); // For mobile devices
+
+      // Execute the copy command
+      const successful = document.execCommand('copy');
+      return successful;
+    } catch (err) {
+      console.error('Fallback clipboard copy failed:', err);
+      return false;
+    }
+  };
+
+  // Clean up the temporary input on component unmount
+  useEffect(() => {
+    return () => {
+      if (tempInputRef.current) {
+        document.body.removeChild(tempInputRef.current);
+        tempInputRef.current = null;
+      }
+    };
+  }, []);
+
+  // Try to use the native Web Share API if available
+  const useNativeShare = async (shareUrl: string): Promise<boolean> => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Shared Chat',
+          url: shareUrl
+        });
+        return true;
+      } catch (err) {
+        // User may have canceled or sharing failed
+        console.log('Native share was canceled or failed');
+        return false;
+      }
+    }
+    return false;
+  };
 
   const handleShare = async () => {
     if (!chatId) return;
@@ -46,12 +105,41 @@ export default function ShareButton({ chatId }: ShareButtonProps) {
 
       const data = await response.json();
 
-      // Construct the full share URL and copy directly to clipboard
+      // Construct the full share URL
       const shareUrl = `${window.location.origin}/share/${data.shareId}`;
 
-      // Copy to clipboard
-      await navigator.clipboard.writeText(shareUrl);
-      setIsCopied(true);
+      // First try native sharing (on mobile)
+      const sharedNatively = await useNativeShare(shareUrl);
+
+      if (!sharedNatively) {
+        // Then try clipboard API with fallback
+        let copySucceeded = false;
+
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            copySucceeded = true;
+          } catch (err) {
+            console.warn('Modern clipboard API failed, trying fallback');
+          }
+        }
+
+        // If modern API failed, try fallback
+        if (!copySucceeded) {
+          copySucceeded = fallbackCopyToClipboard(shareUrl);
+        }
+
+        if (copySucceeded) {
+          setIsCopied(true);
+        } else {
+          console.error('All clipboard methods failed');
+          // Could show an error toast here
+        }
+      } else {
+        // If we used native sharing, we can still show copied message
+        setIsCopied(true);
+      }
     } catch (error) {
       console.error('Error sharing chat:', error);
       // Could show an error toast here
@@ -64,11 +152,11 @@ export default function ShareButton({ chatId }: ShareButtonProps) {
   if (!chatId) return null;
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-2 relative">
       <button
         onClick={handleShare}
         disabled={isSharing}
-        className={`p-2 rounded-full transition-all transform ${
+        className={`p-2 rounded-full transition-all transform min-w-[44px] min-h-[44px] flex items-center justify-center ${
           isDarkMode
             ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300 active:scale-90 active:bg-gray-700'
             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800 active:scale-90 active:bg-gray-200'
@@ -90,6 +178,20 @@ export default function ShareButton({ chatId }: ShareButtonProps) {
           </svg>
         )}
       </button>
+
+      {/* Mobile-friendly tooltip */}
+      {isCopied && (
+        <div
+          className={`absolute top-[-40px] left-1/2 transform -translate-x-1/2 px-3 py-1 rounded text-sm ${
+            isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-800'
+          } shadow-md z-10`}
+        >
+          Copied to clipboard!
+          <div className={`absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 ${
+            isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+          }`}></div>
+        </div>
+      )}
     </div>
   );
 }

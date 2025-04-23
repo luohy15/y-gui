@@ -40,9 +40,6 @@ app.get('/api/docs/*', (c) => {
   return handleApiDocs(request);
 });
 
-// Handle public share endpoints
-app.route('/api/share', shareRouter);
-
 // Auth middleware for all other API routes
 app.use('/api/*', async (c, next) => {
   // Skip auth for already handled public endpoints
@@ -80,6 +77,7 @@ app.use('/api/*', async (c, next) => {
 });
 
 // Mount authenticated API routers
+app.route('/api/share', shareRouter);
 app.route('/api/auth', authRouter);
 app.route('/api/chats', chatRouter);
 app.route('/api/chat', chatRouter);
