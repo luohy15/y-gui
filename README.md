@@ -4,6 +4,8 @@ A web-based graphical interface for AI chat interactions with support for multip
 
 Check out [y-cli](https://github.com/luohy15/y-cli) for a CLI version.
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Fluohy15%2Fy-gui)
+
 ## Demo
 
 ![demo](https://cdn.luohy15.com/y-gui-demo-4.png)
