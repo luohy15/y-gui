@@ -31,3 +31,7 @@ local_protocol = "http"
 [observability]
 enabled = true
 head_sampling_rate = 1
+
+# Scheduled tasks
+[triggers]
+crons = ["0,30 * * * *"]  # Run every 30 minutes

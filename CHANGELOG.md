@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [04250821]
+
+### Added
+- Added automatic token refresh functionality for Google integrations
+- Added scheduled task handler in Cloudflare Worker to run every 30 minutes
+- Added token refresh utility functions with error handling
+- Added storage utility to list all user prefixes from R2 storage
+- Added human-readable expiry time display for integration tokens
+- Added expiry threshold configuration (default: refresh tokens expiring within 5 hours)
+
+### Changed
+- Modified integration handlers to store both numeric and human-readable expiry times
+- Updated worker exports to include both fetch and scheduled handlers
+- Enhanced error handling for token refresh operations
+
 ## [04240058]
 
 ### Added

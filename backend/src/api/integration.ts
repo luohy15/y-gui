@@ -176,6 +176,9 @@ integrationRouter.post('/google-calendar/callback', async (c) => {
     const integrations = await integrationRepository.getIntegrations();
     const existingIntegration = integrations.find(i => i.type === 'google-calendar');
     
+    const expiryDate = Date.now() + (tokenData.expires_in * 1000);
+    const expiryTimeStr = new Date(expiryDate).toLocaleString();
+
     const integration: IntegrationConfig = {
       name: 'Google Calendar',
       type: 'google-calendar',
@@ -183,7 +186,8 @@ integrationRouter.post('/google-calendar/callback', async (c) => {
       credentials: {
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
-        expiry_date: Date.now() + (tokenData.expires_in * 1000),
+        expiry_date: expiryDate,
+        expiry_time_str: expiryTimeStr,
       },
     };
     
@@ -250,6 +254,9 @@ integrationRouter.post('/gmail/callback', async (c) => {
     const integrations = await integrationRepository.getIntegrations();
     const existingIntegration = integrations.find(i => i.type === 'google-gmail');
     
+    const expiryDate = Date.now() + (tokenData.expires_in * 1000);
+    const expiryTimeStr = new Date(expiryDate).toLocaleString();
+
     const integration: IntegrationConfig = {
       name: 'Gmail',
       type: 'google-gmail',
@@ -257,7 +264,8 @@ integrationRouter.post('/gmail/callback', async (c) => {
       credentials: {
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
-        expiry_date: Date.now() + (tokenData.expires_in * 1000),
+        expiry_date: expiryDate,
+        expiry_time_str: expiryTimeStr,
       },
     };
     

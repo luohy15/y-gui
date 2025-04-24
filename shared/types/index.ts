@@ -91,6 +91,7 @@ export interface IntegrationConfig {
     access_token?: string;
     refresh_token?: string;
     expiry_date?: number;
+    expiry_time_str?: string; // Human-readable version of expiry_date
   };
 }
 
