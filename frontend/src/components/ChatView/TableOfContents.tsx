@@ -89,7 +89,7 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
         {conversationRounds.map((round) => (
           <div key={round.id}>
             {/* User message */}
-            <div
+            <button
               onClick={() => onScrollToMessage(round.id)}
               className={`p-2 rounded-lg cursor-pointer transition-colors ${
                 currentMessageId === round.id
@@ -106,7 +106,7 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
                   {round.userMessage.unix_timestamp === 0 ? '' : formatDateTime(round.userMessage.unix_timestamp)}
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         ))}
 

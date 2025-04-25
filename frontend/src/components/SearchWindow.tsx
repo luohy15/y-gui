@@ -59,7 +59,7 @@ const SearchWindow: React.FC<SearchWindowProps> = ({ isOpen, onClose }) => {
   const chats = data?.chats || [];
 
   const renderChatItem = (chat: Chat) => (
-    <div
+    <a
       key={chat.id}
       className={`block rounded-lg cursor-pointer transition-all duration-200 hover:translate-x-1 ${
         isDarkMode
@@ -97,7 +97,7 @@ const SearchWindow: React.FC<SearchWindowProps> = ({ isOpen, onClose }) => {
           </p>
         </div>
       </div>
-    </div>
+    </a>
   );
 
   return (

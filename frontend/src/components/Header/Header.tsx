@@ -82,17 +82,34 @@ const Header: React.FC = () => {
 		};
 	}, []);
 
+	// Close SearchWindow on ESC key press
+	useEffect(() => {
+		if (showSearchWindow) {
+			const handleKeyDown = (event: KeyboardEvent) => {
+				if (event.key === 'Escape') {
+					setShowSearchWindow(false);
+				}
+			};
+
+			window.addEventListener('keydown', handleKeyDown);
+
+			return () => {
+				window.removeEventListener('keydown', handleKeyDown);
+			};
+		}
+	}, [showSearchWindow]);
+
 	return (
 		<header className={`fixed top-0 z-40 w-screen h-16 sm:h-0 ${isDarkMode ? 'bg-[#1a1a1a] border-gray-800' : 'bg-white border-gray-100'} `}>
 			<div className="flex items-center justify-between mx-4 mt-2 sm:mx-6 2xl:mx-8">
 				<div className="flex items-center space-x-8">
-					<div
+					<a
 						className="flex items-center cursor-pointer"
 						onClick={() => navigate('/')}
 					>
 						<Logo />
 						<h1 className={`ml-3 text-lg font-light ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Yovy</h1>
-					</div>
+					</a>
 				</div>
 
 				{/* Right side icons and dropdown */}
