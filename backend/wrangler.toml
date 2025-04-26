@@ -34,4 +34,4 @@ head_sampling_rate = 1
 
 # Scheduled tasks
 [triggers]
-crons = ["0,10 * * * *"]  # Run every 10 minutes
+crons = ["0 * * * *"]  # Run every hour

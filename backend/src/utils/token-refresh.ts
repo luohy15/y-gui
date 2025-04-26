@@ -93,13 +93,12 @@ export async function checkAndRefreshTokens(
   },
   userPrefix: string,
   expiryThresholdMs: number = 300 * 60 * 1000 // Default: refresh if expiring in 300 minutes
-): Promise<void> {
+) {
   try {
     const repo = new IntegrationR2Repository(env.CHAT_R2, userPrefix);
     const integrations = await repo.getIntegrations();
     
     const now = Date.now();
-    const refreshPromises: Promise<any>[] = [];
     
     for (const integration of integrations) {
       if (
@@ -114,20 +113,17 @@ export async function checkAndRefreshTokens(
         if (timeUntilExpiry < expiryThresholdMs) {
           console.log(`Token for ${integration.name} expires in ${timeUntilExpiry/1000} seconds, refreshing...`);
           
-          refreshPromises.push(
-            refreshIntegrationToken(
-              integration,
-              env.GOOGLE_CLIENT_ID,
-              env.GOOGLE_CLIENT_SECRET,
-              env.CHAT_R2,
-              userPrefix
-            )
+          // Process one integration at a time
+          await refreshIntegrationToken(
+            integration,
+            env.GOOGLE_CLIENT_ID,
+            env.GOOGLE_CLIENT_SECRET,
+            env.CHAT_R2,
+            userPrefix
           );
         }
       }
     }
-    
-    await Promise.all(refreshPromises);
   } catch (error) {
     console.error('Error checking and refreshing tokens:', error);
   }
