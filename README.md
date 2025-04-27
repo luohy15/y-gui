@@ -183,6 +183,8 @@ The backend provides RESTful API endpoints for:
 
 For more detailed documentation, see the [memory-bank](./memory-bank) directory.
 
+Visit the [deepwiki page](https://deepwiki.com/luohy15/y-gui) for comprehensive project documentation and guides.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
