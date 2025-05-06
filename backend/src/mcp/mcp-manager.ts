@@ -98,16 +98,19 @@ export class McpManager {
           const integrations = await this.integrationRepository.getIntegrations();
           
           for (const integration of integrations) {
-            // Check if integration type is a prefix of the tool name
-            if (toolName.startsWith(integration.type) && 
-                integration.connected && 
-                integration.credentials?.access_token) {
+            // Check if integration name is a prefix of the tool name
+            if (toolName.startsWith(integration.name) && 
+                integration.connected) {
               
               // Log this match
-              console.log(`Using integration token for ${integration.type} when calling tool ${toolName}`);
+              console.log(`Using integration token for ${integration.name} when calling tool ${toolName}`);
               
               // Use the integration token instead
-              token = integration.credentials.access_token;
+              if (integration.auth_type === "api_key") {
+                token = integration.api_key;
+              } else if (integration.auth_type === "oauth") {
+                token = integration.credentials?.access_token;
+              }
               break;
             }
           }

@@ -84,15 +84,16 @@ export interface McpServerRepository {
 }
 
 export interface IntegrationConfig {
-  name: string;
-  type: string; // "google-calendar" or other future integrations
+  name: string; // "google-calendar" or other future integrations
+  auth_type: 'oauth' | 'api_key'; // Authentication type: 'oauth' for OAuth-based or 'api_key' for API key authentication
   connected: boolean;
+  api_key?: string; // Required for auth_type='api_key'
   credentials?: {
     access_token?: string;
     refresh_token?: string;
     expiry_date?: number;
     expiry_time_str?: string; // Human-readable version of expiry_date
-  };
+  }; // Required for auth_type='oauth'
 }
 
 export interface IntegrationRepository {

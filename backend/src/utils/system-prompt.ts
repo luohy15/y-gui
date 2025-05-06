@@ -69,17 +69,6 @@ Usage:
 </arguments>
 </use_mcp_tool>
 
-## access_mcp_resource
-Description: Request to access a resource provided by a connected MCP server. Resources represent data sources that can be used as context, such as files, API responses, or system information.
-Parameters:
-- server_name: (required) The name of the MCP server providing the resource
-- uri: (required) The URI identifying the specific resource to access
-Usage:
-<access_mcp_resource>
-<server_name>server name here</server_name>
-<uri>resource URI here</uri>
-</access_mcp_resource>
-
 # Tool Use Examples
 ## Example 1: Requesting to use an MCP tool
 
@@ -93,13 +82,6 @@ Usage:
 }
 </arguments>
 </use_mcp_tool>
-
-## Example 2: Requesting to access an MCP resource
-
-<access_mcp_resource>
-<server_name>weather-server</server_name>
-<uri>weather://san-francisco/current</uri>
-</access_mcp_resource>
 
 # Tool Use Guidelines
 
@@ -149,7 +131,7 @@ The Model Context Protocol (MCP) enables communication between the system and lo
 
 # Connected MCP Servers
 
-When a server is connected, you can use the server's tools via the \`use_mcp_tool\` tool, and access the server's resources via the \`access_mcp_resource\` tool.
+When a server is connected, you can use the server's tools via the \`use_mcp_tool\` tool.
 
 # MCP Servers Are Not Always Necessary
 
