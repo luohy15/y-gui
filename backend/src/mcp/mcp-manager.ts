@@ -120,7 +120,19 @@ export class McpManager {
         }
       }
 
-      // Create transport with token if available
+      // Get all connected integrations for the header
+      let connectedIntegrations: string[] = [];
+      try {
+        const integrations = await this.integrationRepository.getIntegrations();
+        connectedIntegrations = integrations
+          .filter(integration => integration.connected)
+          .map(integration => integration.name);
+      } catch (error) {
+        console.error("Error fetching integrations for header:", error);
+        // Continue without the header if there's an error
+      }
+
+      // Create transport with token if available and add X-Integrations header
       const transportOptions: {
         requestInit: {
           headers: HeadersInit;
@@ -133,9 +145,10 @@ export class McpManager {
         };
       } = {
         requestInit: {
-          headers: token ? 
-            { "Authorization": `Bearer ${token}` } :
-            {}
+          headers: {
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            ...(connectedIntegrations.length > 0 ? { "X-Integrations": connectedIntegrations.join(',') } : {})
+          }
         },
         reconnectionOptions: {
           initialReconnectionDelay: 1000,
