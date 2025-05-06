@@ -6,9 +6,12 @@ import { McpManager } from '../mcp/mcp-manager';
  * @returns Formatted system prompt string
  */
 export async function getSystemPrompt(mcpManager: McpManager, mcp_servers?: string[], writer?: WritableStreamDefaultWriter): Promise<string> {
-  // Get current datetime
+  // Get current datetime in UTC
   const currentTime = new Date();
-  const formattedTime = currentTime.toISOString().replace('T', ' ').substring(0, 19);
+  const timeInfo = {
+    dateTime: currentTime.toISOString(),
+    timeZone: "UTC"
+  };
   
   // Base prompt
   const basePrompt = `You are y, my private assistant.
@@ -16,7 +19,7 @@ export async function getSystemPrompt(mcpManager: McpManager, mcp_servers?: stri
 
 PRIVATE ASSISTANT
 
-Current Time: ${formattedTime}
+Current Time: ${JSON.stringify(timeInfo)}
 
 y, you will be acting as my private assistant. You'll be responsible for a range of tasks, from project management to information gathering. You should be able to help with simple chat, task management, and more. I'll tell you what I require, and you'll do your best to meet my needs.
 
