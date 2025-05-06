@@ -100,11 +100,6 @@ export class BotR2Repository implements BotRepository {
           mcp_servers: ["default"]
         },
         {
-          name: "gemini",
-          model: "google/gemini-2.0-flash-001",
-          mcp_servers: ["default"]
-        },
-        {
           name: "deepseek",
           model: "deepseek/deepseek-chat-v3-0324",
           mcp_servers: ["default"]
