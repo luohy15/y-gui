@@ -1,6 +1,7 @@
 /**
  * Utility functions for parsing tool use in AI responses
  */
+import JSON5 from 'json5';
 
 /**
  * Extract MCP tool use details from content
@@ -26,58 +27,16 @@ export function extractMcpToolUse(content: string): [string, string, any] | null
   if (!argsMatch) return null;
   
   try {
-    // Clean the JSON string by properly handling control characters
-    const argsStr = argsMatch[1]
-      // First, log the raw string for debugging
-      .replace(/[\x00-\x1F\x7F-\x9F]/g, (match) => {
-        const code = match.charCodeAt(0);
-        return code === 10 ? ' ' : ''; // Replace newlines with spaces, remove other control chars
-      });
-    
-    const args = JSON.parse(argsStr);
+    // Use JSON5 to parse the arguments with more tolerance for syntax issues
+    const args = JSON5.parse(argsMatch[1]);
     return [serverName, toolName, args];
   } catch (e) {
+    // Log basic error information
     console.error('Error parsing tool arguments:', e);
     console.error('Original content:');
     console.error(argsMatch[1]);
     
-    // Print more context about the position where the error occurred
-    if (e instanceof SyntaxError && e.message.includes('position')) {
-      const position = parseInt(e.message.match(/position (\d+)/)?.[1] || '0');
-      const contextStart = Math.max(0, position - 20);
-      const contextEnd = Math.min(argsMatch[1].length, position + 20);
-      
-      console.error('Content around error position:');
-      console.error(argsMatch[1].substring(contextStart, position) + '👉' + argsMatch[1].charAt(position) + '👈' + argsMatch[1].substring(position + 1, contextEnd));
-      
-      // Show character code for debugging control characters
-      const charCode = argsMatch[1].charCodeAt(position);
-      console.error(`Character at position ${position}: code ${charCode} (${JSON.stringify(argsMatch[1].charAt(position))})`);
-      
-      // List all control characters in the string for more comprehensive debugging
-      const controlChars = [];
-      for (let i = 0; i < argsMatch[1].length; i++) {
-        const code = argsMatch[1].charCodeAt(i);
-        if (code < 32 || (code >= 127 && code <= 159)) {
-          controlChars.push(`Position ${i}: code ${code} (${JSON.stringify(argsMatch[1].charAt(i))})`);
-        }
-      }
-      if (controlChars.length > 0) {
-        console.error('All control characters found:');
-        console.error(controlChars.join('\n'));
-      }
-      
-      // Try a more aggressive approach: replace all control characters and try again
-      try {
-        const sanitizedJson = argsMatch[1].replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-        const args = JSON.parse(sanitizedJson);
-        console.log('Successfully parsed JSON after removing all control characters');
-        return [serverName, toolName, args];
-      } catch (innerError) {
-        console.error('Failed to parse even after removing control characters:', innerError);
-      }
-    }
-    
+    // Return null without attempting fallback parsing
     return null;
   }
 }
