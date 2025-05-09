@@ -37,6 +37,9 @@ export default function ChatView() {
   // Message streaming state
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  const [responseVersions, setResponseVersions] = useState<Record<string, Message[]>>({});
+  const [currentVersionIndex, setCurrentVersionIndex] = useState<Record<string, number>>({});
 
   // MCP logs state from hook
   const {
@@ -517,6 +520,89 @@ export default function ChatView() {
    * Main User Action Handlers
    ****************************/
 
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    if (!id || !selectedBot || !chat || chat.messages.length < 2) return;
+
+    // Find the last assistant message
+    const lastAssistantIndex = [...chat.messages].reverse().findIndex(msg => msg.role === 'assistant');
+    if (lastAssistantIndex === -1) return;
+
+    // Get the actual index in the original array
+    const lastAssistantActualIndex = chat.messages.length - 1 - lastAssistantIndex;
+    const lastAssistantMessage = chat.messages[lastAssistantActualIndex];
+    const lastAssistantId = lastAssistantMessage.unix_timestamp.toString();
+
+    // Store the current version of the message
+    setResponseVersions(prev => {
+      const versions = prev[lastAssistantId] || [];
+      return {
+        ...prev,
+        [lastAssistantId]: [...versions, lastAssistantMessage]
+      };
+    });
+
+    setCurrentVersionIndex(prev => {
+      const versionCount = (prev[lastAssistantId] || 0) + 1;
+      return {
+        ...prev,
+        [lastAssistantId]: versionCount
+      };
+    });
+
+    // Create a context without the last assistant message
+    const contextMessages = chat.messages.slice(0, lastAssistantActualIndex);
+
+    // Add a new empty assistant message
+    await addMessageToChat('', 'assistant');
+
+    // Send the request with the context
+    await streamResponse(
+      '/api/chat/completions',
+      JSON.stringify({
+        content: 'continue',
+        botName: selectedBot,
+        chatId: id,
+        contextMessages: contextMessages
+      })
+    );
+  };
+
+  // Toggle between response versions
+  const toggleResponseVersion = (messageId: string, direction: 'prev' | 'next') => {
+    const versions = responseVersions[messageId] || [];
+    if (versions.length <= 1) return;
+
+    setCurrentVersionIndex(prev => {
+      const currentIndex = prev[messageId] || 0;
+      let newIndex;
+      
+      if (direction === 'prev') {
+        newIndex = currentIndex > 0 ? currentIndex - 1 : versions.length - 1;
+      } else {
+        newIndex = currentIndex < versions.length - 1 ? currentIndex + 1 : 0;
+      }
+      
+      return {
+        ...prev,
+        [messageId]: newIndex
+      };
+    });
+  };
+
+  // Get the current version of a message
+  const getCurrentMessageVersion = (message: Message): Message => {
+    const messageId = message.unix_timestamp.toString();
+    const versions = responseVersions[messageId] || [];
+    const currentIndex = currentVersionIndex[messageId] || 0;
+    
+    if (versions.length === 0 || currentIndex >= versions.length) {
+      return message;
+    }
+    
+    return versions[currentIndex];
+  };
+
   // Send a user message and get response
   const sendUserMessage = async (content: string, additionalProps: Partial<Message> = {}) => {
     if (!id || !selectedBot) return;
@@ -781,7 +867,7 @@ export default function ChatView() {
               }}
             >
               <MessageItem
-                message={msg}
+                message={getCurrentMessageVersion(msg)}
                 isLastMessage={index === chat.messages.length - 1}
                 isDarkMode={isDarkMode}
                 onToolConfirm={isSharedMode
@@ -799,6 +885,9 @@ export default function ChatView() {
                 onToggleToolResult={toggleToolResult}
                 isStreaming={isSharedMode ? false : isStreaming}
                 toolResults={toolResults}
+                responseVersions={responseVersions}
+                currentVersionIndex={currentVersionIndex}
+                onToggleResponseVersion={toggleResponseVersion}
               />
             </div>
           ))}
@@ -812,6 +901,7 @@ export default function ChatView() {
 									? chat.messages[chat.messages.length - 1].content
 									: JSON.stringify(chat.messages[chat.messages.length - 1].content)
 							}
+              onRefresh={handleRefresh}
 						/>
           )}
 

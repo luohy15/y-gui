@@ -18,6 +18,9 @@ interface MessageItemProps {
   onToggleToolResult: (messageId: string) => void;
   isStreaming: boolean;
   toolResults?: Record<string, string | object>;
+  responseVersions?: Record<string, Message[]>;
+  currentVersionIndex?: Record<string, number>;
+  onToggleResponseVersion?: (messageId: string, direction: 'prev' | 'next') => void;
 }
 
 export default function MessageItem({
@@ -32,10 +35,21 @@ export default function MessageItem({
   onToggleToolInfo,
   onToggleToolResult,
   isStreaming,
-  toolResults
+  toolResults,
+  responseVersions,
+  currentVersionIndex,
+  onToggleResponseVersion
 }: MessageItemProps) {
   const messageId = message.unix_timestamp.toString();
   const isUserMessage = message.role === 'user' && !message.server;
+
+  const hasMultipleVersions = !isUserMessage && 
+    responseVersions && 
+    responseVersions[messageId] && 
+    responseVersions[messageId].length > 1;
+  
+  const versionIndex = currentVersionIndex && currentVersionIndex[messageId] || 0;
+  const totalVersions = responseVersions && responseVersions[messageId]?.length || 1;
 
   return (
 		<div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words ${
@@ -75,8 +89,48 @@ export default function MessageItem({
 								{message.provider}
 							</span>
 						)}
+						{/* Version indicator */}
+						{hasMultipleVersions && (
+							<span className={`px-2 py-0.5 rounded text-xs font-medium ${
+								isDarkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
+							}`}>
+								Version {versionIndex + 1}/{totalVersions}
+							</span>
+						)}
 					</div>
 				</div>
+				
+				{/* Version controls */}
+				{hasMultipleVersions && onToggleResponseVersion && (
+					<div className="flex items-center space-x-2 ml-auto">
+						<button 
+							onClick={() => onToggleResponseVersion(messageId, 'prev')}
+							className={`p-1 rounded ${
+								isDarkMode 
+									? 'hover:bg-gray-700 text-gray-300' 
+									: 'hover:bg-gray-200 text-gray-600'
+							}`}
+							title="Previous version"
+						>
+							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+							</svg>
+						</button>
+						<button 
+							onClick={() => onToggleResponseVersion(messageId, 'next')}
+							className={`p-1 rounded ${
+								isDarkMode 
+									? 'hover:bg-gray-700 text-gray-300' 
+									: 'hover:bg-gray-200 text-gray-600'
+							}`}
+							title="Next version"
+						>
+							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
+					</div>
+				)}
 			</div>
 
 			{/* Loading animation for empty assistant message */}
