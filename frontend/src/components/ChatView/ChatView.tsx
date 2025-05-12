@@ -585,18 +585,152 @@ export default function ChatView() {
 
       
       
-      const simulateStreamingResponse = async () => {
-        const responseText = `This is a simulated response for the message: "${lastUserMessage.substring(0, 30)}${lastUserMessage.length > 30 ? '...' : ''}"`;
-        
-        // Update the content character by character to simulate streaming
-        for (let i = 0; i < responseText.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 10)); // Small delay
+      const generateNewResponse = async () => {
+        try {
+          const accessToken = await getAccessTokenSilently();
           
-          // Update the accumulated content
-          accumulatedContent = responseText.substring(0, i + 1);
-          newAssistantMessage.content = accumulatedContent;
+          // Create a temporary chat object with the context messages
+          const tempChat = {
+            ...chat,
+            messages: [...chat.messages.slice(0, lastAssistantActualIndex)]
+          };
           
-          // Update the response versions with the current content
+          tempChat.messages.push({
+            ...lastUserMessageObj,
+            unix_timestamp: Date.now() // Use a new timestamp to avoid conflicts
+          });
+          
+          const response = await fetch('/api/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              content: lastUserMessage,
+              botName: selectedBot,
+              chatId: id
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Error refreshing: ${response.statusText}`);
+          }
+          
+          // Process the streaming response
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder();
+          
+          if (!reader) {
+            throw new Error('Response body is not readable');
+          }
+          
+          let buffer = '';
+          let accumulatedContent = ''; // Declare accumulatedContent here
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            
+            for (let i = 0; i < lines.length - 1; i++) {
+              const line = lines[i];
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                
+                if (data === '[DONE]') {
+                  reader.cancel();
+                  break;
+                }
+                
+                try {
+                  const parsedData = JSON.parse(data);
+                  
+                  if (parsedData.error) {
+                    const errorMessage = `**Error:** ${parsedData.error.message || 'Unknown error occurred'}`;
+                    newAssistantMessage.content = errorMessage;
+                    break;
+                  }
+                  
+                  // Handle content chunks
+                  if (parsedData.choices?.[0]?.delta?.content) {
+                    accumulatedContent += parsedData.choices[0].delta.content;
+                    newAssistantMessage.content = accumulatedContent;
+                    
+                    // Update the response versions with the current content
+                    setResponseVersions(prev => {
+                      const versions = prev[lastAssistantId] || [];
+                      const updatedVersions = [...versions];
+                      
+                      const newVersionIndex = updatedVersions.findIndex(v => 
+                        v.unix_timestamp === newAssistantMessage.unix_timestamp
+                      );
+                      
+                      if (newVersionIndex >= 0) {
+                        // Update existing version
+                        updatedVersions[newVersionIndex] = { ...newAssistantMessage };
+                      } else {
+                        updatedVersions.push({ ...newAssistantMessage });
+                      }
+                      
+                      return {
+                        ...prev,
+                        [lastAssistantId]: updatedVersions
+                      };
+                    });
+                  }
+                  
+                  // Set model and provider info
+                  if (parsedData.model) {
+                    newAssistantMessage.model = parsedData.model;
+                  }
+                  if (parsedData.provider) {
+                    newAssistantMessage.provider = parsedData.provider;
+                  }
+                } catch (e) {
+                  console.error('Error parsing SSE data:', e);
+                }
+              }
+            }
+            
+            buffer = lines[lines.length - 1];
+          }
+          
+          mutate(
+            `/api/chats/${id}`,
+            async (cachedChat: Chat | undefined) => {
+              if (!cachedChat) return cachedChat;
+              
+              // Get the latest chat from the backend
+              const accessToken = await getAccessTokenSilently();
+              const response = await fetch(`/api/chats/${id}`, {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`
+                }
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to fetch updated chat');
+              }
+              
+              const updatedChat = await response.json();
+              
+              return {
+                ...updatedChat,
+                messages: chat.messages
+              };
+            },
+            { revalidate: false }
+          );
+          
+        } catch (error) {
+          console.error('Error generating new response:', error);
+          newAssistantMessage.content = `Error generating new response: ${error}`;
+          
+          // Update the response versions with the error
           setResponseVersions(prev => {
             const versions = prev[lastAssistantId] || [];
             const updatedVersions = [...versions];
@@ -606,7 +740,6 @@ export default function ChatView() {
             );
             
             if (newVersionIndex >= 0) {
-              // Update existing version
               updatedVersions[newVersionIndex] = { ...newAssistantMessage };
             } else {
               updatedVersions.push({ ...newAssistantMessage });
@@ -620,37 +753,7 @@ export default function ChatView() {
         }
       };
       
-      let accumulatedContent = '';
-      
-      // Simulate streaming response
-      await simulateStreamingResponse();
-      
-      setResponseVersions(prev => {
-        const versions = prev[lastAssistantId] || [];
-        const updatedVersions = [...versions];
-        
-        const newVersionIndex = updatedVersions.findIndex(v => 
-          v.unix_timestamp === newAssistantMessage.unix_timestamp
-        );
-        
-        if (newVersionIndex >= 0) {
-          // Update existing version with final content
-          updatedVersions[newVersionIndex] = { 
-            ...newAssistantMessage,
-            content: accumulatedContent || newAssistantMessage.content
-          };
-        } else {
-          updatedVersions.push({ 
-            ...newAssistantMessage,
-            content: accumulatedContent || newAssistantMessage.content
-          });
-        }
-        
-        return {
-          ...prev,
-          [lastAssistantId]: updatedVersions
-        };
-      });
+      await generateNewResponse();
 
       // Set the current version index to the new version
       setCurrentVersionIndex(prev => {
