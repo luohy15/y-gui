@@ -533,59 +533,138 @@ export default function ChatView() {
     const lastAssistantMessage = chat.messages[lastAssistantActualIndex];
     const lastAssistantId = lastAssistantMessage.unix_timestamp.toString();
 
-    // Store the current version of the message with version information
-    const updatedAssistantMessage = {
-      ...lastAssistantMessage,
-      versionIndex: 0,
-      isChoosed: false
-    };
-
-    setResponseVersions(prev => {
-      const versions = prev[lastAssistantId] || [];
-      return {
-        ...prev,
-        [lastAssistantId]: [...versions, updatedAssistantMessage]
-      };
-    });
-
-    setCurrentVersionIndex(prev => {
-      const versionCount = (prev[lastAssistantId] || 0) + 1;
-      return {
-        ...prev,
-        [lastAssistantId]: versionCount
-      };
-    });
-
     // Find the last user message before the assistant message
     let lastUserMessage: string = '';
+    let lastUserMessageObj = null;
     for (let i = lastAssistantActualIndex - 1; i >= 0; i--) {
       if (chat.messages[i].role === 'user') {
         const content = chat.messages[i].content;
         lastUserMessage = typeof content === 'string' 
           ? content 
           : JSON.stringify(content);
+        lastUserMessageObj = chat.messages[i];
         break;
       }
     }
 
-    if (!lastUserMessage) return;
+    if (!lastUserMessage || !lastUserMessageObj) return;
 
-    // Create a context without the last assistant message
-    const contextMessages = chat.messages.slice(0, lastAssistantActualIndex);
+    setIsStreaming(true);
 
-    // Add a new empty assistant message
-    await addMessageToChat('', 'assistant');
+    try {
+      // Create a new version of the assistant message
+      const newAssistantMessage: Message = {
+        role: 'assistant',
+        content: `Generating new response for: "${lastUserMessage.substring(0, 50)}${lastUserMessage.length > 50 ? '...' : ''}"`,
+        timestamp: new Date().toISOString(),
+        unix_timestamp: Date.now(),
+        model: lastAssistantMessage.model,
+        provider: lastAssistantMessage.provider,
+        versionIndex: 0,
+        isChoosed: true
+      };
 
-    // Send the request with the context and last user message
-    await streamResponse(
-      '/api/chat/completions',
-      JSON.stringify({
-        content: lastUserMessage,
-        botName: selectedBot,
-        chatId: id,
-        contextMessages: contextMessages
-      })
-    );
+      // Store the current version of the message with version information
+      const updatedAssistantMessage = {
+        ...lastAssistantMessage,
+        versionIndex: 0,
+        isChoosed: false
+      };
+
+      // Update versions in state
+      setResponseVersions(prev => {
+        const versions = prev[lastAssistantId] || [];
+        if (!versions.some(v => v.unix_timestamp === updatedAssistantMessage.unix_timestamp)) {
+          return {
+            ...prev,
+            [lastAssistantId]: [...versions, updatedAssistantMessage]
+          };
+        }
+        return prev;
+      });
+
+      
+      
+      const simulateStreamingResponse = async () => {
+        const responseText = `This is a simulated response for the message: "${lastUserMessage.substring(0, 30)}${lastUserMessage.length > 30 ? '...' : ''}"`;
+        
+        // Update the content character by character to simulate streaming
+        for (let i = 0; i < responseText.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 10)); // Small delay
+          
+          // Update the accumulated content
+          accumulatedContent = responseText.substring(0, i + 1);
+          newAssistantMessage.content = accumulatedContent;
+          
+          // Update the response versions with the current content
+          setResponseVersions(prev => {
+            const versions = prev[lastAssistantId] || [];
+            const updatedVersions = [...versions];
+            
+            const newVersionIndex = updatedVersions.findIndex(v => 
+              v.unix_timestamp === newAssistantMessage.unix_timestamp
+            );
+            
+            if (newVersionIndex >= 0) {
+              // Update existing version
+              updatedVersions[newVersionIndex] = { ...newAssistantMessage };
+            } else {
+              updatedVersions.push({ ...newAssistantMessage });
+            }
+            
+            return {
+              ...prev,
+              [lastAssistantId]: updatedVersions
+            };
+          });
+        }
+      };
+      
+      let accumulatedContent = '';
+      
+      // Simulate streaming response
+      await simulateStreamingResponse();
+      
+      setResponseVersions(prev => {
+        const versions = prev[lastAssistantId] || [];
+        const updatedVersions = [...versions];
+        
+        const newVersionIndex = updatedVersions.findIndex(v => 
+          v.unix_timestamp === newAssistantMessage.unix_timestamp
+        );
+        
+        if (newVersionIndex >= 0) {
+          // Update existing version with final content
+          updatedVersions[newVersionIndex] = { 
+            ...newAssistantMessage,
+            content: accumulatedContent || newAssistantMessage.content
+          };
+        } else {
+          updatedVersions.push({ 
+            ...newAssistantMessage,
+            content: accumulatedContent || newAssistantMessage.content
+          });
+        }
+        
+        return {
+          ...prev,
+          [lastAssistantId]: updatedVersions
+        };
+      });
+
+      // Set the current version index to the new version
+      setCurrentVersionIndex(prev => {
+        return {
+          ...prev,
+          [lastAssistantId]: (prev[lastAssistantId] || 0) + 1
+        };
+      });
+
+    } catch (error) {
+      console.error('Error refreshing response:', error);
+    } finally {
+      setIsStreaming(false);
+    }
   };
 
   // Toggle between response versions
