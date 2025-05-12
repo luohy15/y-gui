@@ -5,25 +5,24 @@ import { corsHeaders } from '../middleware/cors';
 import { ProviderFactory } from '../providers/provider-factory';
 import { McpManager } from '../mcp/mcp-manager';
 import { ChatService } from '../serivce/chat';
-import { createMessage } from 'src/utils/message';
-import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
+import { createMessage } from '../utils/message';
+import { McpServerR2Repository } from '../repository/mcp-server-repository';
 import { IntegrationR2Repository } from '../repository/integration-r2-repository';
-import { Env } from 'worker-configuration';
+import { Env } from '../worker-configuration';
 
 /**
- * Handle the chat completions endpoint
- * This function processes requests to send messages to a chat and get AI responses
+ * Handle the refresh endpoint
+ * This function generates a new response for an existing user message
  */
-export async function handleChatCompletions(request: Request, env: Env, userPrefix?: string): Promise<Response> {
-  // Get message data from request
-  interface CompletionRequest {
-    content: string;
+export async function handleRefresh(request: Request, env: Env, userPrefix?: string): Promise<Response> {
+  interface RefreshRequest {
+    userMessageId: string;
     botName: string;
     chatId: string;
     server?: string;
   }
-  const completionData = await request.json() as CompletionRequest;
-  const { content, botName, chatId } = completionData;
+  const refreshData = await request.json() as RefreshRequest;
+  const { userMessageId, botName, chatId } = refreshData;
 
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -32,58 +31,67 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
   (async () => {
     try {
       console.log('User prefix:', userPrefix);
-      // Get or create the chat
       const chatRepository = new ChatR2Repository(env.CHAT_R2, userPrefix);
+      const chat = await chatRepository.getChat(chatId);
+      
+      if (!chat) {
+        await writer.write(encoder.encode(`data: {"error": "Chat not found"}\n\n`));
+        await writer.close();
+        return;
+      }
 
-      // Get the bot config
+      const userMessage = chat.messages.find(msg => msg.id === userMessageId && msg.role === 'user');
+      if (!userMessage) {
+        await writer.write(encoder.encode(`data: {"error": "User message not found"}\n\n`));
+        await writer.close();
+        return;
+      }
+
       const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
       const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
       const integrationRepository = new IntegrationR2Repository(env.CHAT_R2, userPrefix);
       const bots = await botRepository.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {
-        return new Response('Bot not found', { status: 404, headers: corsHeaders });
+        await writer.write(encoder.encode(`data: {"error": "Bot not found"}\n\n`));
+        await writer.close();
+        return;
       }
+      
       let resultBotConfig = botConfig;
       if (!resultBotConfig.api_key || !resultBotConfig.base_url) {
         resultBotConfig.api_key = env.OPENROUTER_FREE_KEY;
         resultBotConfig.base_url = env.OPENROUTER_BASE_URL;
       }
-      console.log('Bot config:', resultBotConfig);
 
-      // Get the provider
       const provider = ProviderFactory.createProvider(resultBotConfig);
 
-      // Get the MCP manager
       const mcpManager = new McpManager(mcpServerRepository, integrationRepository);
 
-      // Create the chat service
-      const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, resultBotConfig);
+      const tempChat: Chat = {
+        ...chat,
+        messages: chat.messages.filter(msg => {
+          const msgTimestamp = msg.unix_timestamp;
+          const userMsgTimestamp = userMessage.unix_timestamp;
+          return msgTimestamp <= userMsgTimestamp;
+        })
+      };
 
+      const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, resultBotConfig);
       await chatService.initializeChat(writer);
 
-      // Create the user message with unique ID
-      const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      const userMessage: Message = createMessage('user', content, { 
-        server: completionData.server,
-        id: messageId
-      });
-
-      // Process the user message
       await chatService.processUserMessage(userMessage, writer);
       
-      // Close the writer
       await writer.write(encoder.encode(`data: [DONE]\n\n`));
       await writer.close();
     } catch (error: unknown) {
-      console.error('Error processing stream:', error);
+      console.error('Error processing refresh:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       await writer.write(encoder.encode(`data: {"error": "${errorMessage}"}\n\n`));
       await writer.close();
     }
   })();
   
-  // Return the streaming response
   return new Response(readable, {
     headers: {
       'Content-Type': 'text/event-stream',

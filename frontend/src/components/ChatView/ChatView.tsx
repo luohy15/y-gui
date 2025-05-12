@@ -33,6 +33,10 @@ export default function ChatView() {
   // State for message input and bot selection
   const [message, setMessage] = useState('');
   const { selectedBot, setSelectedBot } = useBot();
+  
+  // State for tracking multiple responses
+  const [responseGroups, setResponseGroups] = useState<Record<string, Message[]>>({});
+  const [currentResponseIndices, setCurrentResponseIndices] = useState<Record<string, number>>({});
 
   // Message streaming state
   const [isStreaming, setIsStreaming] = useState(false);
@@ -521,7 +525,9 @@ export default function ChatView() {
   const sendUserMessage = async (content: string, additionalProps: Partial<Message> = {}) => {
     if (!id || !selectedBot) return;
 
-    await addMessageToChat(content, 'user', additionalProps);
+    const userMessageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    
+    await addMessageToChat(content, 'user', { ...additionalProps, id: userMessageId });
     await addMessageToChat('', 'assistant');
 
     await streamResponse(
@@ -531,6 +537,26 @@ export default function ChatView() {
         botName: selectedBot,
         chatId: id,
         server: additionalProps?.server
+      })
+    );
+  };
+  
+  const refreshResponse = async (userMessageId: string) => {
+    if (!id || !selectedBot || !chat) return;
+    
+    // Find the user message with the given ID
+    const userMessage = chat.messages.find(msg => msg.id === userMessageId && msg.role === 'user');
+    if (!userMessage) return;
+    
+    // Add a new empty assistant message
+    await addMessageToChat('', 'assistant');
+    
+    await streamResponse(
+      '/api/refresh',
+      JSON.stringify({
+        userMessageId,
+        botName: selectedBot,
+        chatId: id
       })
     );
   };
@@ -582,12 +608,34 @@ export default function ChatView() {
    * Initialization and Effects
    ****************************/
 
-  // Initialize tool results when chat loads
+  // Initialize tool results and response groups when chat loads
   useEffect(() => {
     if (!chat) return;
 
     const newToolResults: Record<string, string | object> = {};
     const assistantMessages = chat.messages.filter(msg => msg.role === 'assistant' && msg.tool && msg.server);
+    
+    const newResponseGroups: Record<string, Message[]> = {};
+    const newCurrentResponseIndices: Record<string, number> = {};
+    
+    const userMessages = chat.messages.filter(msg => msg.role === 'user' && msg.id);
+    
+    userMessages.forEach(userMsg => {
+      if (!userMsg.id) return;
+      
+      const userMsgId = userMsg.id;
+      const responses = chat.messages.filter(msg => 
+        msg.role === 'assistant' && msg.parent_id === userMsgId
+      );
+      
+      if (responses.length > 0) {
+        newResponseGroups[userMsgId] = responses;
+        newCurrentResponseIndices[userMsgId] = 0; // Default to showing the first response
+      }
+    });
+    
+    setResponseGroups(newResponseGroups);
+    setCurrentResponseIndices(newCurrentResponseIndices);
 
     // For each assistant message with tool information
     assistantMessages.forEach(assistantMsg => {
@@ -770,41 +818,99 @@ export default function ChatView() {
         {/* Messages (centered) */}
         <div className={`flex flex-col px-4 sm:px-0 pt-20 pb-28 sm:pt-4 w-full sm:w-[50%] 2xl:w-[40%] max-w-[100%] space-y-4`}>
           {chat.messages
-          .filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
-          .map((msg: Message, index: number) => (
-            <div
-              key={`${msg.unix_timestamp}-${index}`}
-              ref={el => {
-                if (el && msg.role === 'user') {
-                  messageRefs.current[msg.unix_timestamp.toString()] = el;
-                }
-              }}
-            >
-              <MessageItem
-                message={msg}
-                isLastMessage={index === chat.messages.length - 1}
-                isDarkMode={isDarkMode}
-                onToolConfirm={isSharedMode
-                  ? handleToolConfirmShared
-                  : (server, tool, args) => {
-                      if (!id) return;
-                      executeToolConfirm(server, tool, args);
-                    }
-                }
-                onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
-                needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
-                expandedToolInfo={expandedToolInfo}
-                expandedToolResults={expandedToolResults}
-                onToggleToolInfo={toggleToolInfo}
-                onToggleToolResult={toggleToolResult}
-                isStreaming={isSharedMode ? false : isStreaming}
-                toolResults={toolResults}
-              />
-            </div>
-          ))}
+          .filter((msg: Message) => {
+            if (msg.role === 'user' && !msg.server && !msg.tool) return true;
+            
+            if (msg.role === 'assistant') {
+              if (msg.parent_id) {
+                const parentId = msg.parent_id;
+                const responseIndex = currentResponseIndices[parentId] || 0;
+                const responses = responseGroups[parentId] || [];
+                
+                return responses[responseIndex]?.id === msg.id;
+              }
+              
+              return true;
+            }
+            
+            return false;
+          })
+          .map((msg: Message, index: number) => {
+            // Determine if this message has multiple responses (for user messages)
+            const hasMultipleResponses = msg.role === 'user' && msg.id && responseGroups[msg.id]?.length > 1;
+            const responseCount = msg.id ? responseGroups[msg.id]?.length || 0 : 0;
+            const currentResponseIndex = msg.id ? currentResponseIndices[msg.id] || 0 : 0;
+            
+            return (
+              <div
+                key={`${msg.unix_timestamp}-${index}`}
+                ref={el => {
+                  if (el && msg.role === 'user') {
+                    messageRefs.current[msg.unix_timestamp.toString()] = el;
+                  }
+                }}
+              >
+                <MessageItem
+                  message={msg}
+                  isLastMessage={index === chat.messages.length - 1}
+                  isDarkMode={isDarkMode}
+                  onToolConfirm={isSharedMode
+                    ? handleToolConfirmShared
+                    : (server, tool, args) => {
+                        if (!id) return;
+                        executeToolConfirm(server, tool, args);
+                      }
+                  }
+                  onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
+                  needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
+                  expandedToolInfo={expandedToolInfo}
+                  expandedToolResults={expandedToolResults}
+                  onToggleToolInfo={toggleToolInfo}
+                  onToggleToolResult={toggleToolResult}
+                  isStreaming={isSharedMode ? false : isStreaming}
+                  toolResults={toolResults}
+                />
+                
+                {/* Message Actions for user messages with refresh and response navigation */}
+                {!isSharedMode && msg.role === 'user' && msg.id && (
+                  <div className="mt-2 flex justify-end">
+                    <MessageActions
+                      chatId={id!}
+                      messageContent={
+                        typeof msg.content === 'string'
+                          ? msg.content
+                          : JSON.stringify(msg.content)
+                      }
+                      messageId={msg.id}
+                      onRefresh={() => refreshResponse(msg.id!)}
+                      responseCount={responseCount}
+                      currentResponseIndex={currentResponseIndex}
+                      onPrevResponse={() => {
+                        if (msg.id && currentResponseIndices[msg.id] > 0) {
+                          setCurrentResponseIndices({
+                            ...currentResponseIndices,
+                            [msg.id]: currentResponseIndices[msg.id] - 1
+                          });
+                        }
+                      }}
+                      onNextResponse={() => {
+                        if (msg.id && responseGroups[msg.id] && 
+                            currentResponseIndices[msg.id] < responseGroups[msg.id].length - 1) {
+                          setCurrentResponseIndices({
+                            ...currentResponseIndices,
+                            [msg.id]: currentResponseIndices[msg.id] + 1
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
-          {/* Message Actions - Only in regular mode */}
-          {!isSharedMode && chat.messages.length > 0 && (
+          {/* Message Actions for the last message - Only in regular mode */}
+          {!isSharedMode && chat.messages.length > 0 && chat.messages[chat.messages.length - 1].role === 'assistant' && (
 						<MessageActions
 							chatId={id!}
 							messageContent={

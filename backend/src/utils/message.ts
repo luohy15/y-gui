@@ -49,6 +49,7 @@ export function createMessage(
     provider?: string;
     model?: string;
     id?: string;
+    parent_id?: string;
     reasoningEffort?: number;
     tool?: string;
     server?: string;
@@ -73,6 +74,14 @@ export function createMessage(
 
     if (options.model !== undefined) {
       messageData.model = options.model;
+    }
+
+    if (options.id !== undefined) {
+      messageData.id = options.id;
+    }
+
+    if (options.parent_id !== undefined) {
+      messageData.parent_id = options.parent_id;
     }
 
     if (options.tool !== undefined) {

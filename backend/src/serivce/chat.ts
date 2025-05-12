@@ -76,7 +76,12 @@ export class ChatService {
         return;
       }
 
-      const assistantMessage: Message = createMessage('assistant', accumulatedContent, { model, provider });
+      const assistantMessage: Message = createMessage('assistant', accumulatedContent, { 
+        model, 
+        provider,
+        id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
+        parent_id: userMessage.id
+      });
       await this.processAssistantMessage(assistantMessage, writer);
       await this.storage.saveChat(this.chat);
     } catch (error: unknown) {

@@ -21,6 +21,8 @@ export interface Message {
   content: string | ContentBlock[];
   timestamp: string;
   unix_timestamp: number;
+  id?: string;
+  parent_id?: string;
   model?: string;
   provider?: string;
   reasoning_content?: string;

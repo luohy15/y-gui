@@ -9,6 +9,7 @@ import shareRouter from './api/share-router';
 import toolRouter from './api/tool-router';
 import mcpServerRouter from './api/mcp-server-router';
 import authRouter from './api/auth-router';
+import refreshRouter from './api/refresh-router';
 import { integrationRouter } from './api/integration';
 import { handleApiDocs } from './openapi';
 
@@ -84,6 +85,7 @@ app.route('/api/chat', chatRouter);
 app.route('/api/bots', botRouter);
 app.route('/api/bot', botRouter);
 app.route('/api/tool', toolRouter);
+app.route('/api/refresh', refreshRouter);
 app.route('/api/mcp-servers', mcpServerRouter);
 app.route('/api/mcp-server', mcpServerRouter);
 app.route('/api/integrations', integrationRouter);
