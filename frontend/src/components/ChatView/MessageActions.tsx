@@ -1,15 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import ShareButton from './ShareButton';
-import { ContentBlock } from '@shared/types';
+import { ContentBlock, Message } from '@shared/types';
 
 interface MessageActionsProps {
   chatId?: string;
   messageContent?: string | ContentBlock[];
   onRefresh?: () => void;
+  messageId?: string;
+  hasMultipleVersions?: boolean;
+  versionIndex?: number;
+  totalVersions?: number;
+  onToggleResponseVersion?: (messageId: string, direction: 'prev' | 'next') => void;
 }
 
-export default function MessageActions({ chatId, messageContent, onRefresh }: MessageActionsProps) {
+export default function MessageActions({ 
+  chatId, 
+  messageContent, 
+  onRefresh, 
+  messageId,
+  hasMultipleVersions,
+  versionIndex,
+  totalVersions,
+  onToggleResponseVersion
+}: MessageActionsProps) {
   const { isDarkMode } = useTheme();
   const [isCopying, setIsCopying] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -64,6 +78,48 @@ export default function MessageActions({ chatId, messageContent, onRefresh }: Me
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       </button>
+
+      {/* Version controls */}
+      {hasMultipleVersions && messageId && onToggleResponseVersion && (
+        <>
+          {/* Version indicator */}
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+            isDarkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
+          }`}>
+            Version {versionIndex! + 1}/{totalVersions}
+          </span>
+          
+          {/* Previous version button */}
+          <button 
+            onClick={() => onToggleResponseVersion(messageId, 'prev')}
+            className={`p-1 rounded ${
+              isDarkMode 
+                ? 'hover:bg-gray-700 text-gray-300' 
+                : 'hover:bg-gray-200 text-gray-600'
+            }`}
+            title="Previous version"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          {/* Next version button */}
+          <button 
+            onClick={() => onToggleResponseVersion(messageId, 'next')}
+            className={`p-1 rounded ${
+              isDarkMode 
+                ? 'hover:bg-gray-700 text-gray-300' 
+                : 'hover:bg-gray-200 text-gray-600'
+            }`}
+            title="Next version"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
 
       {/* Copy button */}
       <button

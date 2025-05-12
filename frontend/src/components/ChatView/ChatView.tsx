@@ -533,12 +533,18 @@ export default function ChatView() {
     const lastAssistantMessage = chat.messages[lastAssistantActualIndex];
     const lastAssistantId = lastAssistantMessage.unix_timestamp.toString();
 
-    // Store the current version of the message
+    // Store the current version of the message with version information
+    const updatedAssistantMessage = {
+      ...lastAssistantMessage,
+      versionIndex: 0,
+      isChoosed: false
+    };
+
     setResponseVersions(prev => {
       const versions = prev[lastAssistantId] || [];
       return {
         ...prev,
-        [lastAssistantId]: [...versions, lastAssistantMessage]
+        [lastAssistantId]: [...versions, updatedAssistantMessage]
       };
     });
 
@@ -550,17 +556,31 @@ export default function ChatView() {
       };
     });
 
+    // Find the last user message before the assistant message
+    let lastUserMessage: string = '';
+    for (let i = lastAssistantActualIndex - 1; i >= 0; i--) {
+      if (chat.messages[i].role === 'user') {
+        const content = chat.messages[i].content;
+        lastUserMessage = typeof content === 'string' 
+          ? content 
+          : JSON.stringify(content);
+        break;
+      }
+    }
+
+    if (!lastUserMessage) return;
+
     // Create a context without the last assistant message
     const contextMessages = chat.messages.slice(0, lastAssistantActualIndex);
 
     // Add a new empty assistant message
     await addMessageToChat('', 'assistant');
 
-    // Send the request with the context
+    // Send the request with the context and last user message
     await streamResponse(
       '/api/chat/completions',
       JSON.stringify({
-        content: 'continue',
+        content: lastUserMessage,
         botName: selectedBot,
         chatId: id,
         contextMessages: contextMessages
@@ -894,15 +914,26 @@ export default function ChatView() {
 
           {/* Message Actions - Only in regular mode */}
           {!isSharedMode && chat.messages.length > 0 && (
-						<MessageActions
-							chatId={id!}
-							messageContent={
-								typeof chat.messages[chat.messages.length - 1].content === 'string'
-									? chat.messages[chat.messages.length - 1].content
-									: JSON.stringify(chat.messages[chat.messages.length - 1].content)
-							}
+            <MessageActions
+              chatId={id!}
+              messageContent={
+                typeof chat.messages[chat.messages.length - 1].content === 'string'
+                  ? chat.messages[chat.messages.length - 1].content
+                  : JSON.stringify(chat.messages[chat.messages.length - 1].content)
+              }
               onRefresh={handleRefresh}
-						/>
+              messageId={chat.messages[chat.messages.length - 1].unix_timestamp.toString()}
+              hasMultipleVersions={
+                responseVersions[chat.messages[chat.messages.length - 1].unix_timestamp.toString()]?.length > 1
+              }
+              versionIndex={
+                currentVersionIndex[chat.messages[chat.messages.length - 1].unix_timestamp.toString()] || 0
+              }
+              totalVersions={
+                responseVersions[chat.messages[chat.messages.length - 1].unix_timestamp.toString()]?.length || 1
+              }
+              onToggleResponseVersion={toggleResponseVersion}
+            />
           )}
 
           <div ref={messagesEndRef} />

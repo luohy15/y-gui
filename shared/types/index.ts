@@ -27,6 +27,8 @@ export interface Message {
   server?: string;
   tool?: string;
   arguments?: string | Record<string, any>;
+  versionIndex?: number;
+  isChoosed?: boolean;
 }
 
 export interface ListChatsOptions {
