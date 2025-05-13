@@ -21,9 +21,11 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
     botName: string;
     chatId: string;
     server?: string;
+    userMessageId?: string;
+    addUserMessage?: boolean;
   }
   const completionData = await request.json() as CompletionRequest;
-  const { content, botName, chatId } = completionData;
+  const { content, botName, chatId, userMessageId, addUserMessage = true } = completionData;
 
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -62,15 +64,34 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
 
       await chatService.initializeChat(writer);
 
-      // Create the user message with unique ID
-      const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      const userMessage: Message = createMessage('user', content, { 
-        server: completionData.server,
-        id: messageId
-      });
+      let userMessage: Message;
+      
+      // If userMessageId is provided, find the existing user message
+      if (userMessageId) {
+        const chat = await chatRepository.getChat(chatId);
+        if (!chat) {
+          await writer.write(encoder.encode(`data: {"error": "Chat not found"}\n\n`));
+          return;
+        }
+        
+        const existingUserMessage = chat.messages.find(msg => msg.id === userMessageId && msg.role === 'user');
+        if (!existingUserMessage) {
+          await writer.write(encoder.encode(`data: {"error": "User message not found"}\n\n`));
+          return;
+        }
+        
+        userMessage = existingUserMessage;
+      } else {
+        // Create a new user message with unique ID
+        const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        userMessage = createMessage('user', content, { 
+          server: completionData.server,
+          id: messageId
+        });
+      }
 
       // Process the user message
-      await chatService.processUserMessage(userMessage, writer);
+      await chatService.processUserMessage(userMessage, writer, addUserMessage);
       
       // Close the writer
       await writer.write(encoder.encode(`data: [DONE]\n\n`));

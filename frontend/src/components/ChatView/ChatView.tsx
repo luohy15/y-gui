@@ -552,11 +552,13 @@ export default function ChatView() {
     await addMessageToChat('', 'assistant');
     
     await streamResponse(
-      '/api/refresh',
+      '/api/chat/completions',
       JSON.stringify({
+        content: userMessage.content as string,
         userMessageId,
         botName: selectedBot,
-        chatId: id
+        chatId: id,
+        addUserMessage: false
       })
     );
   };
