@@ -91,7 +91,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
       }
 
       // Process the user message
-      await chatService.processUserMessage(userMessage, writer, addUserMessage);
+      await chatService.processUserMessage(userMessage, writer, userMessageId);
       
       // Close the writer
       await writer.write(encoder.encode(`data: [DONE]\n\n`));
