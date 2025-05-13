@@ -557,8 +557,7 @@ export default function ChatView() {
         content: userMessage.content as string,
         userMessageId,
         botName: selectedBot,
-        chatId: id,
-        addUserMessage: false
+        chatId: id
       })
     );
   };

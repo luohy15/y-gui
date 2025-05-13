@@ -22,10 +22,9 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
     chatId: string;
     server?: string;
     userMessageId?: string;
-    addUserMessage?: boolean;
   }
   const completionData = await request.json() as CompletionRequest;
-  const { content, botName, chatId, userMessageId, addUserMessage = true } = completionData;
+  const { content, botName, chatId, userMessageId } = completionData;
 
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
