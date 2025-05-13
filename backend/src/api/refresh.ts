@@ -80,7 +80,7 @@ export async function handleRefresh(request: Request, env: Env, userPrefix?: str
       const chatService = new ChatService(chatRepository, provider, mcpManager, chatId, resultBotConfig);
       await chatService.initializeChat(writer);
 
-      await chatService.processUserMessage(userMessage, writer);
+      await chatService.processUserMessage(userMessage, writer, false);
       
       await writer.write(encoder.encode(`data: [DONE]\n\n`));
       await writer.close();

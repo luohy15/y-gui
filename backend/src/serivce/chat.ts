@@ -25,10 +25,12 @@ export class ChatService {
     this.systemPrompt = await getSystemPrompt(this.mcpManager, this.botConfig.mcp_servers, writer);
   }
 
-  async processUserMessage(userMessage: Message, writer: WritableStreamDefaultWriter) {
+  async processUserMessage(userMessage: Message, writer: WritableStreamDefaultWriter, addUserMessage: boolean = true) {
     const encoder = new TextEncoder();
     try {
-      this.chat.messages.push(userMessage);
+      if (addUserMessage) {
+        this.chat.messages.push(userMessage);
+      }
       const providerResponseGenerator = await this.provider.callChatCompletions(this.chat, this.systemPrompt);
       let accumulatedContent = '';
       let model = '';
