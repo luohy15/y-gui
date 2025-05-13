@@ -17,6 +17,27 @@ import McpLogsDisplay from './McpLogsDisplay';
 import TableOfContents from './TableOfContents';
 import TableOfContentsDrawer from './TableOfContentsDrawer';
 
+// API client for selecting responses
+async function selectResponse(chatId: string, messageId: string) {
+  try {
+    const response = await fetch('/api/chat/select-response', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ chatId, messageId }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to select response');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error selecting response:', error);
+  }
+}
+
 export default function ChatView() {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
@@ -631,7 +652,19 @@ export default function ChatView() {
       
       if (responses.length > 0) {
         newResponseGroups[userMsgId] = responses;
-        newCurrentResponseIndices[userMsgId] = 0; // Default to showing the first response
+        
+        // Check if there's a selected_message_id in the chat
+        if (chat.selected_message_id) {
+          // Find the index of the selected message in the responses
+          const selectedIndex = responses.findIndex(resp => resp.id === chat.selected_message_id);
+          if (selectedIndex !== -1) {
+            newCurrentResponseIndices[userMsgId] = selectedIndex;
+          } else {
+            newCurrentResponseIndices[userMsgId] = 0; // Default to showing the first response
+          }
+        } else {
+          newCurrentResponseIndices[userMsgId] = 0; // Default to showing the first response
+        }
       }
     });
     
@@ -888,21 +921,38 @@ export default function ChatView() {
                       currentResponseIndex={currentResponseIndex}
                       onPrevResponse={() => {
                         if (msg.id && currentResponseIndices[msg.id] > 0) {
+                          const newIndex = currentResponseIndices[msg.id] - 1;
                           setCurrentResponseIndices({
                             ...currentResponseIndices,
-                            [msg.id]: currentResponseIndices[msg.id] - 1
+                            [msg.id]: newIndex
                           });
+                          
+                          // Get the selected message ID
+                          const selectedMessageId = responseGroups[msg.id][newIndex].id;
+                          if (selectedMessageId) {
+                            // Update the chat's selected_message_id
+                            selectResponse(id!, selectedMessageId);
+                          }
                         }
                       }}
                       onNextResponse={() => {
                         if (msg.id && responseGroups[msg.id] && 
                             currentResponseIndices[msg.id] < responseGroups[msg.id].length - 1) {
+                          const newIndex = currentResponseIndices[msg.id] + 1;
                           setCurrentResponseIndices({
                             ...currentResponseIndices,
-                            [msg.id]: currentResponseIndices[msg.id] + 1
+                            [msg.id]: newIndex
                           });
+                          
+                          // Get the selected message ID
+                          const selectedMessageId = responseGroups[msg.id][newIndex].id;
+                          if (selectedMessageId) {
+                            // Update the chat's selected_message_id
+                            selectResponse(id!, selectedMessageId);
+                          }
                         }
                       }}
+                      selectedMessageId={responseGroups[msg.id]?.[currentResponseIndex]?.id}
                     />
                   </div>
                 )}
@@ -919,6 +969,7 @@ export default function ChatView() {
 									? chat.messages[chat.messages.length - 1].content
 									: JSON.stringify(chat.messages[chat.messages.length - 1].content)
 							}
+              selectedMessageId={chat.messages[chat.messages.length - 1].id}
 						/>
           )}
 

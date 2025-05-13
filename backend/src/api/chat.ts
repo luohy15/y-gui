@@ -83,6 +83,42 @@ export async function handleChatsRequest(request: Request, env: Env, userPrefix?
     if (path === '/api/chat/completions' && request.method === 'POST') {
       return handleChatCompletions(request, env, userPrefix);
     }
+
+    if (path === '/api/chat/select-response' && request.method === 'POST') {
+      const { chatId, messageId } = await request.json() as { chatId: string, messageId: string };
+      
+      if (!chatId || !messageId) {
+        return new Response(JSON.stringify({ error: 'Missing chatId or messageId' }), {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      const chat = await chatRepository.getChat(chatId);
+      if (!chat) {
+        return new Response(JSON.stringify({ error: 'Chat not found' }), {
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      chat.selected_message_id = messageId;
+      
+      await chatRepository.saveChat(chat);
+      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
+    }
     
     return new Response('Not Found', { 
       status: 404,

@@ -3,6 +3,26 @@ import { useTheme } from '../../contexts/ThemeContext';
 import ShareButton from './ShareButton';
 import { ContentBlock } from '@shared/types';
 
+async function selectResponse(chatId: string, messageId: string) {
+  try {
+    const response = await fetch('/api/chat/select-response', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ chatId, messageId }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to select response');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error selecting response:', error);
+  }
+}
+
 interface MessageActionsProps {
   chatId?: string;
   messageContent?: string | ContentBlock[];
@@ -12,6 +32,7 @@ interface MessageActionsProps {
   currentResponseIndex?: number;
   onPrevResponse?: () => void;
   onNextResponse?: () => void;
+  selectedMessageId?: string;
 }
 
 export default function MessageActions({ 
@@ -22,7 +43,8 @@ export default function MessageActions({
   responseCount = 0, 
   currentResponseIndex = 0, 
   onPrevResponse, 
-  onNextResponse 
+  onNextResponse,
+  selectedMessageId
 }: MessageActionsProps) {
   const { isDarkMode } = useTheme();
   const [isCopying, setIsCopying] = useState(false);
@@ -87,7 +109,12 @@ export default function MessageActions({
           <button 
             className={`${activeButtonClass} ${currentResponseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`} 
             aria-label="Previous response" 
-            onClick={onPrevResponse}
+            onClick={() => {
+              if (onPrevResponse && chatId && selectedMessageId) {
+                onPrevResponse();
+                selectResponse(chatId, selectedMessageId);
+              }
+            }}
             disabled={currentResponseIndex === 0}
             title="Previous response"
           >
@@ -103,7 +130,12 @@ export default function MessageActions({
           <button 
             className={`${activeButtonClass} ${currentResponseIndex === responseCount - 1 ? 'opacity-50 cursor-not-allowed' : ''}`} 
             aria-label="Next response" 
-            onClick={onNextResponse}
+            onClick={() => {
+              if (onNextResponse && chatId && selectedMessageId) {
+                onNextResponse();
+                selectResponse(chatId, selectedMessageId);
+              }
+            }}
             disabled={currentResponseIndex === responseCount - 1}
             title="Next response"
           >

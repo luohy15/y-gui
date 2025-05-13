@@ -5,6 +5,7 @@ export interface Chat {
   update_time: string;
   content_hash?: string;
   share_id?: string;
+  selected_message_id?: string;
 }
 
 export interface ContentBlock {
