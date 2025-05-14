@@ -93,6 +93,10 @@ export async function handleChatsRequest(request: Request, env: Env, userPrefix?
     if (path === '/api/chat/migrate-to-d1' && request.method === 'POST') {
       return handleChatMigration(request, env, userPrefix);
     }
+    // Migrate default chats from R2 to D1
+    if (path === '/api/chat/migrate-to-d1-default' && request.method === 'POST') {
+      return handleChatMigration(request, env);
+    }
     
     return new Response('Not Found', { 
       status: 404,
