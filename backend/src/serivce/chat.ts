@@ -60,6 +60,61 @@ export class ChatService {
     return messagePath;
   }
 
+  /**
+   * Handle error cases by creating an error response and assistant error message
+   * @param error The error object or message
+   * @param userMessage The user message that triggered the error
+   * @param writer The writer to send the error response to
+   * @param customMessage Optional custom error message
+   */
+  private async handleError(
+    error: unknown, 
+    userMessage: Message, 
+    writer: WritableStreamDefaultWriter,
+    customMessage?: string
+  ) {
+    const encoder = new TextEncoder();
+    
+    // Get error message and details
+    const errorMessage = customMessage || (error instanceof Error ? error.message : 'An unknown error occurred');
+    const errorType = (error as any)?.type || 'unknown_error';
+    const errorStatus = (error as any)?.status || 500;
+    
+    // Format error response
+    const errorResponse = {
+      error: {
+        message: errorMessage,
+        type: errorType,
+        status: errorStatus
+      }
+    };
+    
+    // Create error content string
+    const errorContent = `Error: ${errorMessage}`;
+    
+    // Create error assistant message
+    const assistantErrorMessage: Message = createMessage('assistant', errorContent, {
+      model: 'error',
+      provider: 'system',
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
+      parent_id: userMessage.id
+    });
+    
+    // Add the error message to chat
+    this.chat.messages.push(assistantErrorMessage);
+    
+    // Set this error message as the selected message
+    if (assistantErrorMessage.id) {
+      this.chat.selected_message_id = assistantErrorMessage.id;
+    }
+    
+    // Save the chat with the error
+    await this.storage.saveChat(this.chat);
+    
+    // Write error to response stream
+    await writer.write(encoder.encode(`data: ${JSON.stringify(errorResponse)}\n\n`));
+  }
+
   async processUserMessage(userMessage: Message, writer: WritableStreamDefaultWriter, userMessageId?: string) {
     const encoder = new TextEncoder();
     try {
@@ -67,11 +122,12 @@ export class ChatService {
       
       if (userMessageId) {
         messagesToUse = this.buildMessagePath(userMessageId);
-        // Add the current user message to the path if it's not already included
-        if (!messagesToUse.includes(userMessage)) {
-          messagesToUse.push(userMessage);
-        }
       } else {
+        // Set parent_id based on currently selected message
+        if (this.chat.selected_message_id) {
+          userMessage.parent_id = this.chat.selected_message_id;
+        }
+        
         // Add the user message to the chat
         this.chat.messages.push(userMessage);
         messagesToUse = [...this.chat.messages];
@@ -104,23 +160,12 @@ export class ChatService {
 
       // Check if any content was received before proceeding
       if (!accumulatedContent.trim()) {
-        const errorResponse = {
-          error: {
-            message: 'No response content received from provider',
-            type: 'empty_response',
-            status: 500
-          }
-        };
-        await writer.write(encoder.encode(`data: ${JSON.stringify(errorResponse)}\n\n`));
-        
-        // Create error assistant message
-        const errorContent = `Error: No response content received from provider`;
-        const assistantErrorMessage: Message = createMessage('assistant', errorContent, {
-          model: 'error',
-          provider: 'system'
-        });
-        this.chat.messages.push(assistantErrorMessage);
-        await this.storage.saveChat(this.chat);
+        await this.handleError(
+          { type: 'empty_response', status: 500 },
+          userMessage,
+          writer,
+          'No response content received from provider'
+        );
         return;
       }
 
@@ -134,40 +179,7 @@ export class ChatService {
       await this.storage.saveChat(this.chat);
     } catch (error: unknown) {
       console.error('Error in processUserMessage:', error);
-      
-      // Get error message
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      const errorType = (error as any)?.type || 'unknown_error';
-      const errorStatus = (error as any)?.status || 500;
-      
-      // Format error response
-      const errorResponse = {
-        error: {
-          message: errorMessage,
-          type: errorType,
-          status: errorStatus
-        }
-      };
-      
-      // Create error content string
-      const errorContent = `Error: ${errorMessage}`;
-      
-      // Create error assistant message with standard metadata
-      // Using only properties that are known to be supported
-      const assistantErrorMessage: Message = createMessage('assistant', errorContent, {
-        // Store error details in the message metadata if they need to be preserved
-        model: 'error',
-        provider: 'system'
-      });
-      
-      // Add the error message to chat
-      this.chat.messages.push(assistantErrorMessage);
-      
-      // Save the chat with the error
-      await this.storage.saveChat(this.chat);
-      
-      // Write error to response stream
-      await writer.write(encoder.encode(`data: ${JSON.stringify(errorResponse)}\n\n`));
+      await this.handleError(error, userMessage, writer);
     } 
     // No longer closing the writer here - letting the caller handle it
   }
@@ -177,6 +189,12 @@ export class ChatService {
 
     if (!containsToolUse(content)) {
       this.chat.messages.push(assistantMessage);
+      
+      // Set this message as the selected message
+      if (assistantMessage.id) {
+        this.chat.selected_message_id = assistantMessage.id;
+      }
+      
       return;
     }
 
@@ -209,5 +227,10 @@ export class ChatService {
 
     // Add assistant message to chat
     this.chat.messages.push(assistantMessage);
+    
+    // Set this message as the selected message
+    if (assistantMessage.id) {
+      this.chat.selected_message_id = assistantMessage.id;
+    }
   }
 }

@@ -3,46 +3,50 @@ import React from 'react';
 import CopyButton from './CopyButton';
 import MarkdownByReactMarkdown from './Markdown';
 import ToolInformation from './ToolInformation';
+import MessageActions from './MessageActions';
 import './ToolStyles.css';
 
 interface MessageItemProps {
-  message: Message;
-  isLastMessage: boolean;
-  isDarkMode: boolean;
-  onToolConfirm: (server: string, tool: string, args: any) => void;
-  onToolDeny: () => void;
-  needsConfirmation: (server: string, tool: string) => boolean;
-  expandedToolInfo: Record<string, boolean>;
-  expandedToolResults: Record<string, boolean>;
-  onToggleToolInfo: (messageId: string) => void;
-  onToggleToolResult: (messageId: string) => void;
-  isStreaming: boolean;
-  toolResults?: Record<string, string | object>;
+	isDarkMode: boolean;
+	isStreaming: boolean;
+	isSharedMode: boolean;
+	message: Message;
+	messageIds: string[];
+	onRefresh: () => Promise<void>;
+	onSelectMessage: (messageId: string) => Promise<void>;
+	isLastMessage: boolean;
+	onToolConfirm: (server: string, tool: string, args: any) => void;
+	onToolDeny: () => void;
+	needsConfirmation: (server: string, tool: string) => boolean;
+	expandedToolInfo: Record<string, boolean>;
+	onToggleToolInfo: (messageId: string) => void;
+	toolResults?: Record<string, string | object>;
 }
 
 export default function MessageItem({
-  message,
-  isLastMessage,
-  isDarkMode,
-  onToolConfirm,
-  onToolDeny,
-  needsConfirmation,
-  expandedToolInfo,
-  expandedToolResults,
-  onToggleToolInfo,
-  onToggleToolResult,
-  isStreaming,
-  toolResults
+	isDarkMode,
+	isStreaming,
+	isSharedMode,
+	message,
+	messageIds,
+	onRefresh,
+	onSelectMessage,
+	isLastMessage,
+	onToolConfirm,
+	onToolDeny,
+	needsConfirmation,
+	expandedToolInfo,
+	onToggleToolInfo,
+	toolResults,
 }: MessageItemProps) {
-  const messageId = message.unix_timestamp.toString();
-  const isUserMessage = message.role === 'user' && !message.server;
+	const messageId = message.unix_timestamp.toString();
+	const isUserMessage = message.role === 'user' && !message.server;
 
-  return (
-		<div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words ${
-			isUserMessage
+	return (
+		<div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words ${isUserMessage
 				? 'bg-[#4285f4] text-white ml-auto'
 				: isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-50 text-gray-700'
-		}`}>
+			}`}>
 			<CopyButton
 				content={typeof message.content === 'string' ? message.content : JSON.stringify(message.content, null, 2)}
 				isDarkMode={isDarkMode}
@@ -58,20 +62,18 @@ export default function MessageItem({
 					</span>
 					<div className="flex flex-wrap items-center gap-1">
 						{message.model && (
-							<span className={`px-2 py-0.5 rounded text-xs font-medium ${
-								isUserMessage
+							<span className={`px-2 py-0.5 rounded text-xs font-medium ${isUserMessage
 									? 'bg-blue-400 text-white'
 									: isDarkMode ? 'bg-purple-900 text-purple-100' : 'bg-purple-100 text-purple-800'
-							}`}>
+								}`}>
 								{message.model}
 							</span>
 						)}
 						{message.provider && (
-							<span className={`px-2 py-0.5 rounded text-xs font-medium ${
-								isUserMessage
+							<span className={`px-2 py-0.5 rounded text-xs font-medium ${isUserMessage
 									? 'bg-blue-400 text-white'
 									: isDarkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
-							}`}>
+								}`}>
 								{message.provider}
 							</span>
 						)}
@@ -115,6 +117,23 @@ export default function MessageItem({
 					/>
 				</div>
 			)}
+
+			{/* Message Actions for user messages with refresh and response navigation */}
+			{!isSharedMode && message.role === 'assistant' && message.id && (
+				<div className="mt-2 flex justify-start">
+					<MessageActions
+						messageId={message.id}
+						messageIds={messageIds}
+						messageContent={
+							typeof message.content === 'string'
+								? message.content
+								: JSON.stringify(message.content)
+						}
+						onRefresh={onRefresh}
+						onSelectMessage={onSelectMessage}
+					/>
+				</div>
+			)}
 		</div>
-  );
+	);
 }

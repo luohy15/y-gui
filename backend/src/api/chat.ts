@@ -2,6 +2,7 @@ import { Chat } from '../../../shared/types';
 import { ChatR2Repository } from '../repository/chat-repository';
 import { corsHeaders } from '../middleware/cors';
 import { handleChatCompletions } from './chat-completions';
+import { handleSelectResponse } from './chat-select';
 import { generateUniqueId } from '../utils/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { Env } from 'worker-configuration';
@@ -85,39 +86,7 @@ export async function handleChatsRequest(request: Request, env: Env, userPrefix?
     }
 
     if (path === '/api/chat/select-response' && request.method === 'POST') {
-      const { chatId, messageId } = await request.json() as { chatId: string, messageId: string };
-      
-      if (!chatId || !messageId) {
-        return new Response(JSON.stringify({ error: 'Missing chatId or messageId' }), {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          }
-        });
-      }
-      
-      const chat = await chatRepository.getChat(chatId);
-      if (!chat) {
-        return new Response(JSON.stringify({ error: 'Chat not found' }), {
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          }
-        });
-      }
-      
-      chat.selected_message_id = messageId;
-      
-      await chatRepository.saveChat(chat);
-      
-      return new Response(JSON.stringify({ success: true }), {
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      });
+      return handleSelectResponse(request, env, userPrefix);
     }
     
     return new Response('Not Found', { 

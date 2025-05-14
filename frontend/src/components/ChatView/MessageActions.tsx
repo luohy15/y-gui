@@ -1,54 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import ShareButton from './ShareButton';
+// import ShareButton from './ShareButton';
 import { ContentBlock } from '@shared/types';
 
-async function selectResponse(chatId: string, messageId: string) {
-  try {
-    const response = await fetch('/api/chat/select-response', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ chatId, messageId }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to select response');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error selecting response:', error);
-  }
-}
-
 interface MessageActionsProps {
-  chatId?: string;
-  messageContent?: string | ContentBlock[];
-  messageId?: string;
-  onRefresh?: () => void;
-  responseCount?: number;
-  currentResponseIndex?: number;
-  onPrevResponse?: () => void;
-  onNextResponse?: () => void;
-  selectedMessageId?: string;
+	messageIds: string[];
+  messageId: string;
+  messageContent: string | ContentBlock[];
+  onRefresh: () => Promise<void>;
+  onSelectMessage: (messageId: string) => Promise<void>;
 }
 
-export default function MessageActions({ 
-  chatId, 
-  messageContent, 
-  messageId, 
-  onRefresh, 
-  responseCount = 0, 
-  currentResponseIndex = 0, 
-  onPrevResponse, 
-  onNextResponse,
-  selectedMessageId
+export default function MessageActions({
+	messageIds,
+  messageId,
+  messageContent,
+  onRefresh,
+	onSelectMessage,
 }: MessageActionsProps) {
   const { isDarkMode } = useTheme();
   const [isCopying, setIsCopying] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [currentResponseIndex, setCurrentResponseIndex] = useState(0);
+  const [responseCount, setResponseCount] = useState(0);
+
+  // Update navigation state when messageId or messageIds change
+  useEffect(() => {
+    const index = messageIds?.findIndex(id => id === messageId) ?? 0;
+    const count = messageIds?.length ?? 0;
+    setCurrentResponseIndex(index);
+    setResponseCount(count);
+  }, [messageId, messageIds]);
 
   // Reset copied state after timeout
   useEffect(() => {
@@ -90,10 +72,10 @@ export default function MessageActions({
   return (
     <div className="flex items-center space-x-2">
       {/* Refresh button */}
-      {onRefresh && (
-        <button 
-          className={activeButtonClass} 
-          aria-label="Refresh" 
+      {onRefresh && messageId && (
+        <button
+          className={activeButtonClass}
+          aria-label="Refresh"
           onClick={onRefresh}
           title="Generate a new response"
         >
@@ -102,17 +84,16 @@ export default function MessageActions({
           </svg>
         </button>
       )}
-      
+
       {/* Response navigation */}
-      {responseCount > 1 && (
+      {messageIds && messageIds?.length > 1 && (
         <div className="flex items-center space-x-1">
-          <button 
-            className={`${activeButtonClass} ${currentResponseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`} 
-            aria-label="Previous response" 
+          <button
+            className={`${activeButtonClass} ${currentResponseIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            aria-label="Previous response"
             onClick={() => {
-              if (onPrevResponse && chatId && selectedMessageId) {
-                onPrevResponse();
-                selectResponse(chatId, selectedMessageId);
+              if (currentResponseIndex > 0 && messageIds) {
+                onSelectMessage(messageIds[currentResponseIndex - 1]);
               }
             }}
             disabled={currentResponseIndex === 0}
@@ -122,18 +103,17 @@ export default function MessageActions({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          
+
           <span className="text-xs">
             {currentResponseIndex + 1}/{responseCount}
           </span>
-          
-          <button 
-            className={`${activeButtonClass} ${currentResponseIndex === responseCount - 1 ? 'opacity-50 cursor-not-allowed' : ''}`} 
-            aria-label="Next response" 
+
+          <button
+            className={`${activeButtonClass} ${currentResponseIndex === responseCount - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            aria-label="Next response"
             onClick={() => {
-              if (onNextResponse && chatId && selectedMessageId) {
-                onNextResponse();
-                selectResponse(chatId, selectedMessageId);
+              if (currentResponseIndex < responseCount - 1 && messageIds) {
+                onSelectMessage(messageIds[currentResponseIndex + 1]);
               }
             }}
             disabled={currentResponseIndex === responseCount - 1}
@@ -170,7 +150,7 @@ export default function MessageActions({
       </button>
 
       {/* Share button */}
-      {chatId && <ShareButton chatId={chatId} />}
+      {/* {chatId && <ShareButton chatId={chatId} />} */}
     </div>
   );
 }

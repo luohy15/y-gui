@@ -1,42 +1,20 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useBot } from '../../contexts/BotContext';
 import { useToc } from '../../contexts/TocContext';
 import { useMcp } from '../../contexts/McpContext';
-import { useAuthenticatedSWR } from '../../utils/api';
+import { useAuthenticatedSWR, useApi } from '../../utils/api';
 import { Chat, Message, McpServerConfig } from '@shared/types';
 import { mutate } from 'swr';
 import useSWR, { SWRConfiguration } from 'swr';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMcpStatus } from '../../hooks/useMcpStatus';
 import MessageInput from '../MessageInput';
-import MessageActions from './MessageActions';
 import MessageItem from './MessageItem';
 import McpLogsDisplay from './McpLogsDisplay';
 import TableOfContents from './TableOfContents';
 import TableOfContentsDrawer from './TableOfContentsDrawer';
-
-// API client for selecting responses
-async function selectResponse(chatId: string, messageId: string) {
-  try {
-    const response = await fetch('/api/chat/select-response', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ chatId, messageId }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to select response');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error selecting response:', error);
-  }
-}
 
 export default function ChatView() {
   const { isDarkMode } = useTheme();
@@ -45,8 +23,12 @@ export default function ChatView() {
   const { id } = useParams<{ id: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getAccessTokenSilently } = useAuth0();
+  const api = useApi();
   const { isTocOpen, setIsTocOpen, currentMessageId, setCurrentMessageId } = useToc();
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
+
+  // Map to store child messageIds for each parent message
+  const [messageIdsMap, setMessageIdsMap] = useState<Record<string, string[]>>({});
 
   // Determine if we're in shared mode based on URL path
   const isSharedMode = location.pathname.startsWith('/share/');
@@ -54,10 +36,6 @@ export default function ChatView() {
   // State for message input and bot selection
   const [message, setMessage] = useState('');
   const { selectedBot, setSelectedBot } = useBot();
-  
-  // State for tracking multiple responses
-  const [responseGroups, setResponseGroups] = useState<Record<string, Message[]>>({});
-  const [currentResponseIndices, setCurrentResponseIndices] = useState<Record<string, number>>({});
 
   // Message streaming state
   const [isStreaming, setIsStreaming] = useState(false);
@@ -100,7 +78,6 @@ export default function ChatView() {
   const [toolResults, setToolResults] = useState<Record<string, string | object>>({});
 
   const [expandedToolInfo, setExpandedToolInfo] = useState<Record<string, boolean>>({});
-  const [expandedToolResults, setExpandedToolResults] = useState<Record<string, boolean>>({});
 
   // Configure SWR options
   const swrConfig: SWRConfiguration = {
@@ -209,6 +186,37 @@ export default function ChatView() {
       false
     );
   };
+
+  /****************************
+   * Selected Message Path Functions
+   ****************************/
+
+  // Build a path from root to leaf through the selected message
+  const buildSelectedMessagePath = (chat: Chat): string[] => {
+    if (!chat.selected_message_id) return [];
+
+    const allMessages = chat.messages;
+    const result: string[] = [chat.selected_message_id];
+
+    // First, traverse UP to root (follow parent_id chain)
+    let currentId = chat.selected_message_id;
+    let currentMsg = allMessages.find(msg => msg.id === currentId);
+
+    // Traverse up parent_id chain until we reach a message without a parent_id
+    while (currentMsg && currentMsg.parent_id) {
+      result.unshift(currentMsg.parent_id); // Add parent to beginning of array
+      currentId = currentMsg.parent_id;
+      currentMsg = allMessages.find(msg => msg.id === currentId);
+    }
+
+    return result;
+  };
+
+  // Use useMemo to compute the selected message path efficiently
+  const selectedMessagePath = useMemo(() => {
+    if (!chat?.selected_message_id || !chat) return null;
+    return buildSelectedMessagePath(chat);
+  }, [chat?.selected_message_id, chat]);
 
   // Update the last message with new properties
   const updateLastMessage = async (
@@ -391,14 +399,6 @@ export default function ChatView() {
     }));
   };
 
-  // Toggle tool result expand state
-  const toggleToolResult = (messageId: string) => {
-    setExpandedToolResults(prev => ({
-      ...prev,
-      [messageId]: !prev[messageId]
-    }));
-  };
-
   /****************************
    * Stream Response Processing
    ****************************/
@@ -547,7 +547,7 @@ export default function ChatView() {
     if (!id || !selectedBot) return;
 
     const userMessageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-    
+
     await addMessageToChat(content, 'user', { ...additionalProps, id: userMessageId });
     await addMessageToChat('', 'assistant');
 
@@ -561,27 +561,37 @@ export default function ChatView() {
       })
     );
   };
-  
-  const refreshResponse = async (userMessageId: string) => {
-    if (!id || !selectedBot || !chat) return;
-    
+
+  const refreshResponse = async (messageId?: string) => {
+    if (!id || !selectedBot || !chat || !messageId) return;
+
     // Find the user message with the given ID
-    const userMessage = chat.messages.find(msg => msg.id === userMessageId && msg.role === 'user');
-    if (!userMessage) return;
-    
-    // Add a new empty assistant message
-    await addMessageToChat('', 'assistant');
-    
+    const assistantMessage = chat.messages.find(msg => msg.id === messageId && msg.role === 'assistant');
+    if (!assistantMessage) return;
+
+		// Get the user message ID from the assistant message
+		const userMessageId = assistantMessage.parent_id;
+
+    // Clear assistant message content
+		assistantMessage.content = '';
+
     await streamResponse(
       '/api/chat/completions',
       JSON.stringify({
-        content: userMessage.content as string,
         userMessageId,
         botName: selectedBot,
         chatId: id
       })
     );
   };
+
+	async function selectResponse(chatId: string, messageId: string) {
+		try {
+			return await api.post('/api/chat/select-response', { chatId, messageId });
+		} catch (error) {
+			console.error('Error selecting response:', error);
+		}
+	}
 
   // Execute a confirmed tool
   const executeToolConfirm = async (server: string, tool: string, args: any) => {
@@ -630,46 +640,34 @@ export default function ChatView() {
    * Initialization and Effects
    ****************************/
 
-  // Initialize tool results and response groups when chat loads
+  // Build messageIds map - mapping parent messages to their child message IDs
+  useEffect(() => {
+    if (!chat) return;
+
+    const newMessageIdsMap: Record<string, string[]> = {};
+
+    // Iterate through all messages that have an id and parent_id
+    chat.messages.forEach((message) => {
+      if (message.id && message.parent_id) {
+        // If this parent ID doesn't have an entry yet, create one
+        if (!newMessageIdsMap[message.parent_id]) {
+          newMessageIdsMap[message.parent_id] = [];
+        }
+
+        // Add this message's ID to its parent's array
+        newMessageIdsMap[message.parent_id].push(message.id);
+      }
+    });
+
+    setMessageIdsMap(newMessageIdsMap);
+  }, [chat]);
+
+  // Initialize tool results when chat loads
   useEffect(() => {
     if (!chat) return;
 
     const newToolResults: Record<string, string | object> = {};
     const assistantMessages = chat.messages.filter(msg => msg.role === 'assistant' && msg.tool && msg.server);
-    
-    const newResponseGroups: Record<string, Message[]> = {};
-    const newCurrentResponseIndices: Record<string, number> = {};
-    
-    const userMessages = chat.messages.filter(msg => msg.role === 'user' && msg.id);
-    
-    userMessages.forEach(userMsg => {
-      if (!userMsg.id) return;
-      
-      const userMsgId = userMsg.id;
-      const responses = chat.messages.filter(msg => 
-        msg.role === 'assistant' && msg.parent_id === userMsgId
-      );
-      
-      if (responses.length > 0) {
-        newResponseGroups[userMsgId] = responses;
-        
-        // Check if there's a selected_message_id in the chat
-        if (chat.selected_message_id) {
-          // Find the index of the selected message in the responses
-          const selectedIndex = responses.findIndex(resp => resp.id === chat.selected_message_id);
-          if (selectedIndex !== -1) {
-            newCurrentResponseIndices[userMsgId] = selectedIndex;
-          } else {
-            newCurrentResponseIndices[userMsgId] = 0; // Default to showing the first response
-          }
-        } else {
-          newCurrentResponseIndices[userMsgId] = 0; // Default to showing the first response
-        }
-      }
-    });
-    
-    setResponseGroups(newResponseGroups);
-    setCurrentResponseIndices(newCurrentResponseIndices);
 
     // For each assistant message with tool information
     assistantMessages.forEach(assistantMsg => {
@@ -852,126 +850,62 @@ export default function ChatView() {
         {/* Messages (centered) */}
         <div className={`flex flex-col px-4 sm:px-0 pt-20 pb-28 sm:pt-4 w-full sm:w-[50%] 2xl:w-[40%] max-w-[100%] space-y-4`}>
           {chat.messages
-          .filter((msg: Message) => {
-            if (msg.role === 'user' && !msg.server && !msg.tool) return true;
-            
-            if (msg.role === 'assistant') {
-              if (msg.parent_id) {
-                const parentId = msg.parent_id;
-                const responseIndex = currentResponseIndices[parentId] || 0;
-                const responses = responseGroups[parentId] || [];
-                
-                return responses[responseIndex]?.id === msg.id;
-              }
-              
-              return true;
+					.filter((msg: Message) => {
+            // Original filter logic: show assistant messages and user messages without server/tool
+            const passesOriginalFilter = msg.role === 'assistant' || (!msg.server && !msg.tool);
+
+            // If we have a selected path, only show messages in that path
+            if (selectedMessagePath && msg.id) {
+              return passesOriginalFilter && selectedMessagePath.includes(msg.id);
             }
-            
-            return false;
+
+            // Otherwise use the original filter
+            return passesOriginalFilter;
           })
-          .map((msg: Message, index: number) => {
-            // Determine if this message has multiple responses (for user messages)
-            const hasMultipleResponses = msg.role === 'user' && msg.id && responseGroups[msg.id]?.length > 1;
-            const responseCount = msg.id ? responseGroups[msg.id]?.length || 0 : 0;
-            const currentResponseIndex = msg.id ? currentResponseIndices[msg.id] || 0 : 0;
-            
-            return (
-              <div
-                key={`${msg.unix_timestamp}-${index}`}
-                ref={el => {
-                  if (el && msg.role === 'user') {
-                    messageRefs.current[msg.unix_timestamp.toString()] = el;
+          .map((msg: Message, index: number) => (
+            <div
+              key={`${msg.unix_timestamp}-${index}`}
+              ref={el => {
+                if (el && msg.role === 'user') {
+                  messageRefs.current[msg.unix_timestamp.toString()] = el;
+                }
+              }}
+            >
+              <MessageItem
+                isDarkMode={isDarkMode}
+                isStreaming={isSharedMode ? false : isStreaming}
+                isSharedMode={isSharedMode}
+                message={msg}
+                messageIds={msg.parent_id ? messageIdsMap[msg.parent_id] || [] : []}
+                onRefresh={() => refreshResponse(msg.id)}
+                onSelectMessage={async (messageId: string) => {
+                  if (!id || !messageId) return;
+                  try {
+                    const result = await selectResponse(id, messageId);
+                    if (result) {
+                      // Force refetch to update the selected_message_id in chat
+                      mutate(`/api/chats/${id}`);
+                    }
+                  } catch (error) {
+                    console.error('Error selecting message:', error);
                   }
                 }}
-              >
-                <MessageItem
-                  message={msg}
-                  isLastMessage={index === chat.messages.length - 1}
-                  isDarkMode={isDarkMode}
-                  onToolConfirm={isSharedMode
-                    ? handleToolConfirmShared
-                    : (server, tool, args) => {
-                        if (!id) return;
-                        executeToolConfirm(server, tool, args);
-                      }
-                  }
-                  onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
-                  needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
-                  expandedToolInfo={expandedToolInfo}
-                  expandedToolResults={expandedToolResults}
-                  onToggleToolInfo={toggleToolInfo}
-                  onToggleToolResult={toggleToolResult}
-                  isStreaming={isSharedMode ? false : isStreaming}
-                  toolResults={toolResults}
-                />
-                
-                {/* Message Actions for user messages with refresh and response navigation */}
-                {!isSharedMode && msg.role === 'user' && msg.id && (
-                  <div className="mt-2 flex justify-end">
-                    <MessageActions
-                      chatId={id!}
-                      messageContent={
-                        typeof msg.content === 'string'
-                          ? msg.content
-                          : JSON.stringify(msg.content)
-                      }
-                      messageId={msg.id}
-                      onRefresh={() => refreshResponse(msg.id!)}
-                      responseCount={responseCount}
-                      currentResponseIndex={currentResponseIndex}
-                      onPrevResponse={() => {
-                        if (msg.id && currentResponseIndices[msg.id] > 0) {
-                          const newIndex = currentResponseIndices[msg.id] - 1;
-                          setCurrentResponseIndices({
-                            ...currentResponseIndices,
-                            [msg.id]: newIndex
-                          });
-                          
-                          // Get the selected message ID
-                          const selectedMessageId = responseGroups[msg.id][newIndex].id;
-                          if (selectedMessageId) {
-                            // Update the chat's selected_message_id
-                            selectResponse(id!, selectedMessageId);
-                          }
-                        }
-                      }}
-                      onNextResponse={() => {
-                        if (msg.id && responseGroups[msg.id] && 
-                            currentResponseIndices[msg.id] < responseGroups[msg.id].length - 1) {
-                          const newIndex = currentResponseIndices[msg.id] + 1;
-                          setCurrentResponseIndices({
-                            ...currentResponseIndices,
-                            [msg.id]: newIndex
-                          });
-                          
-                          // Get the selected message ID
-                          const selectedMessageId = responseGroups[msg.id][newIndex].id;
-                          if (selectedMessageId) {
-                            // Update the chat's selected_message_id
-                            selectResponse(id!, selectedMessageId);
-                          }
-                        }
-                      }}
-                      selectedMessageId={responseGroups[msg.id]?.[currentResponseIndex]?.id}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Message Actions for the last message - Only in regular mode */}
-          {!isSharedMode && chat.messages.length > 0 && chat.messages[chat.messages.length - 1].role === 'assistant' && (
-						<MessageActions
-							chatId={id!}
-							messageContent={
-								typeof chat.messages[chat.messages.length - 1].content === 'string'
-									? chat.messages[chat.messages.length - 1].content
-									: JSON.stringify(chat.messages[chat.messages.length - 1].content)
-							}
-              selectedMessageId={chat.messages[chat.messages.length - 1].id}
-						/>
-          )}
+                isLastMessage={index === chat.messages.length - 1}
+                onToolConfirm={isSharedMode
+                  ? handleToolConfirmShared
+                  : (server, tool, args) => {
+                      if (!id) return;
+                      executeToolConfirm(server, tool, args);
+                    }
+                }
+                onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
+                needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
+                expandedToolInfo={expandedToolInfo}
+                onToggleToolInfo={toggleToolInfo}
+                toolResults={toolResults}
+              />
+            </div>
+          ))}
 
           <div ref={messagesEndRef} />
         </div>
