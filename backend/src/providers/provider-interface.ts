@@ -1,4 +1,4 @@
-import { Chat } from '../../../shared/types';
+import { Chat, Message } from '../../../shared/types';
 
 /**
  * Common interface for AI providers
@@ -17,12 +17,11 @@ export interface BaseProvider {
   /**
    * Generate a response from the AI provider
    * @param messages List of chat messages
-   * @param chat Optional chat object
    * @param systemPrompt Optional system prompt
    * @returns An AsyncGenerator yielding content fragments and provider info as they arrive
    */
   callChatCompletions(
-    chat?: Chat, 
+    messages: Message[], 
     systemPrompt?: string
   ): AsyncGenerator<ProviderResponseChunk, void, unknown>;
 }

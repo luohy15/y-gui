@@ -1,17 +1,16 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useBot } from '../../contexts/BotContext';
 import { useToc } from '../../contexts/TocContext';
 import { useMcp } from '../../contexts/McpContext';
-import { useAuthenticatedSWR } from '../../utils/api';
+import { useAuthenticatedSWR, useApi } from '../../utils/api';
 import { Chat, Message, McpServerConfig } from '@shared/types';
 import { mutate } from 'swr';
 import useSWR, { SWRConfiguration } from 'swr';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMcpStatus } from '../../hooks/useMcpStatus';
 import MessageInput from '../MessageInput';
-import MessageActions from './MessageActions';
 import MessageItem from './MessageItem';
 import McpLogsDisplay from './McpLogsDisplay';
 import TableOfContents from './TableOfContents';
@@ -24,8 +23,12 @@ export default function ChatView() {
   const { id } = useParams<{ id: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getAccessTokenSilently } = useAuth0();
+  const api = useApi();
   const { isTocOpen, setIsTocOpen, currentMessageId, setCurrentMessageId } = useToc();
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
+
+  // Map to store child messageIds for each parent message
+  const [messageIdsMap, setMessageIdsMap] = useState<Record<string, string[]>>({});
 
   // Determine if we're in shared mode based on URL path
   const isSharedMode = location.pathname.startsWith('/share/');
@@ -75,7 +78,6 @@ export default function ChatView() {
   const [toolResults, setToolResults] = useState<Record<string, string | object>>({});
 
   const [expandedToolInfo, setExpandedToolInfo] = useState<Record<string, boolean>>({});
-  const [expandedToolResults, setExpandedToolResults] = useState<Record<string, boolean>>({});
 
   // Configure SWR options
   const swrConfig: SWRConfiguration = {
@@ -184,6 +186,55 @@ export default function ChatView() {
       false
     );
   };
+
+  /****************************
+   * Selected Message Path Functions
+   ****************************/
+
+  // Build a path from root to leaf through the selected message
+  const buildSelectedMessagePath = (chat: Chat): string[] => {
+    if (!chat.selected_message_id) return [];
+
+    const allMessages = chat.messages;
+    const result: string[] = [chat.selected_message_id];
+
+    // First, traverse UP to root (follow parent_id chain)
+    let currentId = chat.selected_message_id;
+    let currentMsg = allMessages.find(msg => msg.id === currentId);
+
+    // Traverse up parent_id chain until we reach a message without a parent_id
+    while (currentMsg && currentMsg.parent_id) {
+      result.unshift(currentMsg.parent_id); // Add parent to beginning of array
+      currentId = currentMsg.parent_id;
+      currentMsg = allMessages.find(msg => msg.id === currentId);
+    }
+
+    return result;
+  };
+
+  // Use useMemo to compute the selected message path efficiently
+  const selectedMessagePath = useMemo(() => {
+    if (!chat?.selected_message_id || !chat) return null;
+    return buildSelectedMessagePath(chat);
+  }, [chat?.selected_message_id, chat]);
+
+  // Use useMemo to filter messages for both chat display and TOC
+  const filteredMessages = useMemo(() => {
+    if (!chat?.messages) return [];
+
+    return chat.messages.filter((msg: Message) => {
+      // Original filter logic: show assistant messages and user messages without server/tool
+      const passesOriginalFilter = msg.role === 'assistant' || (!msg.server && !msg.tool);
+
+      // If we have a selected path, only show messages in that path
+      if (selectedMessagePath && msg.id) {
+        return passesOriginalFilter && selectedMessagePath.includes(msg.id);
+      }
+
+      // Otherwise use the original filter
+      return passesOriginalFilter;
+    });
+  }, [chat?.messages, selectedMessagePath]);
 
   // Update the last message with new properties
   const updateLastMessage = async (
@@ -366,14 +417,6 @@ export default function ChatView() {
     }));
   };
 
-  // Toggle tool result expand state
-  const toggleToolResult = (messageId: string) => {
-    setExpandedToolResults(prev => ({
-      ...prev,
-      [messageId]: !prev[messageId]
-    }));
-  };
-
   /****************************
    * Stream Response Processing
    ****************************/
@@ -384,6 +427,7 @@ export default function ChatView() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+		mutate(`/api/chats/${id}`);
     setIsStreaming(false);
   };
 
@@ -502,10 +546,8 @@ export default function ChatView() {
 
           buffer = lines[lines.length - 1];
         }
-      } else {
-        const updatedChat = await response.json();
-        mutate(`/api/chats/${id}`, updatedChat, false);
       }
+			mutate(`/api/chats/${id}`);
     } catch (error) {
       console.error('Error streaming response:', error);
     } finally {
@@ -534,6 +576,37 @@ export default function ChatView() {
       })
     );
   };
+
+  const refreshResponse = async (messageId?: string) => {
+    if (!id || !selectedBot || !chat || !messageId) return;
+
+    // Find the user message with the given ID
+    const assistantMessage = chat.messages.find(msg => msg.id === messageId && msg.role === 'assistant');
+    if (!assistantMessage) return;
+
+		// Get the user message ID from the assistant message
+		const userMessageId = assistantMessage.parent_id;
+
+    // Clear assistant message content
+		assistantMessage.content = '';
+
+    await streamResponse(
+      '/api/chat/completions',
+      JSON.stringify({
+        userMessageId,
+        botName: selectedBot,
+        chatId: id
+      })
+    );
+  };
+
+	async function selectResponse(chatId: string, messageId: string) {
+		try {
+			return await api.post('/api/chat/select-response', { chatId, messageId });
+		} catch (error) {
+			console.error('Error selecting response:', error);
+		}
+	}
 
   // Execute a confirmed tool
   const executeToolConfirm = async (server: string, tool: string, args: any) => {
@@ -581,6 +654,28 @@ export default function ChatView() {
   /****************************
    * Initialization and Effects
    ****************************/
+
+  // Build messageIds map - mapping parent messages to their child message IDs
+  useEffect(() => {
+    if (!chat) return;
+
+    const newMessageIdsMap: Record<string, string[]> = {};
+
+    // Iterate through all messages that have an id and parent_id
+    chat.messages.forEach((message) => {
+      if (message.id && message.parent_id) {
+        // If this parent ID doesn't have an entry yet, create one
+        if (!newMessageIdsMap[message.parent_id]) {
+          newMessageIdsMap[message.parent_id] = [];
+        }
+
+        // Add this message's ID to its parent's array
+        newMessageIdsMap[message.parent_id].push(message.id);
+      }
+    });
+
+    setMessageIdsMap(newMessageIdsMap);
+  }, [chat]);
 
   // Initialize tool results when chat loads
   useEffect(() => {
@@ -732,7 +827,7 @@ export default function ChatView() {
       <TableOfContentsDrawer
         isOpen={isTocOpen}
         onClose={() => setIsTocOpen(false)}
-        messages={chat?.messages || []}
+        messages={filteredMessages}
         isDarkMode={isDarkMode}
         onScrollToMessage={scrollToMessage}
         currentMessageId={currentMessageId}
@@ -760,7 +855,7 @@ export default function ChatView() {
 					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] fixed left-8 top-20 2xl:left-40"
 				>
           <TableOfContents
-            messages={chat.messages}
+            messages={filteredMessages}
             isDarkMode={isDarkMode}
             onScrollToMessage={scrollToMessage}
             currentMessageId={currentMessageId}
@@ -769,8 +864,7 @@ export default function ChatView() {
 
         {/* Messages (centered) */}
         <div className={`flex flex-col px-4 sm:px-0 pt-20 pb-28 sm:pt-4 w-full sm:w-[50%] 2xl:w-[40%] max-w-[100%] space-y-4`}>
-          {chat.messages
-          .filter((msg: Message) => msg.role === 'assistant' || (!msg.server && !msg.tool))
+          {filteredMessages
           .map((msg: Message, index: number) => (
             <div
               key={`${msg.unix_timestamp}-${index}`}
@@ -781,9 +875,25 @@ export default function ChatView() {
               }}
             >
               <MessageItem
-                message={msg}
-                isLastMessage={index === chat.messages.length - 1}
                 isDarkMode={isDarkMode}
+                isStreaming={isSharedMode ? false : isStreaming}
+                isSharedMode={isSharedMode}
+                message={msg}
+                messageIds={msg.parent_id ? messageIdsMap[msg.parent_id] || [] : []}
+                onRefresh={() => refreshResponse(msg.id)}
+                onSelectMessage={async (messageId: string) => {
+                  if (!id || !messageId) return;
+                  try {
+                    const result = await selectResponse(id, messageId);
+                    if (result) {
+                      // Force refetch to update the selected_message_id in chat
+                      mutate(`/api/chats/${id}`);
+                    }
+                  } catch (error) {
+                    console.error('Error selecting message:', error);
+                  }
+                }}
+                isLastMessage={index === chat.messages.length - 1}
                 onToolConfirm={isSharedMode
                   ? handleToolConfirmShared
                   : (server, tool, args) => {
@@ -794,26 +904,11 @@ export default function ChatView() {
                 onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
                 needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
                 expandedToolInfo={expandedToolInfo}
-                expandedToolResults={expandedToolResults}
                 onToggleToolInfo={toggleToolInfo}
-                onToggleToolResult={toggleToolResult}
-                isStreaming={isSharedMode ? false : isStreaming}
                 toolResults={toolResults}
               />
             </div>
           ))}
-
-          {/* Message Actions - Only in regular mode */}
-          {!isSharedMode && chat.messages.length > 0 && (
-						<MessageActions
-							chatId={id!}
-							messageContent={
-								typeof chat.messages[chat.messages.length - 1].content === 'string'
-									? chat.messages[chat.messages.length - 1].content
-									: JSON.stringify(chat.messages[chat.messages.length - 1].content)
-							}
-						/>
-          )}
 
           <div ref={messagesEndRef} />
         </div>

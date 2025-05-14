@@ -130,16 +130,15 @@ export class OpenAIFormatProvider implements BaseProvider {
   /**
    * Generate a response from the provider as an async generator
    * @param messages List of chat messages
-   * @param chat Optional chat object
    * @param systemPrompt Optional system prompt
    * @returns An AsyncGenerator yielding content fragments and provider info
    */
   async *callChatCompletions(
-    chat?: Chat, 
+    messages: Message[], 
     systemPrompt?: string
   ): AsyncGenerator<ProviderResponseChunk, void, unknown> {
     // Prepare messages with system prompt
-    const preparedMessages = this.prepareMessagesForCompletion(chat?.messages, systemPrompt);
+    const preparedMessages = this.prepareMessagesForCompletion(messages, systemPrompt);
     
     // Use a more flexible type for the request body
     const body: Record<string, any> = {

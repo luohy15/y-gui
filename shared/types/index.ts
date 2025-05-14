@@ -5,6 +5,7 @@ export interface Chat {
   update_time: string;
   content_hash?: string;
   share_id?: string;
+  selected_message_id?: string;
 }
 
 export interface ContentBlock {
@@ -21,6 +22,8 @@ export interface Message {
   content: string | ContentBlock[];
   timestamp: string;
   unix_timestamp: number;
+  id?: string;
+  parent_id?: string;
   model?: string;
   provider?: string;
   reasoning_content?: string;

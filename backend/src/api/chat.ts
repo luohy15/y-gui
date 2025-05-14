@@ -2,6 +2,7 @@ import { Chat } from '../../../shared/types';
 import { ChatR2Repository } from '../repository/chat-repository';
 import { corsHeaders } from '../middleware/cors';
 import { handleChatCompletions } from './chat-completions';
+import { handleSelectResponse } from './chat-select';
 import { generateUniqueId } from '../utils/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { Env } from 'worker-configuration';
@@ -82,6 +83,10 @@ export async function handleChatsRequest(request: Request, env: Env, userPrefix?
     // Send message to chat (completions endpoint)
     if (path === '/api/chat/completions' && request.method === 'POST') {
       return handleChatCompletions(request, env, userPrefix);
+    }
+
+    if (path === '/api/chat/select-response' && request.method === 'POST') {
+      return handleSelectResponse(request, env, userPrefix);
     }
     
     return new Response('Not Found', { 
