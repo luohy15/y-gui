@@ -218,6 +218,24 @@ export default function ChatView() {
     return buildSelectedMessagePath(chat);
   }, [chat?.selected_message_id, chat]);
 
+  // Use useMemo to filter messages for both chat display and TOC
+  const filteredMessages = useMemo(() => {
+    if (!chat?.messages) return [];
+
+    return chat.messages.filter((msg: Message) => {
+      // Original filter logic: show assistant messages and user messages without server/tool
+      const passesOriginalFilter = msg.role === 'assistant' || (!msg.server && !msg.tool);
+
+      // If we have a selected path, only show messages in that path
+      if (selectedMessagePath && msg.id) {
+        return passesOriginalFilter && selectedMessagePath.includes(msg.id);
+      }
+
+      // Otherwise use the original filter
+      return passesOriginalFilter;
+    });
+  }, [chat?.messages, selectedMessagePath]);
+
   // Update the last message with new properties
   const updateLastMessage = async (
     content?: string,
@@ -409,6 +427,7 @@ export default function ChatView() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+		mutate(`/api/chats/${id}`);
     setIsStreaming(false);
   };
 
@@ -527,10 +546,8 @@ export default function ChatView() {
 
           buffer = lines[lines.length - 1];
         }
-      } else {
-        const updatedChat = await response.json();
-        mutate(`/api/chats/${id}`, updatedChat, false);
       }
+			mutate(`/api/chats/${id}`);
     } catch (error) {
       console.error('Error streaming response:', error);
     } finally {
@@ -546,9 +563,7 @@ export default function ChatView() {
   const sendUserMessage = async (content: string, additionalProps: Partial<Message> = {}) => {
     if (!id || !selectedBot) return;
 
-    const userMessageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-
-    await addMessageToChat(content, 'user', { ...additionalProps, id: userMessageId });
+    await addMessageToChat(content, 'user', additionalProps);
     await addMessageToChat('', 'assistant');
 
     await streamResponse(
@@ -812,7 +827,7 @@ export default function ChatView() {
       <TableOfContentsDrawer
         isOpen={isTocOpen}
         onClose={() => setIsTocOpen(false)}
-        messages={chat?.messages || []}
+        messages={filteredMessages}
         isDarkMode={isDarkMode}
         onScrollToMessage={scrollToMessage}
         currentMessageId={currentMessageId}
@@ -840,7 +855,7 @@ export default function ChatView() {
 					className="hidden sm:block sm:w-[20%] h-[calc(50vh)] fixed left-8 top-20 2xl:left-40"
 				>
           <TableOfContents
-            messages={chat.messages}
+            messages={filteredMessages}
             isDarkMode={isDarkMode}
             onScrollToMessage={scrollToMessage}
             currentMessageId={currentMessageId}
@@ -849,19 +864,7 @@ export default function ChatView() {
 
         {/* Messages (centered) */}
         <div className={`flex flex-col px-4 sm:px-0 pt-20 pb-28 sm:pt-4 w-full sm:w-[50%] 2xl:w-[40%] max-w-[100%] space-y-4`}>
-          {chat.messages
-					.filter((msg: Message) => {
-            // Original filter logic: show assistant messages and user messages without server/tool
-            const passesOriginalFilter = msg.role === 'assistant' || (!msg.server && !msg.tool);
-
-            // If we have a selected path, only show messages in that path
-            if (selectedMessagePath && msg.id) {
-              return passesOriginalFilter && selectedMessagePath.includes(msg.id);
-            }
-
-            // Otherwise use the original filter
-            return passesOriginalFilter;
-          })
+          {filteredMessages
           .map((msg: Message, index: number) => (
             <div
               key={`${msg.unix_timestamp}-${index}`}
