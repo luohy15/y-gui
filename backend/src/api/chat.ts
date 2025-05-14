@@ -1,5 +1,6 @@
 import { Chat } from '../../../shared/types';
-import { ChatR2Repository } from '../repository/chat-repository';
+import { ChatD1Repository } from '../repository/d1/chat-d1-repository';
+import { handleChatMigration } from './chat-migrate';
 import { corsHeaders } from '../middleware/cors';
 import { handleChatCompletions } from './chat-completions';
 import { handleSelectResponse } from './chat-select';
@@ -8,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Env } from 'worker-configuration';
 
 export async function handleChatsRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
-  const chatRepository = new ChatR2Repository(env.CHAT_R2, userPrefix);
+  const chatRepository = new ChatD1Repository(env.CHAT_DB, userPrefix);
   const url = new URL(request.url);
   const path = url.pathname;
 
@@ -87,6 +88,10 @@ export async function handleChatsRequest(request: Request, env: Env, userPrefix?
 
     if (path === '/api/chat/select-response' && request.method === 'POST') {
       return handleSelectResponse(request, env, userPrefix);
+    }
+    // Migrate chats from R2 to D1
+    if (path === '/api/chat/migrate-to-d1' && request.method === 'POST') {
+      return handleChatMigration(request, env, userPrefix);
     }
     
     return new Response('Not Found', { 

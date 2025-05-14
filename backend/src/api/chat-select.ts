@@ -1,5 +1,5 @@
 import { Chat } from '../../../shared/types';
-import { ChatR2Repository } from '../repository/chat-repository';
+import { ChatD1Repository } from '../repository/d1/chat-d1-repository';
 import { corsHeaders } from '../middleware/cors';
 import { Env } from 'worker-configuration';
 
@@ -39,7 +39,7 @@ function findLeafMessageId(chat: Chat, messageId: string): string {
 }
 
 export async function handleSelectResponse(request: Request, env: Env, userPrefix?: string): Promise<Response> {
-  const chatRepository = new ChatR2Repository(env.CHAT_R2, userPrefix);
+  const chatRepository = new ChatD1Repository(env.CHAT_DB, userPrefix);
   
   try {
     const { chatId, messageId } = await request.json() as { chatId: string, messageId: string };

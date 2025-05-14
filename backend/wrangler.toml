@@ -35,3 +35,9 @@ head_sampling_rate = 1
 # Scheduled tasks
 [triggers]
 crons = ["0 * * * *"]  # Run every hour
+
+# D1 Database
+[[d1_databases]]
+binding = "CHAT_DB"
+database_name = "yovy"
+database_id = "bd822d41-bee0-4736-b048-1cabe7447dcf" # Replace with your actual database ID

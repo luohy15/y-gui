@@ -1,4 +1,4 @@
-import { IntegrationConfig, IntegrationRepository } from '../../../shared/types';
+import { IntegrationConfig, IntegrationRepository } from '../../../../shared/types';
 
 export class IntegrationR2Repository implements IntegrationRepository {
   private r2Key: string;

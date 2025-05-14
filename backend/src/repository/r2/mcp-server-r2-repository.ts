@@ -1,4 +1,4 @@
-import { McpServerConfig, McpServerRepository } from '../../../shared/types';
+import { McpServerConfig, McpServerRepository } from '../../../../shared/types';
 import { Env } from 'worker-configuration';
 
 export class McpServerR2Repository implements McpServerRepository {

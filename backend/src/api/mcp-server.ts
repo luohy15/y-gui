@@ -1,10 +1,10 @@
 import { McpServerConfig } from '../../../shared/types';
 import { corsHeaders } from '../middleware/cors';
-import { McpServerR2Repository } from '../repository/mcp-server-repository';
+import { McpServerD1Repository } from '../repository/d1/mcp-server-d1-repository';
 import { Env } from 'worker-configuration';
 
 export async function handleMcpServerRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
-  const mcpRepo = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
+  const mcpRepo = new McpServerD1Repository(env.CHAT_DB, env, userPrefix);
   const url = new URL(request.url);
   const path = url.pathname;
   const pathParts = path.split('/');

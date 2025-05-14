@@ -1,5 +1,5 @@
-import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../../shared/types';
-import { generateUniqueId } from '../utils/chat';
+import { Chat, ChatRepository, ListChatsOptions, ListChatsResult } from '../../../../shared/types';
+import { generateUniqueId } from '../../utils/chat';
 
 export class ChatR2Repository implements ChatRepository {
   private r2Key: string;
@@ -35,7 +35,7 @@ export class ChatR2Repository implements ChatRepository {
     return chats.find(chat => chat.id === id) || null;
   }
 
-  private async getChats(): Promise<Chat[]> {
+  async getChats(): Promise<Chat[]> {
     try {
       let object = await this.r2.get(this.r2Key);
       if (!object) return [];

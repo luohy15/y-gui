@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { BotConfig, McpServerRepository, IntegrationRepository } from '../../../shared/types';
-import { BotR2Repository } from '../repository/bot-r2-repository';
+import { BotD1Repository } from '../repository/d1/bot-d1-repository';
 import { writeMcpStatus } from '../utils/writer';
 
 /**

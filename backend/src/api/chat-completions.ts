@@ -1,13 +1,13 @@
 import { Chat, Message } from '../../../shared/types';
-import { ChatR2Repository } from '../repository/chat-repository';
-import { BotR2Repository } from '../repository/bot-r2-repository';
+import { ChatD1Repository } from '../repository/d1/chat-d1-repository';
+import { BotD1Repository } from '../repository/d1/bot-d1-repository';
 import { corsHeaders } from '../middleware/cors';
 import { ProviderFactory } from '../providers/provider-factory';
 import { McpManager } from '../mcp/mcp-manager';
 import { ChatService } from '../serivce/chat';
 import { createMessage } from 'src/utils/message';
-import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
-import { IntegrationR2Repository } from '../repository/integration-r2-repository';
+import { McpServerD1Repository } from 'src/repository/d1/mcp-server-d1-repository';
+import { IntegrationD1Repository } from '../repository/d1/integration-d1-repository';
 import { Env } from 'worker-configuration';
 
 /**
@@ -34,12 +34,12 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
     try {
       console.log('User prefix:', userPrefix);
       // Get or create the chat
-      const chatRepository = new ChatR2Repository(env.CHAT_R2, userPrefix);
+      const chatRepository = new ChatD1Repository(env.CHAT_DB, userPrefix);
 
       // Get the bot config
-      const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
-      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
-      const integrationRepository = new IntegrationR2Repository(env.CHAT_R2, userPrefix);
+      const botRepository = new BotD1Repository(env.CHAT_DB, env, userPrefix);
+      const mcpServerRepository = new McpServerD1Repository(env.CHAT_DB, env, userPrefix);
+      const integrationRepository = new IntegrationD1Repository(env.CHAT_DB, userPrefix);
       const bots = await botRepository.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {
@@ -73,7 +73,7 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
           return;
         }
         
-        const existingUserMessage = chat.messages.find(msg => msg.id === userMessageId && msg.role === 'user');
+        const existingUserMessage = chat.messages.find((msg: Message) => msg.id === userMessageId && msg.role === 'user');
         if (!existingUserMessage) {
           await writer.write(encoder.encode(`data: {"error": "User message not found"}\n\n`));
           return;

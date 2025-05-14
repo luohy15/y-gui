@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { IntegrationConfig } from '../../../shared/types';
-import { IntegrationR2Repository } from '../repository/integration-r2-repository';
+import { IntegrationD1Repository } from '../repository/d1/integration-d1-repository';
 import { Env } from '../worker-configuration';
 
 // OAuth service configuration type
@@ -50,10 +50,10 @@ async function getUserPrefix(c: any): Promise<string> {
 // Get all integrations - route handler for both /api/integration and /api/integrations
 integrationRouter.get('/', async (c) => {
   try {
-    const { CHAT_R2 } = c.env;
+    const { CHAT_DB } = c.env;
     const userPrefix = await getUserPrefix(c);
     
-    const integrationRepository = new IntegrationR2Repository(CHAT_R2, userPrefix);
+    const integrationRepository = new IntegrationD1Repository(CHAT_DB, userPrefix);
     const integrations = await integrationRepository.getIntegrations();
     
     return c.json(integrations);
@@ -66,7 +66,7 @@ integrationRouter.get('/', async (c) => {
 // Create a new integration
 integrationRouter.post('/', async (c) => {
   try {
-    const { CHAT_R2 } = c.env;
+    const { CHAT_DB } = c.env;
     const userPrefix = await getUserPrefix(c);
     
     const integration = await c.req.json() as IntegrationConfig;
@@ -75,7 +75,7 @@ integrationRouter.post('/', async (c) => {
       return c.json({ error: 'Missing required fields' }, 400);
     }
     
-    const integrationRepository = new IntegrationR2Repository(CHAT_R2, userPrefix);
+    const integrationRepository = new IntegrationD1Repository(CHAT_DB, userPrefix);
     await integrationRepository.addIntegration(integration);
     
     return c.json(integration, 201);
@@ -88,7 +88,7 @@ integrationRouter.post('/', async (c) => {
 // Update an existing integration
 integrationRouter.put('/:name', async (c) => {
   try {
-    const { CHAT_R2 } = c.env;
+    const { CHAT_DB } = c.env;
     const userPrefix = await getUserPrefix(c);
     const name = c.req.param('name');
     
@@ -98,7 +98,7 @@ integrationRouter.put('/:name', async (c) => {
       return c.json({ error: 'Missing required fields' }, 400);
     }
     
-    const integrationRepository = new IntegrationR2Repository(CHAT_R2, userPrefix);
+    const integrationRepository = new IntegrationD1Repository(CHAT_DB, userPrefix);
     await integrationRepository.updateIntegration(name, updatedIntegration);
     
     return c.json(updatedIntegration);
@@ -111,11 +111,11 @@ integrationRouter.put('/:name', async (c) => {
 // Delete an integration
 integrationRouter.delete('/:name', async (c) => {
   try {
-    const { CHAT_R2 } = c.env;
+    const { CHAT_DB } = c.env;
     const userPrefix = await getUserPrefix(c);
     const name = c.req.param('name');
     
-    const integrationRepository = new IntegrationR2Repository(CHAT_R2, userPrefix);
+    const integrationRepository = new IntegrationD1Repository(CHAT_DB, userPrefix);
     await integrationRepository.deleteIntegration(name);
     
     return c.json({ success: true });
@@ -169,7 +169,7 @@ integrationRouter.get('/auth/:type', async (c) => {
  * Handles the OAuth callback, exchanges code for tokens, and stores the integration
  */
 async function handleOAuthCallback(c: any, code: string, config: OAuthServiceConfig): Promise<IntegrationConfig> {
-  const { CHAT_R2, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = c.env;
+  const { CHAT_DB, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = c.env;
   const redirectUriEnvValue = c.env[config.redirectUriEnvVar];
   const REDIRECT_URI = redirectUriEnvValue || `${new URL(c.req.url).origin}${config.defaultRedirectUriPath}`;
   const userPrefix = await getUserPrefix(c);
@@ -198,7 +198,7 @@ async function handleOAuthCallback(c: any, code: string, config: OAuthServiceCon
   const tokenData = await tokenResponse.json() as TokenResponse;
   
   // Create or update the integration
-  const integrationRepository = new IntegrationR2Repository(CHAT_R2, userPrefix);
+  const integrationRepository = new IntegrationD1Repository(CHAT_DB, userPrefix);
   
   // Check if integration already exists
   const integrations = await integrationRepository.getIntegrations();
@@ -262,10 +262,10 @@ integrationRouter.post('/callback/:type', async (c) => {
  * Disconnects an integration by removing its credentials or removing the entire integration for API key based integrations
  */
 async function disconnectIntegration(c: any, integrationName: string): Promise<void> {
-  const { CHAT_R2 } = c.env;
+  const { CHAT_DB } = c.env;
   const userPrefix = await getUserPrefix(c);
   
-  const integrationRepository = new IntegrationR2Repository(CHAT_R2, userPrefix);
+  const integrationRepository = new IntegrationD1Repository(CHAT_DB, userPrefix);
   const integrations = await integrationRepository.getIntegrations();
   
   const integration = integrations.find(i => i.name === integrationName);

@@ -1,10 +1,10 @@
 import { BotConfig } from '../../../shared/types';
 import { corsHeaders } from '../middleware/cors';
-import { BotR2Repository } from '../repository/bot-r2-repository';
+import { BotD1Repository } from '../repository/d1/bot-d1-repository';
 import { Env } from 'worker-configuration';
 
 export async function handleBotRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
-  const botRepo = new BotR2Repository(env.CHAT_R2, userPrefix);
+  const botRepo = new BotD1Repository(env.CHAT_DB, env, userPrefix);
   const url = new URL(request.url);
   const path = url.pathname;
   const pathParts = path.split('/');

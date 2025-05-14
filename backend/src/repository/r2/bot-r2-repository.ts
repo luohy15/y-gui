@@ -1,4 +1,4 @@
-import { BotConfig, BotRepository } from '../../../shared/types';
+import { BotConfig, BotRepository } from '../../../../shared/types';
 
 export class BotR2Repository implements BotRepository {
   private r2Key: string;

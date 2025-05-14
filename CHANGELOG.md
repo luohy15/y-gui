@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [05140058]
+
+### Added
+- Added D1 database support for data storage
+- Added migration endpoint `/api/chat/migrate-to-d1` to transfer chats from R2 to D1
+- Added database repositories for bots, chats, integrations, and MCP servers
+- Added batch processing for chat migration with error handling
+- Added D1 database configuration in wrangler.toml
+
+### Changed
+- Migrated all repositories from R2 storage to D1 database
+- Refactored repository code structure with separate r2/ and d1/ directories
+- Updated all API handlers to use D1 repositories
+- Modified token refresh utility to work with D1 repositories
+- Enhanced error handling and type safety in repository implementations
+
 ## [04250821]
 
 ### Added

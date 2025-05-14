@@ -1,8 +1,8 @@
 import { corsHeaders } from '../middleware/cors';
 import { McpManager } from '../mcp/mcp-manager';
-import { BotR2Repository } from '../repository/bot-r2-repository';
-import { McpServerR2Repository } from 'src/repository/mcp-server-repository';
-import { IntegrationR2Repository } from '../repository/integration-r2-repository';
+import { BotD1Repository } from '../repository/d1/bot-d1-repository';
+import { McpServerD1Repository } from 'src/repository/d1/mcp-server-d1-repository';
+import { IntegrationD1Repository } from '../repository/d1/integration-d1-repository';
 import { Message } from '../../../shared/types';
 import { createMessage } from 'src/utils/message';
 import { Env } from 'worker-configuration';
@@ -31,12 +31,12 @@ export async function handleToolConfirmation(request: Request, env: Env, userPre
   (async () => {
     try {
       // Initialize repositories and MCP manager
-      const mcpServerRepository = new McpServerR2Repository(env.CHAT_R2, env, userPrefix);
-      const integrationRepository = new IntegrationR2Repository(env.CHAT_R2, userPrefix);
+      const mcpServerRepository = new McpServerD1Repository(env.CHAT_DB, env, userPrefix);
+      const integrationRepository = new IntegrationD1Repository(env.CHAT_DB, userPrefix);
       const mcpManager = new McpManager(mcpServerRepository, integrationRepository);
       
       // Get the bot config
-      const botRepository = new BotR2Repository(env.CHAT_R2, userPrefix);
+      const botRepository = new BotD1Repository(env.CHAT_DB, env, userPrefix);
       const bots = await botRepository.getBots();
       const botConfig = bots.find(bot => bot.name === botName);
       if (!botConfig) {

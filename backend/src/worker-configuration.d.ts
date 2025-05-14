@@ -3,6 +3,7 @@
 export interface Env {
     CHAT_R2: R2Bucket;
     USER_KV: KVNamespace;
+    CHAT_DB: D1Database;
     ASSETS: { fetch: (request: Request) => Promise<Response> };
     OPENROUTER_BASE_URL: string;
     OPENROUTER_FREE_KEY: string;
