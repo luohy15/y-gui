@@ -880,6 +880,7 @@ export default function ChatView() {
                 isSharedMode={isSharedMode}
                 message={msg}
                 messageIds={msg.parent_id ? messageIdsMap[msg.parent_id] || [] : []}
+                chatId={id}
                 onRefresh={() => refreshResponse(msg.id)}
                 onSelectMessage={async (messageId: string) => {
                   if (!id || !messageId) return;

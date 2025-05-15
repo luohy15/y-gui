@@ -4,7 +4,8 @@ export interface Chat {
   create_time: string;
   update_time: string;
   content_hash?: string;
-  share_id?: string;
+  origin_chat_id?: string; // Stores the original chat ID for shared chats
+  origin_message_id?: string; // Stores the original message ID for shared chats
   selected_message_id?: string;
 }
 
@@ -50,6 +51,7 @@ export interface ChatRepository {
   getOrCreateChat(id: string): Promise<Chat>;
   listChats(options?: ListChatsOptions): Promise<ListChatsResult>;
   saveChat(chat: Chat): Promise<Chat>;
+  getChats(): Promise<Chat[]>;
 }
 
 export interface BotConfig {

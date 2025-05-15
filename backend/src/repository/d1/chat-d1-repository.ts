@@ -10,6 +10,42 @@ export class ChatD1Repository implements ChatRepository {
   }
 
   /**
+   * Get all chats for the current user prefix
+   * @returns Array of all chats
+   */
+  async getChats(): Promise<Chat[]> {
+    try {
+      await this.initSchema();
+
+      const results = await this.db.prepare(`
+        SELECT json_content FROM chat 
+        WHERE user_prefix = ?
+        ORDER BY update_time DESC
+      `)
+      .bind(this.userPrefix)
+      .all<{ json_content: string }>();
+
+      if (!results || !results.results) {
+        return [];
+      }
+
+      const chats = results.results.map(row => {
+        try {
+          return JSON.parse(row.json_content) as Chat;
+        } catch (error) {
+          console.error('Error parsing chat JSON:', error);
+          return null;
+        }
+      }).filter((chat): chat is Chat => chat !== null);
+
+      return chats;
+    } catch (error) {
+      console.error('Error getting all chats from D1:', error);
+      return [];
+    }
+  }
+
+  /**
    * Initialize the database schema if it doesn't exist
    */
   async initSchema(): Promise<void> {

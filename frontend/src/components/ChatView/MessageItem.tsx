@@ -12,6 +12,7 @@ interface MessageItemProps {
 	isSharedMode: boolean;
 	message: Message;
 	messageIds: string[];
+	chatId?: string;
 	onRefresh: () => Promise<void>;
 	onSelectMessage: (messageId: string) => Promise<void>;
 	isLastMessage: boolean;
@@ -29,6 +30,7 @@ export default function MessageItem({
 	isSharedMode,
 	message,
 	messageIds,
+	chatId,
 	onRefresh,
 	onSelectMessage,
 	isLastMessage,
@@ -120,10 +122,11 @@ export default function MessageItem({
 
 			{/* Message Actions for user messages with refresh and response navigation */}
 			{!isSharedMode && message.role === 'assistant' && message.id && (
-				<div className="mt-2 flex justify-start">
+				<div className="mt-1 flex justify-start">
 					<MessageActions
 						messageId={message.id}
 						messageIds={messageIds}
+						chatId={chatId}
 						messageContent={
 							typeof message.content === 'string'
 								? message.content

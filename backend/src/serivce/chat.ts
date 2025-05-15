@@ -4,6 +4,7 @@ import { BaseProvider } from 'src/providers/provider-interface';
 import { getSystemPrompt } from '../utils/system-prompt';
 import { createMessage, extractContentText } from '../utils/message';
 import { containsToolUse, splitContent, extractMcpToolUse } from '../utils/tool-parser';
+import { buildMessagePath } from '../utils/chat';
 
 export class ChatService {
   private chat: Chat;
@@ -25,40 +26,6 @@ export class ChatService {
     this.systemPrompt = await getSystemPrompt(this.mcpManager, this.botConfig.mcp_servers, writer);
   }
 
-  /**
-   * Build a message path by traversing parent_id relationships
-   * @param userMessageId ID of the user message to start from
-   * @returns Array of messages forming the conversation path
-   */
-  private buildMessagePath(userMessageId: string): Message[] {
-    const messagePath: Message[] = [];
-    
-    const userMessage = this.chat.messages.find(msg => msg.id === userMessageId);
-    if (!userMessage) return messagePath;
-    
-    // Add the user message to the path
-    messagePath.push(userMessage);
-    
-    const messagesById = new Map<string, Message>();
-    this.chat.messages.forEach(msg => {
-      if (msg.id) {
-        messagesById.set(msg.id, msg);
-      }
-    });
-    
-    let currentId = userMessage.parent_id;
-    while (currentId) {
-      const parentMessage = messagesById.get(currentId);
-      if (!parentMessage) break;
-      
-      // Add the parent message to the beginning of the path
-      messagePath.unshift(parentMessage);
-      
-      currentId = parentMessage.parent_id;
-    }
-    
-    return messagePath;
-  }
 
   /**
    * Handle error cases by creating an error response and assistant error message
@@ -121,7 +88,7 @@ export class ChatService {
       let messagesToUse: Message[];
       
       if (userMessageId) {
-        messagesToUse = this.buildMessagePath(userMessageId);
+        messagesToUse = buildMessagePath(this.chat.messages, userMessageId);
       } else {
         // Set parent_id based on currently selected message
         if (this.chat.selected_message_id) {

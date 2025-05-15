@@ -1,28 +1,17 @@
-import { Chat } from '../../../shared/types';
 import { ChatD1Repository } from '../repository/d1/chat-d1-repository';
 import { corsHeaders } from '../middleware/cors';
-import { v4 as uuidv4 } from 'uuid';
 import { Env } from 'worker-configuration';
+import { ShareService } from '../serivce/share';
 
-// Function to generate MD5 hash of chat messages
-async function generateChatContentHash(chat: Chat): Promise<string> {
-  // Only hash the messages array as per requirements
-  const messagesString = JSON.stringify(chat.messages);
-  
-  // Use Web Crypto API to generate MD5 hash
-  const msgUint8 = new TextEncoder().encode(messagesString);
-  const hashBuffer = await crypto.subtle.digest('MD5', msgUint8);
-  
-  // Convert hash to hex string
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  return hashHex;
+interface ShareRequestBody {
+  messageId?: string;
 }
 
 export async function handleShareRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
   const chatRepository = new ChatD1Repository(env.CHAT_DB, userPrefix);
   const publicChatRepository = new ChatD1Repository(env.CHAT_DB);
+  const shareService = new ShareService(chatRepository, publicChatRepository);
+  
   const url = new URL(request.url);
   const path = url.pathname;
 
@@ -37,66 +26,48 @@ export async function handleShareRequest(request: Request, env: Env, userPrefix?
         });
       }
 
-      // Get the chat
-      const chat = await chatRepository.getChat(chatId);
-      if (!chat) {
-        return new Response('Chat not found', { 
-          status: 404,
-          headers: corsHeaders
-        });
+      // Parse request body to get messageId if provided
+      let requestBody: ShareRequestBody = {};
+      try {
+        if (request.body) {
+          requestBody = await request.json() as ShareRequestBody;
+        }
+      } catch (e) {
+        console.error('Failed to parse request body:', e);
+        // Continue even if body parsing fails
       }
 
-      // Generate MD5 hash of the current chat content
-      const current_content_hash = await generateChatContentHash(chat);
-      
-      // Check if this chat has been shared before and the content hasn't changed
-      if (chat.content_hash === current_content_hash && chat.share_id) {
-        // Content hasn't changed, return the existing share ID
-        return new Response(JSON.stringify({ shareId: chat.share_id }), {
+      try {
+        // Use ShareService to create a shared chat
+        const shareId = await shareService.createShare(chatId, requestBody.messageId);
+        
+        return new Response(JSON.stringify({ shareId }), {
           headers: { 
             'Content-Type': 'application/json',
             ...corsHeaders
           }
         });
+      } catch (error: any) {
+        console.error('Error creating share:', error);
+        return new Response(error.message || 'Failed to create share', { 
+          status: 404,
+          headers: corsHeaders
+        });
       }
-
-      // Content has changed or hasn't been shared before, generate a new share ID
-      const share_id = uuidv4().substring(0, 8);
-      
-      // Store the hash and share_id in the original chat
-      chat.content_hash = current_content_hash;
-      chat.share_id = share_id;
-      
-      // Save the updated original chat with hash and share_id
-      await chatRepository.saveChat(chat);
-      
-      // Create a copy for public sharing
-      const sharedChat = { ...chat };
-      sharedChat.id = share_id; // Update the chat ID to the share ID
-      
-      // Save the shared chat copy
-      await publicChatRepository.saveChat(sharedChat);
-      
-      return new Response(JSON.stringify({ shareId: share_id }), {
-        headers: { 
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      });
     }
     
     // Get a shared chat (public endpoint, no authentication required)
     if (path.startsWith('/api/share/')  && request.method === 'GET') {
-      const share_id = path.split('/').pop();
-      if (!share_id) {
+      const shareId = path.split('/').pop();
+      if (!shareId) {
         return new Response('Invalid share ID', { 
           status: 400,
           headers: corsHeaders
         });
       }
 
-      // Find the chat with the matching share_id
-      const chat = await publicChatRepository.getChat(share_id);
+      // Use ShareService to get a shared chat
+      const chat = await shareService.getSharedChat(shareId);
       
       if (!chat) {
         return new Response('Shared chat not found', { 
