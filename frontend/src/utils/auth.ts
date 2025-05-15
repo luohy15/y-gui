@@ -11,9 +11,17 @@ export const createAuthenticatedFetch = (getAccessTokenSilently: () => Promise<a
   return async (url: string, options: RequestInit = {}) => {
     try {
       // Get the access token
-      const accessToken = await getAccessTokenSilently();
+			let accessToken;
+			try {
+				accessToken = await getAccessTokenSilently();
+			} catch {
+				if (logout) {
+					logout();
+				}
+				window.location.href = '/'; // This will redirect to login due to Auth0 setup
+			}
       if (!accessToken) {
-        throw new Error('Failed to get access token');
+				throw new Error('Failed to get access token');
       }
 
       const response = await fetch(url, {
@@ -43,7 +51,8 @@ export const createAuthenticatedFetch = (getAccessTokenSilently: () => Promise<a
       return response.json();
     } catch (error) {
       console.error('Fetch error:', error);
-      // Re-throw the error to be handled by SWR
+
+      // Re-throw errors to be handled by SWR
       throw error;
     }
   };
