@@ -37,15 +37,9 @@ export function useApi() {
   ): Promise<T> => {
     try {
       // Get the access token
-			let accessToken;
-			try {
-				accessToken = await getAccessTokenSilently();
-			} catch {
-				logout();
-				window.location.href = '/'; // This will redirect to login due to Auth0 setup
-			}
+      const accessToken = await getAccessTokenSilently();
       if (!accessToken) {
-				throw new Error('Failed to get access token');
+        throw new Error('Failed to get access token');
       }
 
       const response = await fetch(url, {
