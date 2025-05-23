@@ -70,8 +70,8 @@ export class OpenAIFormatProvider implements BaseProvider {
         ];
       }
 
-      // Add cache_control for Claude-3 models
-      if (this.botConfig.model.includes('claude-3')) {
+      // Add cache_control for Claude models
+      if (this.botConfig.model.includes('claude-')) {
         for (const part of systemMessage.content as MessageContentBlock[]) {
           if (part.type === 'text') {
             part.cache_control = { type: 'ephemeral' };
@@ -100,8 +100,8 @@ export class OpenAIFormatProvider implements BaseProvider {
       preparedMessages.push(msgDict);
     }
 
-    // Find last user message and add cache_control for Claude-3 models
-    if (this.botConfig.model.includes('claude-3')) {
+    // Find last user message and add cache_control for Claude- models
+    if (this.botConfig.model.includes('claude-')) {
       for (let i = preparedMessages.length - 1; i >= 0; i--) {
         const msg = preparedMessages[i];
         if (msg.role === 'user') {

@@ -96,12 +96,12 @@ export class BotR2Repository implements BotRepository {
       const freeBots: BotConfig[] = [
         {
           name: "claude",
-          model: "anthropic/claude-3.7-sonnet:beta",
+          model: "anthropic/claude-sonnet-4",
           mcp_servers: ["default"]
         },
         {
-          name: "deepseek",
-          model: "deepseek/deepseek-chat-v3-0324",
+          name: "gemini",
+          model: "google/gemini-2.5-flash-preview-05-20",
           mcp_servers: ["default"]
         },
       ];
