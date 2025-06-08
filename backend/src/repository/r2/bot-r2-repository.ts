@@ -95,11 +95,6 @@ export class BotR2Repository implements BotRepository {
       
       const freeBots: BotConfig[] = [
         {
-          name: "claude",
-          model: "anthropic/claude-sonnet-4",
-          mcp_servers: ["default"]
-        },
-        {
           name: "gemini",
           model: "google/gemini-2.5-flash-preview-05-20",
           mcp_servers: ["default"]

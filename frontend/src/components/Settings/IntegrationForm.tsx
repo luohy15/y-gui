@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { IntegrationConfig } from '../../../../shared/types';
+import { useAuthenticatedSWR } from '../../utils/api';
 
 interface IntegrationFormModalProps {
   isOpen: boolean;
@@ -29,15 +30,12 @@ export const IntegrationFormModal: React.FC<IntegrationFormModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch available integration types from MCP servers
+  const { data: availableIntegrationTypes, error: fetchError, isLoading: isLoadingIntegrations } =
+    useAuthenticatedSWR<string[]>('/api/integration/types');
+
   // All available integration types
-  const allIntegrationNames = [
-    'google-gmail',
-    'google-calendar',
-    'brave',
-    'tavily',
-    's3',
-    'image-router'
-  ];
+  const allIntegrationNames = availableIntegrationTypes || [];
 
   // Filter out integrations that already exist in the list
   const integrationNames = initialIntegration
@@ -144,7 +142,15 @@ export const IntegrationFormModal: React.FC<IntegrationFormModalProps> = ({
                 <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                   Integration *
                 </label>
-                {integrationNames.length > 0 ? (
+                {isLoadingIntegrations ? (
+                  <div className={`p-3 ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'} rounded-md animate-pulse`}>
+                    Loading available integrations...
+                  </div>
+                ) : fetchError ? (
+                  <div className={`p-3 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-md`}>
+                    Error loading integrations. Please try again.
+                  </div>
+                ) : integrationNames.length > 0 ? (
                   <select
                     name="name"
                     value={formData.name}

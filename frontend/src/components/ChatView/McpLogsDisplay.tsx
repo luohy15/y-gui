@@ -16,10 +16,9 @@ interface McpLogsDisplayProps {
 
 export default function McpLogsDisplay({ logs, isVisible, onClose, isDarkMode }: McpLogsDisplayProps) {
   const { showMcpLogs } = useMcp();
+  const logsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Don't show logs if either isVisible is false or showMcpLogs is false
-  if (!isVisible || !showMcpLogs) return null;
-
+  // Define constants before any conditional returns
   const statusEmoji: Record<McpLog['status'], string> = {
     "connecting": "🔄",
     "connected": "✅",
@@ -28,8 +27,7 @@ export default function McpLogsDisplay({ logs, isVisible, onClose, isDarkMode }:
     "summary": "📊"
   };
 
-  const logsContainerRef = useRef<HTMLDivElement>(null);
-
+  // All hooks must be called before any conditional returns
   useEffect(() => {
     if (logsContainerRef.current) {
       const container = logsContainerRef.current;
@@ -41,79 +39,78 @@ export default function McpLogsDisplay({ logs, isVisible, onClose, isDarkMode }:
     }
   }, [logs]); // Re-run when logs change
 
+  // Don't show logs if either isVisible is false or showMcpLogs is false
+  if (!isVisible || !showMcpLogs) return null;
+
   return (
-    <div>
-      <div className={`w-full h-full rounded-lg shadow-lg overflow-hidden ${
-        isDarkMode ? 'bg-gray-800' : 'bg-white'
-      }`}>
-        <div className={`absolute top-0 left-0 right-0 p-2 flex justify-between items-center ${
-          isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
+    <div
+      className={`w-full sm:w-[80%] h-full overflow-x-hidden overflow-y-auto ${
+        isDarkMode ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-700'
+      } sm:rounded-lg`}
+      onScroll={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+      ref={logsContainerRef}
+    >
+      <div className="p-4 space-y-1.5">
+        <div className={`flex items-center justify-between w-full mb-3 ${
+          isDarkMode ? 'text-gray-200' : 'text-gray-700'
         }`}>
-          <span className={`text-sm font-medium ${
-            isDarkMode ? 'text-gray-200' : 'text-gray-700'
-          }`}>
-            MCP Status Logs
-          </span>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={onClose}
-              className={`p-1 rounded hover:bg-opacity-20 ${
-                isDarkMode ? 'hover:bg-white text-gray-300' : 'hover:bg-black text-gray-600'
-              }`}
-              title="Close"
+          <span className="text-sm font-medium">MCP Status Logs</span>
+          <button
+            onClick={onClose}
+            className={`p-1 rounded hover:bg-opacity-20 ${
+              isDarkMode ? 'hover:bg-white text-gray-300' : 'hover:bg-black text-gray-600'
+            }`}
+            title="Close"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
         </div>
 
-        <div
-          ref={logsContainerRef}
-          className={`absolute top-10 bottom-0 left-0 right-0 overflow-y-auto p-2 ${
-            isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}
-        >
-          {logs.map((log, index) => (
-            <div
-              key={index}
-              className={`mb-2 p-2 rounded text-sm ${
-                isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
-              } ${
-                log.status === 'error'
-                  ? isDarkMode
-                    ? 'text-red-300'
-                    : 'text-red-600'
-                  : isDarkMode
-                    ? 'text-gray-200'
-                    : 'text-gray-700'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  {statusEmoji[log.status]}
-                  <span className="truncate">{log.message}</span>
-                </span>
-                <span className={`text-xs ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                }`}>
-                  {log.timestamp}
-                </span>
+        {logs.map((log, index) => (
+          <div
+            key={index}
+            className={`p-3 pl-4 rounded-lg transition-all duration-200 mb-1 last:mb-0 ${
+              log.status === 'error'
+                ? isDarkMode
+                  ? 'bg-red-900/30 text-red-300'
+                  : 'bg-red-50 text-red-600'
+                : isDarkMode
+                  ? 'bg-gray-800 text-gray-100 border border-gray-700'
+                  : 'bg-white text-gray-700 border border-gray-200'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <div className="text-sm font-medium line-clamp-1 text-left max-w-[70%] pr-1 pl-0 flex items-center gap-2">
+                {statusEmoji[log.status]}
+                <span className="truncate">{log.message}</span>
+              </div>
+              <div className={`text-xs whitespace-nowrap text-right ${
+                isDarkMode ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                {log.timestamp}
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
+
+        {logs.length === 0 && (
+          <div className={`p-4 text-center ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            No logs available
+          </div>
+        )}
       </div>
     </div>
   );

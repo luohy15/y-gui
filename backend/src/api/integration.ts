@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { IntegrationConfig } from '../../../shared/types';
 import { IntegrationD1Repository } from '../repository/d1/integration-d1-repository';
+import { McpServerD1Repository } from '../repository/d1/mcp-server-d1-repository';
 import { Env } from '../worker-configuration';
 
 // OAuth service configuration type
@@ -122,6 +123,63 @@ integrationRouter.delete('/:name', async (c) => {
   } catch (error) {
     console.error('Error deleting integration:', error);
     return c.json({ error: 'Failed to delete integration' }, 500);
+  }
+});
+
+// Get all available integration types from MCP servers
+integrationRouter.get('/types', async (c) => {
+  try {
+    const { CHAT_DB } = c.env;
+    const userPrefix = await getUserPrefix(c);
+    
+    // Get all MCP servers
+    const mcpServerRepo = new McpServerD1Repository(CHAT_DB, c.env, userPrefix);
+    const mcpServers = await mcpServerRepo.getMcpServers();
+    
+    if (mcpServers.length === 0) {
+      return c.json([], 200);
+    }
+    
+    // Fetch integration types from all MCP servers
+    const integrationTypesSet = new Set<string>();
+    
+    // Make parallel requests to all MCP servers
+    const promises = mcpServers.map(async (server) => {
+      if (!server.url) return;
+      
+      try {
+        const response = await fetch(`${server.url}/integrations`, {
+          headers: {
+            ...(server.token ? { "Authorization": `Bearer ${server.token}` } : {})
+          }
+        });
+        
+        if (!response.ok) {
+          console.error(`Error fetching integrations from ${server.name}: ${response.status}`);
+          return;
+        }
+        
+        const responseData = await response.json() as any;
+        // Handle MCP server response format: {"integrations": ["type1", "type2", ...]}
+        const integrationTypes = responseData.integrations || responseData;
+        
+        if (Array.isArray(integrationTypes)) {
+          integrationTypes.forEach(type => integrationTypesSet.add(type));
+        }
+      } catch (error) {
+        console.error(`Error fetching integrations from ${server.name}:`, error);
+      }
+    });
+    
+    // Wait for all requests to complete
+    await Promise.all(promises);
+    
+    // Convert Set to Array and return
+    const integrationTypes = Array.from(integrationTypesSet);
+    return c.json(integrationTypes);
+  } catch (error) {
+    console.error('Error fetching integration types:', error);
+    return c.json({ error: 'Failed to fetch integration types' }, 500);
   }
 });
 

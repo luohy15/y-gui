@@ -75,7 +75,8 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Replace links with just the text
       .trim();
 
-    return plainText.length > 20 ? plainText.substring(0, 20) + '...' : plainText;
+    // Increase preview length for better readability
+    return plainText.length > 40 ? plainText.substring(0, 40) + '...' : plainText;
   };
 
 
@@ -85,24 +86,27 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
       onScroll={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
-      <div className="p-4">
+      <div className="p-4 space-y-1.5">
         {conversationRounds.map((round) => (
-          <div key={round.id}>
+          <div key={round.id} className="mb-1 last:mb-0">
             {/* User message */}
             <button
               onClick={() => onScrollToMessage(round.id)}
-              className={`p-2 rounded-lg cursor-pointer transition-colors ${
+              className={`w-full p-3 pl-4 rounded-lg cursor-pointer transition-all duration-200 ${
                 currentMessageId === round.id
-                  ? (isDarkMode ? 'bg-gray-800 text-white' : 'bg-[#4285f4] text-white')
-                  : (isDarkMode ? 'hover:bg-gray-800 text-gray-100' : 'hover:bg-gray-50 text-gray-700')
+                  ? (isDarkMode ? 'bg-gray-800 text-white shadow-sm' : 'bg-[#4285f4] text-white shadow-sm')
+                  : (isDarkMode
+                      ? 'hover:bg-gray-800/70 text-gray-100 border border-transparent hover:border-gray-700'
+                      : 'hover:bg-gray-200/80 text-gray-700 border border-transparent hover:border-gray-200')
               }`}
             >
-              <div className="flex justify-between items-center">
-                <div className="flex-grow">{getMessagePreview(round.userMessage)}</div>
-                <div className={`text-xs opacity-75 ${
-									currentMessageId === round.id
-										? 'text-white'
-										: (isDarkMode ? 'text-gray-400' : 'text-gray-500')}`}>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-sm font-medium line-clamp-1 text-left max-w-[70%] pr-1 pl-0">{getMessagePreview(round.userMessage)}</div>
+                <div className={`text-xs whitespace-nowrap text-right ${
+                  currentMessageId === round.id
+                    ? 'text-white/80'
+                    : (isDarkMode ? 'text-gray-400' : 'text-gray-500')
+                }`}>
                   {round.userMessage.unix_timestamp === 0 ? '' : formatDateTime(round.userMessage.unix_timestamp)}
                 </div>
               </div>
