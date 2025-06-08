@@ -873,6 +873,7 @@ export default function ChatView() {
                   messageRefs.current[msg.unix_timestamp.toString()] = el;
                 }
               }}
+              className="scroll-mt-20 sm:scroll-mt-4" /* Add scroll margin for better spacing when scrolling to messages */
             >
               <MessageItem
                 isDarkMode={isDarkMode}
