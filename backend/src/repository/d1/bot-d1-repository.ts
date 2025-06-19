@@ -124,7 +124,7 @@ export class BotD1Repository implements BotRepository {
     return [
       {
         name: "gemini",
-        model: "google/gemini-2.5-flash-preview-05-20",
+        model: "google/gemini-2.5-flash",
         mcp_servers: ["default"]
       },
     ];
