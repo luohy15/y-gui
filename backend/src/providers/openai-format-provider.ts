@@ -297,11 +297,11 @@ export class OpenAIFormatProvider implements BaseProvider {
     // Handle OpenAI format
     if (event.choices && event.choices[0]) {
       const delta = event.choices[0].delta;
-      if (delta) {
+      if (delta && (delta.content || delta.reasoning_content)) {
         return {
           content: delta.content,
           reasoningContent: delta.reasoning_content,
-          provider: event.provider,
+          provider: event.provider || this.botConfig.name,
           model: event.model
         };
       }
