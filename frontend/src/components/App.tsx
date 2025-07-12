@@ -7,6 +7,8 @@ import Login from './Login';
 import { Settings } from './Settings/Settings';
 import Header from './Header/Header';
 import { OAuthCallback } from './Callback/OAuthCallback';
+import TermsOfService from './Legal/TermsOfService';
+import PrivacyPolicy from './Legal/PrivacyPolicy';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { McpProvider } from '../contexts/McpContext';
 import { BotProvider } from '../contexts/BotContext';
@@ -37,6 +39,8 @@ export default function App() {
         {!isAuthenticated ? (
           <Routes>
             <Route path="/share/:id" element={<ChatView />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="*" element={<Login />} />
           </Routes>
         ) : (
@@ -50,6 +54,8 @@ export default function App() {
                 <Route path="/settings" element={<Navigate to="/settings/general" replace />} />
                 <Route path="/settings/:section" element={<Settings />} />
                 <Route path="/callback/:service" element={<OAuthCallback />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
