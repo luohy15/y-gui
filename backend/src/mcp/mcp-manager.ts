@@ -1,7 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { BotConfig, McpServerRepository, IntegrationRepository } from '../../../shared/types';
-import { BotD1Repository } from '../repository/d1/bot-d1-repository';
+import { McpServerRepository, IntegrationRepository, McpServer, McpTool } from '../../../shared/types';
 import { writeMcpStatus } from '../utils/writer';
 
 /**
@@ -13,10 +12,11 @@ export class McpManager {
 
   /**
    * Create a new MCP Manager
-   * @param configRepo Repository for accessing MCP server configurations
+   * @param mcpServerRepository Repository for accessing MCP server configurations
+   * @param integrationRepository Repository for accessing integration configurations
    */
   constructor(
-    private mcpServerConfigRepository: McpServerRepository,
+    private mcpServerRepository: McpServerRepository,
     private integrationRepository: IntegrationRepository
   ) {}
 
@@ -69,7 +69,7 @@ export class McpManager {
     await this.disconnectAll();
     
     try {
-      const mcpServers = await this.mcpServerConfigRepository.getMcpServers();
+      const mcpServers = await this.mcpServerRepository.getMcpServers();
       const server = mcpServers.find(s => s.name === serverName);
       
       if (!server) {
@@ -200,59 +200,169 @@ export class McpManager {
   }
   
   /**
-   * Format MCP server information for the system prompt
-   * @returns Formatted server information string
+   * Refresh cache for all MCP servers by connecting and fetching their tools
+   * @param writer Optional writer for status updates
+   * @returns Promise resolving when cache refresh is complete
    */
-  async format_server_info(mcp_servers?: string[], writer?: WritableStreamDefaultWriter): Promise<string> {
+  async refreshAllServerCaches(writer?: WritableStreamDefaultWriter): Promise<void> {
+    try {
+      const mcpServers = await this.mcpServerRepository.getMcpServers();
+      
+      if (mcpServers.length === 0) {
+        await writeMcpStatus(writer, "info", "No MCP servers to cache");
+        return;
+      }
+      
+      await writeMcpStatus(writer, "info", `Refreshing cache for ${mcpServers.length} MCP servers`);
+      
+      for (const server of mcpServers) {
+        await this.getServerTools(server.name, writer);
+      }
+      
+      await writeMcpStatus(writer, "info", "Finished refreshing all server caches");
+    } catch (error) {
+      console.error("Error refreshing server caches:", error);
+      await writeMcpStatus(writer, "error", `Error refreshing server caches: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
+   * Get tools for a specific MCP server
+   * @param serverName Name of the MCP server to get tools for
+   * @param writer Optional writer for status updates
+   */
+  async getServerTools(serverName: string, writer?: WritableStreamDefaultWriter): Promise<void> {
+    const now = new Date().toISOString();
+    
+    try {
+      await writeMcpStatus(writer, "info", `Refreshing cache for ${serverName}`, serverName);
+      
+      const client = await this.connectOnDemand(serverName, "", writer);
+      
+      if (!client) {
+        // Update the server with failed status
+        const servers = await this.mcpServerRepository.getMcpServers();
+        const server = servers.find(s => s.name === serverName);
+        if (server) {
+          const updatedServer: McpServer = {
+            ...server,
+            tools: [],
+            last_updated: now,
+            status: 'failed',
+            error_message: 'Failed to connect to server'
+          };
+          await this.mcpServerRepository.updateMcpServer(serverName, updatedServer);
+        }
+        return;
+      }
+      
+      // Get tools with timeout
+      const toolsResponse = await Promise.race([
+        client.listTools(),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout listing tools for ${serverName}`)), 5000)
+        )
+      ]);
+
+      const tools: McpTool[] = [];
+      if (toolsResponse && toolsResponse.tools && toolsResponse.tools.length > 0) {
+        for (const tool of toolsResponse.tools) {
+          tools.push({
+            name: tool.name,
+            description: tool.description || '',
+            inputSchema: tool.inputSchema
+          });
+        }
+      }
+
+      // Update the server with cached tools
+      const servers = await this.mcpServerRepository.getMcpServers();
+      const server = servers.find(s => s.name === serverName);
+      if (server) {
+        const updatedServer: McpServer = {
+          ...server,
+          tools,
+          last_updated: now,
+          status: 'connected'
+        };
+        await this.mcpServerRepository.updateMcpServer(serverName, updatedServer);
+      }
+
+      await writeMcpStatus(writer, "info", `Cached ${tools.length} tools for ${serverName}`, serverName);
+      
+      // Disconnect from this server
+      await this.disconnectServer(serverName);
+      
+    } catch (error) {
+      console.error(`Error refreshing cache for ${serverName}:`, error);
+      
+      // Update the server with error status
+      const servers = await this.mcpServerRepository.getMcpServers();
+      const server = servers.find(s => s.name === serverName);
+      if (server) {
+        const updatedServer: McpServer = {
+          ...server,
+          tools: [],
+          last_updated: now,
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : String(error)
+        };
+        await this.mcpServerRepository.updateMcpServer(serverName, updatedServer);
+      }
+      
+      await writeMcpStatus(
+        writer, 
+        "error", 
+        `Error caching tools for ${serverName}: ${error instanceof Error ? error.message : String(error)}`,
+        serverName
+      );
+    }
+  }
+
+  /**
+   * Get formatted MCP tools prompt using cached data
+   * @param writer Optional writer for status updates
+   * @returns Formatted tools prompt string
+   */
+  async getToolsPrompt(writer?: WritableStreamDefaultWriter): Promise<string> {
     try {
       // Get the list of configured MCP servers
-      let mcpServers = await this.mcpServerConfigRepository.getMcpServers();
+      const mcpServers = await this.mcpServerRepository.getMcpServers();
       
       if (mcpServers.length === 0) {
         await writeMcpStatus(writer, "info", "No MCP servers configured");
         return "(No MCP servers configured)";
       }
 
-      // Filter servers if specified
-      if (mcp_servers && mcp_servers.length > 0) {
-        mcpServers = mcpServers.filter(s => mcp_servers.includes(s.name));
-      } else {
-        await writeMcpStatus(writer, "info", "No MCP servers configured");
-        return "(No MCP servers configured)";
-      }
-      
       const serverSections = [];
       
-      // In Cloudflare Workers (stateless environment), we always use on-demand connections
-      // Connect to each server one at a time, get tools, then disconnect
+      // Use cached data to build the prompt
       for (const server of mcpServers) {
         let toolsSection = "";
-        const serverName = server.name;
         
-        try {
-          // Connect to this server
-          await writeMcpStatus(writer, "info", `Connecting to ${serverName} to list tools...`, serverName);
-          const client = await this.connectOnDemand(serverName, "", writer);
-          
-          if (!client) {
-            await writeMcpStatus(writer, "error", `Failed to connect to ${serverName} to list tools`, serverName);
-            serverSections.push(`## ${serverName}\n\n(Could not connect to server)`);
-            continue;
+        if (server.status === 'connected' && server.tools && server.tools.length > 0) {
+          const tools = [];
+          for (const tool of server.tools) {
+            let schemaStr = "";
+            if (tool.inputSchema) {
+              const schemaJson = JSON.stringify(tool.inputSchema, null, 2);
+              const schemaLines = schemaJson.split("\n");
+              schemaStr = "\n    Input Schema:\n    " + schemaLines.join("\n    ");
+            }
+            tools.push(`- ${tool.name}: ${tool.description}${schemaStr}`);
           }
+          toolsSection = "\n\n### Available Tools\n" + tools.join("\n\n");
+        } else if (server.status === 'failed') {
+          toolsSection = `\n\n(Server unavailable: ${server.error_message || 'Unknown error'})`;
+        } else {
+          // No cache available or uncached, try to get tools for this server specifically
+          await this.getServerTools(server.name, writer);
+          const updatedServers = await this.mcpServerRepository.getMcpServers();
+          const updatedServer = updatedServers.find(s => s.name === server.name);
           
-          await writeMcpStatus(writer, "info", `Getting tools from ${serverName}...`, serverName);
-          
-          // Get and format tools section with timeout
-          const toolsResponse = await Promise.race([
-            client.listTools(),
-            new Promise<null>((_, reject) => 
-              setTimeout(() => reject(new Error(`Timeout listing tools for ${serverName}`)), 5000)
-            )
-          ]);
-
-          if (toolsResponse && toolsResponse.tools && toolsResponse.tools.length > 0) {
+          if (updatedServer && updatedServer.status === 'connected' && updatedServer.tools && updatedServer.tools.length > 0) {
             const tools = [];
-            for (const tool of toolsResponse.tools) {
+            for (const tool of updatedServer.tools) {
               let schemaStr = "";
               if (tool.inputSchema) {
                 const schemaJson = JSON.stringify(tool.inputSchema, null, 2);
@@ -262,27 +372,12 @@ export class McpManager {
               tools.push(`- ${tool.name}: ${tool.description}${schemaStr}`);
             }
             toolsSection = "\n\n### Available Tools\n" + tools.join("\n\n");
-            
-            await writeMcpStatus(writer, "info", `Found ${toolsResponse.tools.length} tools in ${serverName}`, serverName);
           } else {
-            await writeMcpStatus(writer, "info", `No tools found in ${serverName}`, serverName);
+            toolsSection = "\n\n(Could not connect to server)";
           }
-          
-          // Disconnect from this server before moving to the next one
-          await this.disconnectServer(serverName);
-          
-        } catch (error) {
-          console.error(`Error listing tools for ${serverName}:`, error);
-          await writeMcpStatus(
-            writer, 
-            "error", 
-            `Error listing tools for ${serverName}: ${error instanceof Error ? error.message : String(error)}`,
-            serverName
-          );
         }
 
-        // Combine all sections
-        const serverSection = `## ${serverName}${toolsSection}`;
+        const serverSection = `## ${server.name}${toolsSection}`;
         serverSections.push(serverSection);
       }
       

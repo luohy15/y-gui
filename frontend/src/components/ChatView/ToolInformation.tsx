@@ -9,10 +9,12 @@ interface ToolInformationProps {
   onToggle: (messageId: string) => void;
   onApprove?: () => void;
   onDeny?: () => void;
+  onAllowAlways?: () => void;
   isDarkMode: boolean;
   needsConfirmation?: boolean;
   isLastMessage?: boolean;
   toolResult?: string | object;
+  isToolExecuting?: boolean;
 }
 
 export default function ToolInformation({
@@ -24,10 +26,12 @@ export default function ToolInformation({
   onToggle,
   onApprove,
   onDeny,
+  onAllowAlways,
   isDarkMode,
   needsConfirmation,
   isLastMessage,
-  toolResult
+  toolResult,
+  isToolExecuting
 }: ToolInformationProps) {
   return (
     <div className={`mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -105,6 +109,7 @@ export default function ToolInformation({
           </div>
         )}
       </button>
+
       {!isCollapsed && (
         <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
           <div className="mb-2">
@@ -140,26 +145,44 @@ export default function ToolInformation({
             </div>
           )}
 
-          {isLastMessage && needsConfirmation && onApprove && onDeny && (
-            <div className="flex space-x-3">
-              <button
-                onClick={onApprove}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
-              >
-                Approve
-              </button>
-              <button
-                onClick={onDeny}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isDarkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                Deny
-              </button>
-            </div>
+        </div>
+      )}
+
+			{/* Approve/Deny buttons - always visible when confirmation is needed */}
+      {isLastMessage && needsConfirmation && onApprove && onDeny && !isToolExecuting && (
+        <div className="flex space-x-3 mt-4">
+          <button
+            onClick={onApprove}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+              isDarkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+          >
+            Allow Once
+          </button>
+          {onAllowAlways && (
+            <button
+              onClick={onAllowAlways}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                isDarkMode
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+              }`}
+            >
+              Allow Always
+            </button>
           )}
+          <button
+            onClick={onDeny}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              isDarkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}
+          >
+            Deny
+          </button>
         </div>
       )}
     </div>

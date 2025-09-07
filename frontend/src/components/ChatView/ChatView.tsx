@@ -3,9 +3,8 @@ import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useBot } from '../../contexts/BotContext';
 import { useToc } from '../../contexts/TocContext';
-import { useMcp } from '../../contexts/McpContext';
 import { useAuthenticatedSWR, useApi } from '../../utils/api';
-import { Chat, Message, McpServerConfig } from '@shared/types';
+import { Chat, Message, McpServer } from '@shared/types';
 import { mutate } from 'swr';
 import useSWR, { SWRConfiguration } from 'swr';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -49,35 +48,34 @@ export default function ChatView() {
     closeLog
   } = useMcpStatus();
 
-  // Tool execution state
-  const [toolInfoState, setToolInfoState] = useState<{
+  // Tool execution state - unified state for tool info and results
+  const [toolState, setToolState] = useState<{
     plain_content: string | undefined;
     server: string | undefined;
     tool: string | undefined;
     arguments: any | undefined;
     messageId: string | undefined;
+    result: string | undefined;
   }>({
     plain_content: undefined,
     server: undefined,
     tool: undefined,
     arguments: undefined,
-    messageId: undefined
-  });
-
-  const [toolResultState, setToolResultState] = useState<{
-    content: string | undefined;
-    server: string | undefined;
-    targetMessageId: string | undefined;
-  }>({
-    content: undefined,
-    server: undefined,
-    targetMessageId: undefined
+    messageId: undefined,
+    result: undefined
   });
 
   // Store tool results mapped to the assistant message IDs
   const [toolResults, setToolResults] = useState<Record<string, string | object>>({});
 
   const [expandedToolInfo, setExpandedToolInfo] = useState<Record<string, boolean>>({});
+
+  // Tool execution loading state
+  const [isToolExecuting, setIsToolExecuting] = useState(false);
+
+  // executedTools state removed - isStreaming check prevents duplicates
+
+  // isManuallyExecuting state removed - auto-execution now handled directly in handleToolInfo
 
   // Configure SWR options
   const swrConfig: SWRConfiguration = {
@@ -118,13 +116,8 @@ export default function ChatView() {
 
   // Only fetch MCP servers in regular mode
   const { data: mcpServers } = !isSharedMode
-    ? useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers', swrConfig)
+    ? useAuthenticatedSWR<McpServer[]>('/api/mcp-servers', swrConfig)
     : { data: undefined };
-
-  // Debug selectedBot changes
-  useEffect(() => {
-    console.log('selectedBot changed:', selectedBot);
-  }, [selectedBot]);
 
   /****************************
    * Message Handling Functions
@@ -302,11 +295,11 @@ export default function ChatView() {
     const server = mcpServers.find(s => s.name === serverName);
     if (!server) return true;
 
-    if (!server.need_confirm || server.need_confirm.length === 0) {
-      return false;
+    if (!server.allow_tools || server.allow_tools.length === 0) {
+      return true;
     }
 
-    return server.need_confirm.includes(toolName);
+    return !server.allow_tools.includes(toolName);
   };
 
   // Handle tool information
@@ -326,88 +319,88 @@ export default function ChatView() {
       }
     }
 
-    setToolInfoState({
+    setToolState({
       plain_content: plainContent,
       server: server,
       tool: tool,
       arguments: args,
-      messageId
+      messageId,
+      result: undefined
     });
   };
 
   // Handle tool result
-  const handleToolResult = async (content: string, server: string) => {
-    // Find the target message ID from the last tool info state
-    const targetMessageId = toolInfoState.messageId;
-    setToolResultState({ content, server, targetMessageId });
+  const handleToolResult = async (content: string) => {
+    // Update the tool state with result information
+    setToolState(prev => ({
+      ...prev,
+      result: content
+    }));
 
-    // If we have a target message ID, associate this result with it
-    if (targetMessageId) {
+    // If we have a message ID, associate this result with it
+    if (toolState.messageId) {
       setToolResults(prev => ({
         ...prev,
-        [targetMessageId]: content
+        [toolState.messageId!]: content
       }));
     }
   };
 
-  // Process tool info when streaming ends
+  // Process pending tool info when streaming ends (avoids race conditions)
   useEffect(() => {
     const executePendingTool = async () => {
       // When streaming ends and we have pending tool info
       if (!isStreaming &&
-          toolInfoState.server &&
-          toolInfoState.tool &&
-          toolInfoState.arguments) {
+          toolState.server &&
+          toolState.tool &&
+          toolState.arguments &&
+          !toolState.result) { // Only execute if we don't already have a result
 
-        const { server, tool, arguments: args } = toolInfoState;
+        const { server, tool, arguments: args } = toolState;
 
-        // Check if this tool needs confirmation
+        // Auto-execute if tool doesn't need confirmation
         if (!needsConfirmation(server, tool)) {
           console.log(`Auto-executing tool: ${tool} on server: ${server}`);
 
           // Execute the tool
           await executeToolConfirm(server, tool, args);
 
-          // Clear the tool info state
-          setToolInfoState({
-            plain_content: undefined,
-            server: undefined,
-            tool: undefined,
-            arguments: undefined,
-            messageId: undefined
-          });
         }
       }
     };
 
     executePendingTool();
-  }, [isStreaming, toolInfoState, needsConfirmation]);
+  }, [isStreaming, toolState, needsConfirmation]);
 
-  // Process tool result when streaming ends
+  // Process tool result when streaming ends - now integrated into main tool processing
   useEffect(() => {
     const processPendingToolResult = async () => {
       // When streaming ends and we have pending tool result
       if (!isStreaming &&
-          toolResultState.content &&
-          toolResultState.server) {
+          toolState.result &&
+          toolState.server) {
 
-        const { content, server } = toolResultState;
+        const { result, server } = toolState;
 
         // Send the message immediately
-        console.log(`Sending tool result: ${content}`);
-        await sendUserMessage(content, { server });
+        await sendUserMessage(result, { server });
 
-        // Clear the tool result state
-        setToolResultState({
-          content: undefined,
-          server: undefined,
-          targetMessageId: undefined
-        });
+        // Clear the tool state
+				setToolState({
+					plain_content: undefined,
+					server: undefined,
+					tool: undefined,
+					arguments: undefined,
+					messageId: undefined,
+					result: undefined
+				});
       }
     };
 
     processPendingToolResult();
-  }, [isStreaming, toolResultState]);
+  }, [isStreaming, toolState]);
+
+  // This useEffect is no longer needed since we removed isManuallyExecuting state
 
   // Toggle tool information expand state
   const toggleToolInfo = (messageId: string) => {
@@ -536,7 +529,7 @@ export default function ChatView() {
 
                 // Handle tool result
                 if (parsedData.role === 'user') {
-                  await handleToolResult(parsedData.content || '', parsedData.server || '');
+                  await handleToolResult(parsedData.content || '');
                 }
               } catch (e) {
                 console.error('Error parsing SSE data:', e);
@@ -562,6 +555,8 @@ export default function ChatView() {
   // Send a user message and get response
   const sendUserMessage = async (content: string, additionalProps: Partial<Message> = {}) => {
     if (!id || !selectedBot) return;
+
+    // No need to clear executed tools - isStreaming check prevents duplicates
 
     await addMessageToChat(content, 'user', additionalProps);
     await addMessageToChat('', 'assistant');
@@ -612,15 +607,58 @@ export default function ChatView() {
   const executeToolConfirm = async (server: string, tool: string, args: any) => {
     if (!selectedBot) return;
 
-    await streamResponse(
-      '/api/tool/confirm',
-      JSON.stringify({
-        botName: selectedBot,
-        server,
-        tool,
-        args
-      })
-    );
+    setIsToolExecuting(true);
+    try {
+      await streamResponse(
+        '/api/tool/confirm',
+        JSON.stringify({
+          botName: selectedBot,
+          server,
+          tool,
+          args
+        })
+      );
+    } finally {
+      setIsToolExecuting(false);
+    }
+  };
+
+  // Handle allowing a tool always - add to allow_tools list and execute
+  const handleAllowAlways = async (server: string, tool: string, args: any) => {
+    if (!selectedBot || !mcpServers) return;
+
+    try {
+      // Find the server configuration
+      const serverConfig = mcpServers.find(s => s.name === server);
+      if (!serverConfig) {
+        console.error(`Server ${server} not found in MCP servers`);
+        return;
+      }
+
+      // Add the tool to allow_tools list if not already present
+      const currentAllowTools = serverConfig.allow_tools || [];
+      if (!currentAllowTools.includes(tool)) {
+        const updatedAllowTools = [...currentAllowTools, tool];
+
+        // Update the server configuration
+        const updatedServer = {
+          ...serverConfig,
+          allow_tools: updatedAllowTools
+        };
+
+        // Call the update API
+        await api.put(`/api/mcp-server/${server}`, updatedServer);
+
+        // Refresh MCP servers list to reflect the change
+        mutate('/api/mcp-servers');
+      }
+
+    } catch (error) {
+      console.error('Error in handleAllowAlways:', error);
+    }
+
+    // Execute the tool
+    await executeToolConfirm(server, tool, args);
   };
 
   // Handle form submission from message input
@@ -904,10 +942,12 @@ export default function ChatView() {
                     }
                 }
                 onToolDeny={isSharedMode ? handleToolDenyShared : handleToolDeny}
+                onAllowAlways={isSharedMode ? undefined : handleAllowAlways}
                 needsConfirmation={isSharedMode ? checkNeedsConfirmationShared : needsConfirmation}
                 expandedToolInfo={expandedToolInfo}
                 onToggleToolInfo={toggleToolInfo}
                 toolResults={toolResults}
+                isToolExecuting={isToolExecuting}
               />
             </div>
           ))}

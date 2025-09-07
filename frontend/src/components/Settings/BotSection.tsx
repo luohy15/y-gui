@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BotConfig, McpServerConfig } from '../../../../shared/types';
+import { BotConfig } from '../../../../shared/types';
 import { BotFormModal } from './BotForm';
 import { ConfirmationDialog } from './Confirm';
-import { ActionMenu } from './ActionMenu';
 import { useAuthenticatedSWR, useApi } from '../../utils/api';
 
 interface BotSectionProps {
@@ -22,9 +21,6 @@ export const BotSection: React.FC<BotSectionProps> = ({
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [botToDelete, setBotToDelete] = useState<string | null>(null);
 
-  // Action menu state
-  const [actionMenuBot, setActionMenuBot] = useState<string | null>(null);
-  const actionMenuRef = useRef<HTMLDivElement>(null);
 
   // API functions
   const api = useApi();
@@ -32,8 +28,6 @@ export const BotSection: React.FC<BotSectionProps> = ({
   // Fetch configurations using authenticated SWR
   const { data: bots, error: botsError, isLoading: botsLoading, mutate: mutateBots } =
     useAuthenticatedSWR<BotConfig[]>('/api/bots');
-  const { data: mcpServers, error: mcpError, isLoading: mcpLoading } =
-    useAuthenticatedSWR<McpServerConfig[]>('/api/mcp-servers');
 
   // Handle bot form submission
   const handleBotSubmit = async (bot: BotConfig) => {
@@ -99,7 +93,6 @@ export const BotSection: React.FC<BotSectionProps> = ({
         }}
         onSubmit={handleBotSubmit}
         initialBot={selectedBot}
-        mcpServers={mcpServers}
         isDarkMode={isDarkMode}
       />
 
@@ -121,7 +114,7 @@ export const BotSection: React.FC<BotSectionProps> = ({
             setSelectedBot(undefined);
             setIsBotFormOpen(true);
           }}
-          className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm sm:text-base`}
+          className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md text-sm sm:text-base`}
         >
           Add Bot
         </button>
@@ -151,28 +144,24 @@ export const BotSection: React.FC<BotSectionProps> = ({
               <div>
                 <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{bot.name}</h3>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <span>{bot.model} {bot.mcp_servers && bot.mcp_servers.length > 0 && `• MCPs: ${bot.mcp_servers.join(', ')}`}</span>
+                  <span>{bot.model}</span>
                 </div>
               </div>
-              <div className="relative" ref={actionMenuBot === bot.name ? actionMenuRef : undefined}>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => setActionMenuBot(actionMenuBot === bot.name ? null : bot.name)}
-                  className={`p-2 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => handleEditBot(bot)}
+                  className={`px-3 py-1.5 text-sm ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md`}
+                  title="Edit bot"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                  </svg>
+                  Edit
                 </button>
-
-                {actionMenuBot === bot.name && (
-                  <ActionMenu
-                    isOpen={true}
-                    onClose={() => setActionMenuBot(null)}
-                    onEdit={() => handleEditBot(bot)}
-                    onDelete={() => handleDeleteConfirm(bot.name)}
-                    isDarkMode={isDarkMode}
-                  />
-                )}
+                <button
+                  onClick={() => handleDeleteConfirm(bot.name)}
+                  className={`px-3 py-1.5 text-sm ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md`}
+                  title="Delete bot"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>

@@ -1,28 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { McpServerConfig } from '../../../../shared/types';
+import { McpServer } from '../../../../shared/types';
 
-// MCP Server form modal component
-interface McpServerFormModalProps {
+// Connector form modal component
+interface ConnectorFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (server: McpServerConfig) => void;
-  initialServer?: McpServerConfig;
+  onSubmit: (server: McpServer) => void;
+  initialServer?: McpServer;
   isDarkMode: boolean;
 }
 
-export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
+export const ConnectorFormModal: React.FC<ConnectorFormModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
   initialServer,
   isDarkMode
 }) => {
-  const [formData, setFormData] = useState<McpServerConfig>(
+  const [formData, setFormData] = useState<McpServer>(
     initialServer || {
       name: '',
       url: null,
       token: null,
-      need_confirm: null
+      allow_tools: null
     }
   );
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
         name: '',
         url: null,
         token: null,
-        need_confirm: null
+        allow_tools: null
       });
     }
   }, [initialServer]);
@@ -82,7 +82,7 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
         <div className="p-4 sm:p-6 overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold">
-              {initialServer ? 'Edit MCP Server' : 'Add New MCP Server'}
+              {initialServer ? 'Edit Connector' : 'Add New Connector'}
             </h3>
             <button
               onClick={onClose}
@@ -130,7 +130,7 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
                   required
                 />
                 <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  URL for the MCP server
+                  URL for the connector
                 </p>
               </div>
 
@@ -146,7 +146,7 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
                   className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 />
                 <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Authentication token for the MCP server
+                  Authentication token for the connector
                 </p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export const McpServerFormModal: React.FC<McpServerFormModalProps> = ({
                 disabled={isSubmitting}
                 className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {isSubmitting ? 'Saving...' : initialServer ? 'Update Server' : 'Add Server'}
+                {isSubmitting ? 'Saving...' : initialServer ? 'Update Connector' : 'Add Connector'}
               </button>
             </div>
           </form>

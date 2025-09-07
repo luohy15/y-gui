@@ -5,7 +5,7 @@ import { McpManager } from '../mcp/mcp-manager';
  * @param mcpManager MCP manager instance to get server information
  * @returns Formatted system prompt string
  */
-export async function getSystemPrompt(mcpManager: McpManager, mcp_servers?: string[], writer?: WritableStreamDefaultWriter): Promise<string> {
+export async function getSystemPrompt(mcpManager: McpManager, writer?: WritableStreamDefaultWriter): Promise<string> {
   // Get current datetime in UTC
   const currentTime = new Date();
   const timeInfo = {
@@ -143,7 +143,7 @@ While MCP servers can provide additional tools and resources, they are not alway
 `;
 
   // Get formatted server information
-  const serverInfo = await mcpManager.format_server_info(mcp_servers, writer);
+  const serverInfo = await mcpManager.getToolsPrompt(writer);
 
   // Combine base prompt with server information
   return basePrompt + toolUse + serverInfo;

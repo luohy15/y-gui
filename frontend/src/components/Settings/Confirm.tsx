@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { BotConfig, McpServerConfig } from '../../../../shared/types';
-
+import React from 'react';
 // Confirmation dialog component
 interface ConfirmationDialogProps {
   isOpen: boolean;

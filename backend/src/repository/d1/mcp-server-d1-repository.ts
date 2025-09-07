@@ -1,4 +1,4 @@
-import { McpServerConfig, McpServerRepository } from '../../../../shared/types';
+import { McpServer, McpServerRepository } from '../../../../shared/types';
 import { Env } from 'worker-configuration';
 
 export class McpServerD1Repository implements McpServerRepository {
@@ -15,7 +15,7 @@ export class McpServerD1Repository implements McpServerRepository {
     await this.db.exec(`CREATE TABLE IF NOT EXISTS mcp_server (user_prefix TEXT NOT NULL, name TEXT NOT NULL, json_content TEXT NOT NULL, UNIQUE(user_prefix, name));`);
   }
 
-  async getMcpServers(): Promise<McpServerConfig[]> {
+  async getMcpServers(): Promise<McpServer[]> {
     try {
       await this.initSchema();
       
@@ -28,12 +28,13 @@ export class McpServerD1Repository implements McpServerRepository {
       .bind(this.userPrefix)
       .all<{ json_content: string }>();
       
-      if (!results || !results.results) {
+      if (!results || !results.results || results.results.length === 0) {
+        // No servers in database, return default servers without inserting
         return this.getDefaultServers();
       }
       
-      // Parse the results into McpServerConfig objects
-      const servers: McpServerConfig[] = results.results.map(row => {
+      // Parse the results into McpServer objects
+      const servers: McpServer[] = results.results.map(row => {
         return JSON.parse(row.json_content);
       });
       
@@ -41,6 +42,13 @@ export class McpServerD1Repository implements McpServerRepository {
       const defaultServers = this.getDefaultServers();
       for (const defaultServer of defaultServers) {
         if (!servers.some(server => server.name === defaultServer.name)) {
+          // Insert missing default server into database
+          await this.db.prepare(`
+            INSERT INTO mcp_server (user_prefix, name, json_content)
+            VALUES (?, ?, ?)
+          `)
+          .bind(this.userPrefix, defaultServer.name, JSON.stringify(defaultServer))
+          .run();
           servers.push(defaultServer);
         }
       }
@@ -52,7 +60,7 @@ export class McpServerD1Repository implements McpServerRepository {
     }
   }
 
-  async addMcpserver(mcp_server: McpServerConfig): Promise<void> {
+  async addMcpserver(mcp_server: McpServer): Promise<void> {
     try {
       await this.initSchema();
       
@@ -69,11 +77,11 @@ export class McpServerD1Repository implements McpServerRepository {
     }
   }
 
-  async updateMcpServer(name: string, mcp_server: McpServerConfig): Promise<void> {
+  async updateMcpServer(name: string, mcp_server: McpServer): Promise<void> {
     try {
       await this.initSchema();
       
-      // Update the MCP server
+      // Try to update the MCP server first
       const result = await this.db.prepare(`
         UPDATE mcp_server 
         SET json_content = ?
@@ -82,8 +90,22 @@ export class McpServerD1Repository implements McpServerRepository {
       .bind(JSON.stringify(mcp_server), this.userPrefix, name)
       .run();
       
+      // If no rows were updated, check if this is a default server and insert it
       if (!result || result.meta.changes === 0) {
-        throw new Error(`MCP server with name ${name} not found`);
+        const defaultServers = this.getDefaultServers();
+        const isDefaultServer = defaultServers.some(server => server.name === name);
+        
+        if (isDefaultServer) {
+          // Insert the default server into the database
+          await this.db.prepare(`
+            INSERT INTO mcp_server (user_prefix, name, json_content)
+            VALUES (?, ?, ?)
+          `)
+          .bind(this.userPrefix, mcp_server.name, JSON.stringify(mcp_server))
+          .run();
+        } else {
+          throw new Error(`MCP server with name ${name} not found`);
+        }
       }
     } catch (error) {
       console.error('Error updating MCP server in D1:', error);
@@ -112,11 +134,12 @@ export class McpServerD1Repository implements McpServerRepository {
     }
   }
   
-  private getDefaultServers(): McpServerConfig[] {
+  private getDefaultServers(): McpServer[] {
     return [
       {
         name: "default",
-        url: this.env.MCP_SERVER_URL
+        url: this.env.MCP_SERVER_URL,
+        is_default: true
       },
     ];
   }

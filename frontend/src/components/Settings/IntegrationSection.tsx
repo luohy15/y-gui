@@ -63,7 +63,7 @@ const IntegrationItem: React.FC<IntegrationItemProps> = ({
       return (
         <button
           onClick={() => onDisconnect(integration)}
-          className={`px-3 py-1.5 sm:px-4 sm:py-2 border border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm sm:text-base`}
+          className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md text-sm sm:text-base`}
         >
           Disconnect
         </button>
@@ -85,7 +85,7 @@ const IntegrationItem: React.FC<IntegrationItemProps> = ({
               />
               <button
                 onClick={handleSaveApiKey}
-                className={`px-3 py-1 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm`}
+                className={`px-3 py-1 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md text-sm`}
               >
                 Save
               </button>
@@ -93,7 +93,7 @@ const IntegrationItem: React.FC<IntegrationItemProps> = ({
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm sm:text-base mb-2`}
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md text-sm sm:text-base mb-2`}
             >
               {integration.api_key ? 'Update API Key' : 'Add API Key'}
             </button>
@@ -111,7 +111,7 @@ const IntegrationItem: React.FC<IntegrationItemProps> = ({
     return (
       <button
         onClick={() => onConnect(integration)}
-        className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm sm:text-base`}
+        className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md text-sm sm:text-base`}
       >
         Connect
       </button>
@@ -290,7 +290,7 @@ export const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             setSelectedIntegration(undefined);
             setIsIntegrationFormOpen(true);
           }}
-          className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm sm:text-base`}
+          className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md text-sm sm:text-base`}
         >
           Add Integration
         </button>

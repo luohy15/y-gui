@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BotConfig, McpServerConfig } from '../../../../shared/types';
+import { BotConfig } from '../../../../shared/types';
 
 // Bot form modal component
 interface BotFormModalProps {
@@ -7,7 +7,6 @@ interface BotFormModalProps {
 	onClose: () => void;
 	onSubmit: (bot: BotConfig) => void;
 	initialBot?: BotConfig;
-	mcpServers?: McpServerConfig[];
 	isDarkMode: boolean;
 }
 
@@ -16,7 +15,6 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 	onClose,
 	onSubmit,
 	initialBot,
-	mcpServers,
 	isDarkMode
 }) => {
 	const [formData, setFormData] = useState<BotConfig>(
@@ -24,8 +22,7 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 			name: '',
 			model: '',
 			base_url: '',
-			api_key: '',
-			mcp_servers: []
+			api_key: ''
 		}
 	);
 	const [error, setError] = useState<string | null>(null);
@@ -43,16 +40,8 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 	}, [initialBot]);
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-		const { name, value, type } = e.target;
-
-		if (name === 'mcp_servers') {
-			// Handle multi-select for MCP servers
-			const select = e.target as HTMLSelectElement;
-			const selectedOptions = Array.from(select.selectedOptions).map(option => option.value);
-			setFormData(prev => ({ ...prev, [name]: selectedOptions }));
-		} else {
-			setFormData(prev => ({ ...prev, [name]: value }));
-		}
+		const { name, value } = e.target;
+		setFormData(prev => ({ ...prev, [name]: value }));
 	};
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -127,30 +116,6 @@ export const BotFormModal: React.FC<BotFormModalProps> = ({
 								/>
 							</div>
 
-							{mcpServers && mcpServers.length > 0 && (
-								<div>
-									<label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-										MCP Servers
-									</label>
-									<select
-										name="mcp_servers"
-										multiple
-										value={formData.mcp_servers || []}
-										onChange={handleChange}
-										className={`w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-										size={Math.min(3, mcpServers.length)}
-									>
-										{mcpServers.map(server => (
-											<option key={server.name} value={server.name}>
-												{server.name}
-											</option>
-										))}
-									</select>
-									<p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-										Hold Ctrl/Cmd to select multiple servers
-									</p>
-								</div>
-							)}
 
 							<div>
 								<div className="flex items-center mb-2">

@@ -59,7 +59,6 @@ export interface BotConfig {
   model: string;
   base_url?: string;
   api_key?: string;
-  mcp_servers?: string[];
   openrouter_config?: Record<string, any>;
   api_type?: string;
   custom_api_path?: string;
@@ -67,11 +66,17 @@ export interface BotConfig {
   reasoning_effort?: string;
 }
 
-export interface McpServerConfig {
+export interface McpServer {
   name: string;
   url: string | null;           // URL for the server
   token?: string | null;        // Optional token for authentication
-  need_confirm?: string[] | null; // List of tool names that require confirmation, if not specified or empty, no confirmation needed
+  allow_tools?: string[] | null; // List of tool names that are allowed to execute without confirmation, if not specified or empty, all tools require confirmation
+  is_default?: boolean;         // Whether this is a predefined default server
+  // Cache fields
+  tools?: McpTool[];           // Cached tools from the server
+  last_updated?: string;       // Last cache update timestamp
+  status?: 'connected' | 'disconnected' | 'failed'; // Connection status
+  error_message?: string;      // Error message if connection failed
 }
 
 export interface BotRepository {
@@ -82,9 +87,9 @@ export interface BotRepository {
 }
 
 export interface McpServerRepository {
-  getMcpServers(): Promise<McpServerConfig[]>;
-  addMcpserver(mcp_server: McpServerConfig): Promise<void>;
-  updateMcpServer(name: string, mcp_server: McpServerConfig): Promise<void>;
+  getMcpServers(): Promise<McpServer[]>;
+  addMcpserver(mcp_server: McpServer): Promise<void>;
+  updateMcpServer(name: string, mcp_server: McpServer): Promise<void>;
   deleteMcpServer(name: string): Promise<void>;
 }
 
@@ -106,4 +111,10 @@ export interface IntegrationRepository {
   addIntegration(integration: IntegrationConfig): Promise<void>;
   updateIntegration(name: string, integration: IntegrationConfig): Promise<void>;
   deleteIntegration(name: string): Promise<void>;
+}
+
+export interface McpTool {
+  name: string;
+  description: string;
+  inputSchema?: any;
 }

@@ -1,7 +1,38 @@
-import { McpServerConfig } from '../../../shared/types';
+import { McpServer } from '../../../shared/types';
 import { corsHeaders } from '../middleware/cors';
 import { McpServerD1Repository } from '../repository/d1/mcp-server-d1-repository';
+import { IntegrationD1Repository } from '../repository/d1/integration-d1-repository';
+import { McpManager } from '../mcp/mcp-manager';
 import { Env } from 'worker-configuration';
+
+async function connectToMcpServer(serverName: string, mcpRepo: McpServerD1Repository, env: Env, userPrefix?: string) {
+  const integrationRepo = new IntegrationD1Repository(env.CHAT_DB, userPrefix);
+  const mcpManager = new McpManager(mcpRepo, integrationRepo);
+  
+  try {
+    // Use getServerTools logic to connect and fetch tools
+    await mcpManager.getServerTools(serverName);
+    
+    // Get the updated server to check if connection was successful
+    const updatedServers = await mcpRepo.getMcpServers();
+    const server = updatedServers.find(s => s.name === serverName);
+    
+    return {
+      success: server?.status === 'connected',
+      server,
+      tools: server?.tools || [],
+      error: server?.status !== 'connected' ? (server?.error_message || 'Connection failed') : undefined
+    };
+  } catch (error) {
+    console.error(`Error connecting to MCP server ${serverName}:`, error);
+    return {
+      success: false,
+      server: null,
+      tools: [],
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
 
 export async function handleMcpServerRequest(request: Request, env: Env, userPrefix?: string): Promise<Response> {
   const mcpRepo = new McpServerD1Repository(env.CHAT_DB, env, userPrefix);
@@ -23,10 +54,10 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
     }
     // Add a new MCP server
     if (path === '/api/mcp-server' && request.method === 'POST') {
-      const mcpServerConfig: McpServerConfig = await request.json();
+      const mcpServer: McpServer = await request.json();
       
       // Validate required fields
-      if (!mcpServerConfig.name) {
+      if (!mcpServer.name) {
         return new Response(JSON.stringify({ error: 'Missing required field: name' }), {
           status: 400,
           headers: { 
@@ -37,7 +68,7 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
       }
       
       // Validate that url is provided
-      if (!mcpServerConfig.url) {
+      if (!mcpServer.url) {
         return new Response(JSON.stringify({ error: 'Url must be provided' }), {
           status: 400,
           headers: { 
@@ -49,7 +80,7 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
       
       // Check if server with same name already exists
       const existingServers = await mcpRepo.getMcpServers();
-      if (existingServers.some(server => server.name === mcpServerConfig.name)) {
+      if (existingServers.some(server => server.name === mcpServer.name)) {
         return new Response(JSON.stringify({ error: 'MCP server with this name already exists' }), {
           status: 409,
           headers: { 
@@ -60,9 +91,20 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
       }
       
       // Add the MCP server
-      await mcpRepo.addMcpserver(mcpServerConfig);
+      await mcpRepo.addMcpserver(mcpServer);
       
-      return new Response(JSON.stringify({ success: true, server: mcpServerConfig }), {
+      // Auto-connect to the newly added server
+      const connectionResult = await connectToMcpServer(mcpServer.name, mcpRepo, env, userPrefix);
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        server: connectionResult.server || mcpServer,
+        autoConnected: connectionResult.success,
+        tools: connectionResult.tools,
+        message: connectionResult.success 
+          ? `MCP server ${mcpServer.name} added and connected successfully`
+          : `MCP server ${mcpServer.name} added but connection failed: ${connectionResult.error}`
+      }), {
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -72,10 +114,10 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
     
     // Update an existing MCP server
     if (serverName && path === `/api/mcp-server/${serverName}` && request.method === 'PUT') {
-      const mcpServerConfig: McpServerConfig = await request.json();
+      const mcpServer: McpServer = await request.json();
       
       // Validate required fields
-      if (!mcpServerConfig.name) {
+      if (!mcpServer.name) {
         return new Response(JSON.stringify({ error: 'Missing required field: name' }), {
           status: 400,
           headers: { 
@@ -86,7 +128,7 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
       }
       
       // Validate that url is provided
-      if (!mcpServerConfig.url) {
+      if (!mcpServer.url) {
         return new Response(JSON.stringify({ error: 'Url must be provided' }), {
           status: 400,
           headers: {
@@ -109,9 +151,9 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
       }
       
       // Update the MCP server
-      await mcpRepo.updateMcpServer(serverName, mcpServerConfig);
+      await mcpRepo.updateMcpServer(serverName, mcpServer);
       
-      return new Response(JSON.stringify({ success: true, server: mcpServerConfig }), {
+      return new Response(JSON.stringify({ success: true, server: mcpServer }), {
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -142,6 +184,98 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
           ...corsHeaders
         }
       });
+    }
+    
+    // Connect to a specific MCP server
+    if (serverName && path === `/api/mcp-server/${serverName}/connect` && request.method === 'POST') {
+      // Check if server exists
+      const existingServers = await mcpRepo.getMcpServers();
+      if (!existingServers.some(server => server.name === serverName)) {
+        return new Response(JSON.stringify({ error: 'MCP server not found' }), {
+          status: 404,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      const connectionResult = await connectToMcpServer(serverName, mcpRepo, env, userPrefix);
+      
+      if (connectionResult.success) {
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: `MCP server ${serverName} connected successfully`,
+          tools: connectionResult.tools
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      } else {
+        return new Response(JSON.stringify({ 
+          error: `Failed to connect to MCP server ${serverName}`, 
+          details: connectionResult.error
+        }), {
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+    }
+    
+    // Disconnect from a specific MCP server
+    if (serverName && path === `/api/mcp-server/${serverName}/disconnect` && request.method === 'POST') {
+      // Check if server exists
+      const existingServers = await mcpRepo.getMcpServers();
+      const server = existingServers.find(server => server.name === serverName);
+      if (!server) {
+        return new Response(JSON.stringify({ error: 'MCP server not found' }), {
+          status: 404,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      try {
+        // Clear tools and set status to disconnected
+        const disconnectedServer = {
+          ...server,
+          tools: [],
+          status: 'disconnected' as const,
+          last_updated: new Date().toISOString(),
+          error_message: undefined
+        };
+        
+        await mcpRepo.updateMcpServer(serverName, disconnectedServer);
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: `MCP server ${serverName} disconnected successfully`
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      } catch (error) {
+        console.error(`Error disconnecting MCP server ${serverName}:`, error);
+        return new Response(JSON.stringify({ 
+          error: `Failed to disconnect MCP server ${serverName}`, 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        }), {
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
     }
 
     return new Response('Not Found', { 

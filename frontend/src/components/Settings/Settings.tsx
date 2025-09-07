@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthenticatedSWR } from '../../utils/api';
 import { BotSection } from './BotSection';
-import { McpServerSection } from './McpServerSection';
+import { ConnectorSection } from './ConnectorSection';
 import { IntegrationSection } from './IntegrationSection';
 
 interface SettingsProps {
@@ -15,7 +15,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
   const { isDarkMode, setTheme } = useTheme();
 
   // Validate section parameter and default to 'general' if invalid
-  const activeSection = (section === 'general' || section === 'bots' || section === 'mcp-servers' || section === 'integrations')
+  const activeSection = (section === 'general' || section === 'bots' || section === 'connectors' || section === 'integrations')
     ? section
     : 'general';
 
@@ -122,10 +122,10 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                 Bots
               </Link>
               <Link
-                to="/settings/mcp-servers"
+                to="/settings/connectors"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`block w-full text-left px-4 py-2 text-sm ${
-                  activeSection === 'mcp-servers'
+                  activeSection === 'connectors'
                     ? isDarkMode
                       ? 'bg-gray-700 text-white'
                       : 'bg-blue-50 text-blue-600'
@@ -134,7 +134,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                       : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                MCP Servers
+                Connectors
               </Link>
               <Link
                 to="/settings/integrations"
@@ -207,9 +207,9 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
               </li>
               <li className="mb-1">
                 <Link
-                  to="/settings/mcp-servers"
+                  to="/settings/connectors"
                   className={`block w-full text-left px-3 py-2 rounded-md ${
-                    activeSection === 'mcp-servers'
+                    activeSection === 'connectors'
                       ? isDarkMode
                         ? 'bg-gray-800 text-white font-medium'
                         : 'bg-blue-50 text-blue-600 font-medium'
@@ -218,7 +218,7 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
                         : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  MCP Servers
+                  Connectors
                 </Link>
               </li>
               <li className="mb-1">
@@ -318,9 +318,9 @@ export const Settings: React.FC<SettingsProps> = ({ }) => {
             />
           )}
 
-          {/* MCP Servers settings section */}
-          {activeSection === 'mcp-servers' && (
-            <McpServerSection
+          {/* Connectors settings section */}
+          {activeSection === 'connectors' && (
+            <ConnectorSection
               isDarkMode={isDarkMode}
               setStatusMessage={setStatusMessage}
             />

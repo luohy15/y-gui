@@ -18,10 +18,12 @@ interface MessageItemProps {
 	isLastMessage: boolean;
 	onToolConfirm: (server: string, tool: string, args: any) => void;
 	onToolDeny: () => void;
+	onAllowAlways?: (server: string, tool: string, args: any) => void;
 	needsConfirmation: (server: string, tool: string) => boolean;
 	expandedToolInfo: Record<string, boolean>;
 	onToggleToolInfo: (messageId: string) => void;
 	toolResults?: Record<string, string | object>;
+	isToolExecuting?: boolean;
 }
 
 export default function MessageItem({
@@ -36,10 +38,12 @@ export default function MessageItem({
 	isLastMessage,
 	onToolConfirm,
 	onToolDeny,
+	onAllowAlways,
 	needsConfirmation,
 	expandedToolInfo,
 	onToggleToolInfo,
 	toolResults,
+	isToolExecuting,
 }: MessageItemProps) {
 	const messageId = message.unix_timestamp.toString();
 	const isUserMessage = message.role === 'user' && !message.server;
@@ -112,10 +116,12 @@ export default function MessageItem({
 						onToggle={onToggleToolInfo}
 						onApprove={() => onToolConfirm(message.server!, message.tool!, message.arguments!)}
 						onDeny={onToolDeny}
+						onAllowAlways={onAllowAlways ? () => onAllowAlways(message.server!, message.tool!, message.arguments!) : undefined}
 						isDarkMode={isDarkMode}
 						needsConfirmation={needsConfirmation(message.server, message.tool)}
 						isLastMessage={isLastMessage}
 						toolResult={toolResults && toolResults[messageId]}
+						isToolExecuting={isToolExecuting}
 					/>
 				</div>
 			)}

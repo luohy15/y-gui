@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { McpServerConfig } from '@shared/types';
-import { useAuthenticatedSWR } from '../utils/api';
 
 export interface ServerStatus {
   status: "connected" | "connecting" | "error" | "disconnected";
