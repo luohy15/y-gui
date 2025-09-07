@@ -200,33 +200,6 @@ export class McpManager {
   }
   
   /**
-   * Refresh cache for all MCP servers by connecting and fetching their tools
-   * @param writer Optional writer for status updates
-   * @returns Promise resolving when cache refresh is complete
-   */
-  async refreshAllServerCaches(writer?: WritableStreamDefaultWriter): Promise<void> {
-    try {
-      const mcpServers = await this.mcpServerRepository.getMcpServers();
-      
-      if (mcpServers.length === 0) {
-        await writeMcpStatus(writer, "info", "No MCP servers to cache");
-        return;
-      }
-      
-      await writeMcpStatus(writer, "info", `Refreshing cache for ${mcpServers.length} MCP servers`);
-      
-      for (const server of mcpServers) {
-        await this.getServerTools(server.name, writer);
-      }
-      
-      await writeMcpStatus(writer, "info", "Finished refreshing all server caches");
-    } catch (error) {
-      console.error("Error refreshing server caches:", error);
-      await writeMcpStatus(writer, "error", `Error refreshing server caches: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  /**
    * Get tools for a specific MCP server
    * @param serverName Name of the MCP server to get tools for
    * @param writer Optional writer for status updates

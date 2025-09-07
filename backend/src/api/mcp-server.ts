@@ -190,7 +190,18 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
       // Update the MCP server
       await mcpRepo.updateMcpServer(serverName, mcpServer);
       
-      return new Response(JSON.stringify({ success: true, server: mcpServer }), {
+      // Auto-connect to the updated server to refresh tools
+      const connectionResult = await connectToMcpServer(mcpServer.name, mcpRepo, env, userPrefix);
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        server: connectionResult.server || mcpServer,
+        autoConnected: connectionResult.success,
+        tools: connectionResult.tools,
+        message: connectionResult.success 
+          ? `MCP server ${mcpServer.name} updated and connected successfully`
+          : `MCP server ${mcpServer.name} updated but connection failed: ${connectionResult.error}`
+      }), {
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
