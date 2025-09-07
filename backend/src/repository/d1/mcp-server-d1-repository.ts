@@ -84,10 +84,10 @@ export class McpServerD1Repository implements McpServerRepository {
       // Try to update the MCP server first
       const result = await this.db.prepare(`
         UPDATE mcp_server 
-        SET json_content = ?
+        SET name = ?, json_content = ?
         WHERE user_prefix = ? AND name = ?
       `)
-      .bind(JSON.stringify(mcp_server), this.userPrefix, name)
+      .bind(mcp_server.name, JSON.stringify(mcp_server), this.userPrefix, name)
       .run();
       
       // If no rows were updated, check if this is a default server and insert it
@@ -117,7 +117,7 @@ export class McpServerD1Repository implements McpServerRepository {
     try {
       await this.initSchema();
       
-      // Delete the MCP server
+      // First try to delete by name column
       const result = await this.db.prepare(`
         DELETE FROM mcp_server
         WHERE user_prefix = ? AND name = ?
@@ -125,8 +125,41 @@ export class McpServerD1Repository implements McpServerRepository {
       .bind(this.userPrefix, name)
       .run();
       
+      // If no rows were deleted, try to find and delete by name in JSON content
       if (!result || result.meta.changes === 0) {
-        throw new Error(`MCP server with name ${name} not found`);
+        const servers = await this.db.prepare(`
+          SELECT name, json_content
+          FROM mcp_server
+          WHERE user_prefix = ?
+        `)
+        .bind(this.userPrefix)
+        .all<{ name: string; json_content: string }>();
+        
+        // Find server by name in JSON content
+        const matchingServer = servers.results?.find(row => {
+          try {
+            const serverData = JSON.parse(row.json_content);
+            return serverData.name === name;
+          } catch {
+            return false;
+          }
+        });
+        
+        if (matchingServer) {
+          // Delete by the database name column
+          const deleteResult = await this.db.prepare(`
+            DELETE FROM mcp_server
+            WHERE user_prefix = ? AND name = ?
+          `)
+          .bind(this.userPrefix, matchingServer.name)
+          .run();
+          
+          if (!deleteResult || deleteResult.meta.changes === 0) {
+            throw new Error(`MCP server with name ${name} not found`);
+          }
+        } else {
+          throw new Error(`MCP server with name ${name} not found`);
+        }
       }
     } catch (error) {
       console.error('Error deleting MCP server from D1:', error);
