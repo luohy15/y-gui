@@ -52,6 +52,43 @@ export async function handleMcpServerRequest(request: Request, env: Env, userPre
         }
       });
     }
+
+    // Browse available connectors from mcprouter
+    if (path === '/api/browse-connectors' && request.method === 'GET') {
+      try {
+        const response = await fetch('https://api.mcprouter.to/v1/list-servers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({})
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        return new Response(JSON.stringify(data), {
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching servers from mcprouter:', error);
+        return new Response(JSON.stringify({ 
+          error: 'Failed to fetch servers from mcprouter',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }), {
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+    }
     // Add a new MCP server
     if (path === '/api/mcp-server' && request.method === 'POST') {
       const mcpServer: McpServer = await request.json();

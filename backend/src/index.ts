@@ -86,6 +86,7 @@ app.route('/api/bot', botRouter);
 app.route('/api/tool', toolRouter);
 app.route('/api/mcp-servers', mcpServerRouter);
 app.route('/api/mcp-server', mcpServerRouter);
+app.route('/api/browse-connectors', mcpServerRouter);
 app.route('/api/integrations', integrationRouter);
 app.route('/api/integration', integrationRouter);
 

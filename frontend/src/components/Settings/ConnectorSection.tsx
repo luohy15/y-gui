@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { McpServer } from '../../../../shared/types';
 import { useAuthenticatedSWR, useApi } from '../../utils/api';
 import { ConnectorFormModal } from './ConnectorForm';
+import { BrowseConnectorsModal } from './BrowseConnectorsModal';
 import { ConfirmationDialog } from './Confirm';
 import { useMcp } from '../../contexts/McpContext';
 
@@ -17,6 +18,9 @@ export const ConnectorSection: React.FC<ConnectorSectionProps> = ({
   // Connector form modal state
   const [isConnectorFormOpen, setIsConnectorFormOpen] = useState(false);
   const [selectedConnector, setSelectedConnector] = useState<McpServer | undefined>(undefined);
+  
+  // Browse connectors modal state
+  const [isBrowseModalOpen, setIsBrowseModalOpen] = useState(false);
 
   // Confirmation dialog state
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -28,6 +32,10 @@ export const ConnectorSection: React.FC<ConnectorSectionProps> = ({
   // Allow tools management state
   const [managingAllowTools, setManagingAllowTools] = useState<string | null>(null);
   const [editingAllowTools, setEditingAllowTools] = useState<{[key: string]: string[]}>({});
+
+  // Tools configuration modal state
+  const [toolsConfigModal, setToolsConfigModal] = useState<string | null>(null);
+  const [toolSearchQuery, setToolSearchQuery] = useState<string>('');
 
   // API functions
   const api = useApi();
@@ -173,6 +181,19 @@ export const ConnectorSection: React.FC<ConnectorSectionProps> = ({
     setEditingAllowTools({});
   };
 
+  // Handle adding server from browse modal
+  const handleAddServerFromBrowse = async (server: McpServer) => {
+    try {
+      await api.post('/api/mcp-server', server);
+      setStatusMessage({ type: 'success', text: `Connector "${server.name}" added successfully` });
+      mutateConnectors();
+    } catch (error) {
+      console.error('Error adding server:', error);
+      setStatusMessage({ type: 'error', text: `Failed to add connector: ${error instanceof Error ? error.message : 'Unknown error'}` });
+      throw error; // Re-throw to let the modal handle the error state
+    }
+  };
+
   // Render individual connector item
   const renderConnectorItem = (connector: McpServer, isDefault: boolean) => (
     <div className="flex justify-between items-center">
@@ -212,143 +233,17 @@ export const ConnectorSection: React.FC<ConnectorSectionProps> = ({
           {connector.error_message && (
             <div className="text-red-500 text-xs mt-1">Error: {connector.error_message}</div>
           )}
-          {connector.tools && connector.tools.length > 0 && (
-            <div className="mt-2">
-              <div className="text-xs font-medium mb-1">Available Tools ({connector.tools.length}):</div>
-              <div className="flex flex-wrap gap-1">
-                {connector.tools.slice(0, 3).map((tool, toolIndex) => (
-                  <span
-                    key={toolIndex}
-                    className={`px-2 py-0.5 rounded text-xs ${
-                      isDarkMode
-                        ? 'bg-gray-700 text-gray-300'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
-                    title={tool.description}
-                  >
-                    {tool.name}
-                  </span>
-                ))}
-                {connector.tools.length > 3 && (
-                  <span className={`px-2 py-0.5 rounded text-xs ${
-                    isDarkMode
-                      ? 'bg-gray-700 text-gray-300'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    +{connector.tools.length - 3} more
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Allow Tools Management */}
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-medium">Allowed Tools ({connector.allow_tools?.length || 0})</div>
-              {managingAllowTools !== connector.name && (
-                <button
-                  onClick={() => handleManageAllowTools(connector.name, connector.allow_tools || null)}
-                  className={`text-xs px-2 py-1 rounded ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-600 hover:bg-gray-700 text-white'}`}
-                >
-                  Manage
-                </button>
-              )}
-            </div>
-            
-            {managingAllowTools === connector.name ? (
-              <div className={`p-3 rounded border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
-                {/* Tags display */}
-                <div className="mb-3">
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {(editingAllowTools[connector.name] || []).map((toolName, toolIndex) => (
-                      <span
-                        key={toolIndex}
-                        className={`px-2 py-1 rounded text-xs flex items-center gap-1 ${
-                          isDarkMode
-                            ? 'bg-gray-700 text-gray-300'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {toolName}
-                        <button
-                          onClick={() => handleRemoveAllowTool(connector.name, toolName)}
-                          className="ml-1 text-xs hover:text-red-300"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Dropdown to add tools */}
-                {connector.tools && connector.tools.length > 0 && (
-                  <select
-                    className={`w-full px-2 py-1 text-xs rounded mb-2 ${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleAddAllowTool(connector.name, e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                  >
-                    <option value="">Add tool...</option>
-                    {connector.tools
-                      .filter(tool => !(editingAllowTools[connector.name] || []).includes(tool.name))
-                      .map((tool, toolIndex) => (
-                        <option key={toolIndex} value={tool.name}>
-                          {tool.name} - {tool.description.slice(0, 50)}{tool.description.length > 50 ? '...' : ''}
-                        </option>
-                      ))}
-                  </select>
-                )}
-                
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleSaveAllowTools(connector.name)}
-                    className={`px-2 py-1 text-xs rounded ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-600 hover:bg-gray-700 text-white'}`}
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancelAllowToolsEdit}
-                    className={`px-2 py-1 text-xs rounded ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-600 hover:bg-gray-700 text-white'}`}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1">
-                {(connector.allow_tools?.length || 0) > 0 ? (
-                  connector.allow_tools!.map((toolName, toolIndex) => (
-                    <span
-                      key={toolIndex}
-                      className={`px-2 py-0.5 rounded text-xs ${
-                        isDarkMode
-                          ? 'bg-gray-700 text-gray-300'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {toolName}
-                    </span>
-                  ))
-                ) : (
-                  <span className={`px-2 py-0.5 rounded text-xs ${
-                    isDarkMode
-                      ? 'bg-yellow-700 text-yellow-200'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    All tools need confirmation
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
+
       <div className="flex gap-2">
+        <button
+          onClick={() => setToolsConfigModal(connector.name)}
+          className={`px-3 py-1.5 text-sm ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md`}
+          title="Configure tools"
+        >
+          Configure
+        </button>
         <button
           onClick={() => handleToggleConnector(connector.name, connector.status || '')}
           disabled={togglingConnector === connector.name}
@@ -418,6 +313,14 @@ export const ConnectorSection: React.FC<ConnectorSectionProps> = ({
         isDarkMode={isDarkMode}
       />
 
+      {/* Browse connectors modal */}
+      <BrowseConnectorsModal
+        isOpen={isBrowseModalOpen}
+        onClose={() => setIsBrowseModalOpen(false)}
+        onAddServer={handleAddServerFromBrowse}
+        isDarkMode={isDarkMode}
+      />
+
       {/* Confirmation dialog */}
       <ConfirmationDialog
         isOpen={isConfirmDialogOpen}
@@ -428,10 +331,203 @@ export const ConnectorSection: React.FC<ConnectorSectionProps> = ({
         isDarkMode={isDarkMode}
       />
 
+      {/* Tools Configuration Modal */}
+      {toolsConfigModal && (() => {
+        const connector = connectors?.find(c => c.name === toolsConfigModal);
+        return connector ? (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4`}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Configure Tools - {connector.name}
+                </h3>
+                <button
+                  onClick={() => {
+                    setToolsConfigModal(null);
+                    setToolSearchQuery('');
+                  }}
+                  className={`text-gray-400 hover:text-gray-600 text-xl font-bold`}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Allow Tools Management */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className={`text-md font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Allowed Tools ({connector.allow_tools?.length || 0})
+                  </h4>
+                  {managingAllowTools !== connector.name && (
+                    <button
+                      onClick={() => handleManageAllowTools(connector.name, connector.allow_tools || null)}
+                      className={`px-3 py-1.5 text-sm rounded ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-600 hover:bg-gray-700 text-white'}`}
+                    >
+                      Manage
+                    </button>
+                  )}
+                </div>
+                
+                {managingAllowTools === connector.name ? (
+                  <div className={`p-4 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                    {/* Tags display */}
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {(editingAllowTools[connector.name] || []).map((toolName, toolIndex) => (
+                          <span
+                            key={toolIndex}
+                            className={`px-3 py-1.5 rounded text-sm flex items-center gap-2 ${
+                              isDarkMode
+                                ? 'bg-gray-800 text-gray-300 border border-gray-600'
+                                : 'bg-white text-gray-700 border border-gray-200'
+                            }`}
+                          >
+                            {toolName}
+                            <button
+                              onClick={() => handleRemoveAllowTool(connector.name, toolName)}
+                              className="text-red-400 hover:text-red-300 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Search and add tools */}
+                    {connector.tools && connector.tools.length > 0 && (
+                      <div className="mb-3">
+                        <input
+                          type="text"
+                          placeholder="Search tools to add..."
+                          value={toolSearchQuery}
+                          onChange={(e) => setToolSearchQuery(e.target.value)}
+                          className={`w-full px-3 py-2 text-sm rounded mb-2 ${isDarkMode ? 'bg-gray-800 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                        />
+                        {toolSearchQuery && (
+                          <div className={`max-h-32 overflow-y-auto border rounded ${isDarkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'}`}>
+                            {connector.tools
+                              .filter(tool => 
+                                !(editingAllowTools[connector.name] || []).includes(tool.name) &&
+                                (tool.name.toLowerCase().includes(toolSearchQuery.toLowerCase()) ||
+                                 tool.description.toLowerCase().includes(toolSearchQuery.toLowerCase()))
+                              )
+                              .slice(0, 10) // Limit to 10 results
+                              .map((tool, toolIndex) => (
+                                <button
+                                  key={toolIndex}
+                                  onClick={() => {
+                                    handleAddAllowTool(connector.name, tool.name);
+                                    setToolSearchQuery('');
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-sm hover:bg-opacity-80 ${isDarkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-100 text-gray-900'} border-b last:border-b-0 ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}
+                                >
+                                  <div className="font-medium">{tool.name}</div>
+                                  <div className={`text-xs mt-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    {tool.description.slice(0, 80)}{tool.description.length > 80 ? '...' : ''}
+                                  </div>
+                                </button>
+                              ))}
+                            {connector.tools
+                              .filter(tool => 
+                                !(editingAllowTools[connector.name] || []).includes(tool.name) &&
+                                (tool.name.toLowerCase().includes(toolSearchQuery.toLowerCase()) ||
+                                 tool.description.toLowerCase().includes(toolSearchQuery.toLowerCase()))
+                              ).length === 0 && (
+                              <div className={`px-3 py-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                No tools found matching "{toolSearchQuery}"
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSaveAllowTools(connector.name)}
+                        className={`px-4 py-2 text-sm rounded ${isDarkMode ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={handleCancelAllowToolsEdit}
+                        className={`px-4 py-2 text-sm rounded ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-600 hover:bg-gray-700 text-white'}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`p-4 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex flex-wrap gap-2">
+                      {(connector.allow_tools?.length || 0) > 0 ? (
+                        connector.allow_tools!.map((toolName, toolIndex) => (
+                          <span
+                            key={toolIndex}
+                            className={`px-3 py-1.5 rounded text-sm ${
+                              isDarkMode
+                                ? 'bg-gray-800 text-gray-300 border border-gray-600'
+                                : 'bg-white text-gray-700 border border-gray-200'
+                            }`}
+                          >
+                            {toolName}
+                          </span>
+                        ))
+                      ) : (
+                        <span className={`px-3 py-1.5 rounded text-sm ${
+                          isDarkMode
+                            ? 'bg-yellow-700 text-yellow-200'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          All tools need confirmation
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Available Tools Section */}
+              {connector.tools && connector.tools.length > 0 && (
+                <div>
+                  <h4 className={`text-md font-medium mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Available Tools ({connector.tools.length})
+                  </h4>
+                  <div className={`p-4 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {connector.tools.map((tool, toolIndex) => (
+                        <div
+                          key={toolIndex}
+                          className={`p-3 rounded border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}
+                        >
+                          <div className={`font-medium text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {tool.name}
+                          </div>
+                          <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {tool.description}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null;
+      })()}
+
       <div className="flex justify-between items-center mb-6">
         <h2 className={`text-xl sm:text-2xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} sm:hidden`}>Connectors</h2>
         <h2 className={`hidden sm:block text-2xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Connectors</h2>
         <div className="flex gap-2">
+          <button
+            onClick={() => setIsBrowseModalOpen(true)}
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md text-sm sm:text-base`}
+          >
+            Browse Connectors
+          </button>
           <button
             onClick={() => {
               setSelectedConnector(undefined);
