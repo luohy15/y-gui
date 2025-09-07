@@ -50,7 +50,6 @@ export async function handleChatCompletions(request: Request, env: Env, userPref
         resultBotConfig.api_key = env.OPENROUTER_FREE_KEY;
         resultBotConfig.base_url = env.OPENROUTER_BASE_URL;
       }
-      console.log('Bot config:', resultBotConfig);
 
       // Get the provider
       const provider = ProviderFactory.createProvider(resultBotConfig);

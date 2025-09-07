@@ -355,26 +355,7 @@ export class McpManager {
         } else if (server.status === 'failed') {
           toolsSection = `\n\n(Server unavailable: ${server.error_message || 'Unknown error'})`;
         } else {
-          // No cache available or uncached, try to get tools for this server specifically
-          await this.getServerTools(server.name, writer);
-          const updatedServers = await this.mcpServerRepository.getMcpServers();
-          const updatedServer = updatedServers.find(s => s.name === server.name);
-          
-          if (updatedServer && updatedServer.status === 'connected' && updatedServer.tools && updatedServer.tools.length > 0) {
-            const tools = [];
-            for (const tool of updatedServer.tools) {
-              let schemaStr = "";
-              if (tool.inputSchema) {
-                const schemaJson = JSON.stringify(tool.inputSchema, null, 2);
-                const schemaLines = schemaJson.split("\n");
-                schemaStr = "\n    Input Schema:\n    " + schemaLines.join("\n    ");
-              }
-              tools.push(`- ${tool.name}: ${tool.description}${schemaStr}`);
-            }
-            toolsSection = "\n\n### Available Tools\n" + tools.join("\n\n");
-          } else {
-            toolsSection = "\n\n(Could not connect to server)";
-          }
+          toolsSection = "\n\n(Server not connected)";
         }
 
         const serverSection = `## ${server.name}${toolsSection}`;
