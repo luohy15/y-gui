@@ -35,16 +35,16 @@ export class BotD1Repository implements BotRepository {
   async updateBot(name: string, updatedBot: BotConfig): Promise<void> {
     try {
       await this.initSchema();
-      
-      // Update the bot
+
+      // Update the bot by querying the JSON name field
       const result = await this.db.prepare(`
-        UPDATE bot 
+        UPDATE bot
         SET json_content = ?
-        WHERE user_prefix = ? AND name = ?
+        WHERE user_prefix = ? AND json_extract(json_content, '$.name') = ?
       `)
       .bind(JSON.stringify(updatedBot), this.userPrefix, name)
       .run();
-      
+
       if (!result || result.meta.changes === 0) {
         throw new Error(`Bot with name ${name} not found`);
       }
@@ -57,15 +57,15 @@ export class BotD1Repository implements BotRepository {
   async deleteBot(name: string): Promise<void> {
     try {
       await this.initSchema();
-      
-      // Delete the bot
+
+      // Delete the bot by querying the JSON name field
       const result = await this.db.prepare(`
         DELETE FROM bot
-        WHERE user_prefix = ? AND name = ?
+        WHERE user_prefix = ? AND json_extract(json_content, '$.name') = ?
       `)
       .bind(this.userPrefix, name)
       .run();
-      
+
       if (!result || result.meta.changes === 0) {
         throw new Error(`Bot with name ${name} not found`);
       }
