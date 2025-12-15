@@ -28,9 +28,11 @@ export interface Message {
   model?: string;
   provider?: string;
   reasoning_content?: string;
+  reasoning_effort?: string;
   server?: string;
   tool?: string;
   arguments?: string | Record<string, any>;
+  links?: string[]; // Array of URL citations in format "title|url" or just "url"
 }
 
 export interface ListChatsOptions {
@@ -63,7 +65,6 @@ export interface BotConfig {
   api_type?: string;
   custom_api_path?: string;
   max_tokens?: number;
-  reasoning_effort?: string;
 }
 
 export interface McpServer {
@@ -117,4 +118,10 @@ export interface McpTool {
   name: string;
   description: string;
   inputSchema?: any;
+}
+
+export interface RoutingDecision {
+  use_think_model: boolean;      // False = quick, True = think
+  use_web_search: boolean;       // False = no search, True = search
+  reasoning_effort: string;      // "low", "medium", or "high" (only if use_think_model=True)
 }

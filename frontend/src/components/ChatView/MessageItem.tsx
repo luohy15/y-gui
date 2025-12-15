@@ -24,6 +24,7 @@ interface MessageItemProps {
 	onToggleToolInfo: (messageId: string) => void;
 	toolResults?: Record<string, string | object>;
 	isToolExecuting?: boolean;
+	onShowLinks?: (messageId: string, links: string[]) => void;
 }
 
 export default function MessageItem({
@@ -44,9 +45,25 @@ export default function MessageItem({
 	onToggleToolInfo,
 	toolResults,
 	isToolExecuting,
+	onShowLinks,
 }: MessageItemProps) {
 	const messageId = message.unix_timestamp.toString();
 	const isUserMessage = message.role === 'user' && !message.server;
+
+	// Parse links in format "Title|URL"
+	const parsedLinks = message.links?.map((link) => {
+		const parts = link.split('|');
+		return {
+			title: parts[0] || 'Link',
+			url: parts[1] || link
+		};
+	}) || [];
+
+	const handleToggleLinks = () => {
+		if (onShowLinks && message.links) {
+			onShowLinks(messageId, message.links);
+		}
+	};
 
 	return (
 		<div className={`rounded-lg px-4 py-3 sm:px-6 sm:py-4 break-words ${isUserMessage
@@ -103,6 +120,37 @@ export default function MessageItem({
 				content={typeof message.content === 'string' ? message.content : ''}
 				className={isUserMessage ? 'prose-invert' : 'prose-gray'}
 			/>
+
+			{/* Links button */}
+			{parsedLinks.length > 0 && (
+				<div className="mt-3">
+					<button
+						onClick={handleToggleLinks}
+						className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+							isUserMessage
+								? 'bg-blue-500 hover:bg-blue-600 text-white'
+								: isDarkMode
+								? 'bg-gray-700 hover:bg-gray-600 text-gray-100'
+								: 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+						}`}
+					>
+						<svg
+							className="h-4 w-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+							/>
+						</svg>
+						{parsedLinks.length} {parsedLinks.length === 1 ? 'Link' : 'Links'}
+					</button>
+				</div>
+			)}
 
 			{/* Tool information - Added custom classes for visual styling */}
 			{message.tool && message.server && message.arguments && message.role === 'assistant' && (

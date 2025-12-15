@@ -14,6 +14,7 @@ import MessageItem from './MessageItem';
 import McpLogsDisplay from './McpLogsDisplay';
 import TableOfContents from './TableOfContents';
 import TableOfContentsDrawer from './TableOfContentsDrawer';
+import LinksModal from './LinksModal';
 
 export default function ChatView() {
   const { isDarkMode } = useTheme();
@@ -76,6 +77,9 @@ export default function ChatView() {
   // executedTools state removed - isStreaming check prevents duplicates
 
   // isManuallyExecuting state removed - auto-execution now handled directly in handleToolInfo
+
+  // Links state - store active message's links directly
+  const [activeMessageLinks, setActiveMessageLinks] = useState<{messageId: string, links: string[]} | null>(null);
 
   // Configure SWR options
   const swrConfig: SWRConfiguration = {
@@ -408,6 +412,13 @@ export default function ChatView() {
       ...prev,
       [messageId]: !prev[messageId]
     }));
+  };
+
+  // Handle links toggle - only one message can show links at a time
+  const handleShowLinks = (messageId: string, links: string[]) => {
+    setActiveMessageLinks(prev =>
+      prev?.messageId === messageId ? null : {messageId, links}
+    );
   };
 
   /****************************
@@ -885,6 +896,14 @@ export default function ChatView() {
 				</div>
       )}
 
+      {/* Links Modal - Show active message's links */}
+      <LinksModal
+        isOpen={activeMessageLinks !== null}
+        onClose={() => setActiveMessageLinks(null)}
+        links={activeMessageLinks?.links || []}
+        isDarkMode={isDarkMode}
+      />
+
       {/* Main content with messages and TOC */}
       <div className="flex justify-center">
 
@@ -948,6 +967,7 @@ export default function ChatView() {
                 onToggleToolInfo={toggleToolInfo}
                 toolResults={toolResults}
                 isToolExecuting={isToolExecuting}
+                onShowLinks={handleShowLinks}
               />
             </div>
           ))}

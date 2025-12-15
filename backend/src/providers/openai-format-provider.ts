@@ -1,5 +1,5 @@
 import { BaseProvider, ProviderResponseChunk } from './provider-interface';
-import { BotConfig, Chat, Message, ContentBlock } from '../../../shared/types';
+import { BotConfig, Chat, Message, ContentBlock, RoutingDecision } from '../../../shared/types';
 
 // Define interfaces for message content blocks and error handling
 interface TextContentBlock {
@@ -131,37 +131,48 @@ export class OpenAIFormatProvider implements BaseProvider {
    * Generate a response from the provider as an async generator
    * @param messages List of chat messages
    * @param systemPrompt Optional system prompt
+   * @param decision Optional routing decision for smart routing
    * @returns An AsyncGenerator yielding content fragments and provider info
    */
   async *callChatCompletions(
-    messages: Message[], 
-    systemPrompt?: string
+    messages: Message[],
+    systemPrompt?: string,
+    decision?: RoutingDecision
   ): AsyncGenerator<ProviderResponseChunk, void, unknown> {
     // Prepare messages with system prompt
     const preparedMessages = this.prepareMessagesForCompletion(messages, systemPrompt);
-    
+
+    // Determine model name based on routing decision
+    let modelName = this.botConfig.model;
+    if (decision?.use_web_search) {
+      modelName = `${modelName}:online`;
+    }
+
     // Use a more flexible type for the request body
     const body: Record<string, any> = {
-      model: this.botConfig.model,
+      model: modelName,  // May include :online suffix
       messages: preparedMessages,
       stream: true
     };
     
+    // Add reasoning parameter if think mode (from routing decision)
+    if (decision?.use_think_model) {
+      body.reasoning = {
+        enabled: true,
+        effort: decision.reasoning_effort
+      };
+    }
+
     // Add provider if specified in openrouter_config
     if (this.botConfig.openrouter_config && this.botConfig.openrouter_config.provider) {
       body.provider = this.botConfig.openrouter_config.provider;
     }
-    
+
     // Add max_tokens if specified
     if (this.botConfig.max_tokens) {
       body.max_tokens = this.botConfig.max_tokens;
     }
-    
-    // Add reasoning_effort if specified
-    if (this.botConfig.reasoning_effort) {
-      body.reasoning_effort = this.botConfig.reasoning_effort;
-    }
-    
+
     // Add include_reasoning for deepseek models
     if (this.botConfig.model.includes('deepseek-r1')) {
       body.include_reasoning = true;
@@ -297,16 +308,36 @@ export class OpenAIFormatProvider implements BaseProvider {
     // Handle OpenAI format
     if (event.choices && event.choices[0]) {
       const delta = event.choices[0].delta;
-      if (delta && (delta.content || delta.reasoning_content)) {
+      if (delta && (delta.content || delta.reasoning_content || delta.annotations)) {
+        // Extract URL citations from annotations
+        const links: string[] = [];
+        if (delta.annotations) {
+          for (const annotation of delta.annotations) {
+            if (annotation.type === 'url_citation') {
+              const urlCitation = annotation.url_citation || {};
+              const url = urlCitation.url;
+              const title = urlCitation.title;
+              if (url) {
+                // Use "title|url" format when both are available
+                const linkEntry = title ? `${title}|${url}` : url;
+                if (!links.includes(linkEntry)) {
+                  links.push(linkEntry);
+                }
+              }
+            }
+          }
+        }
+
         return {
           content: delta.content,
           reasoningContent: delta.reasoning_content,
           provider: event.provider || this.botConfig.name,
-          model: event.model
+          model: event.model,
+          links: links.length > 0 ? links : null
         };
       }
-    } 
-    
+    }
+
     return null;
   }
   

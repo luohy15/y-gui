@@ -1,14 +1,16 @@
-import { BotConfig, Chat, ChatRepository, Message } from '../../../shared/types';
+import { BotConfig, Chat, ChatRepository, Message, RoutingDecision } from '../../../shared/types';
 import { McpManager } from '../mcp/mcp-manager';
 import { BaseProvider } from 'src/providers/provider-interface';
 import { getSystemPrompt } from '../utils/system-prompt';
 import { createMessage, extractContentText } from '../utils/message';
 import { containsToolUse, splitContent, extractMcpToolUse } from '../utils/tool-parser';
 import { buildMessagePath } from '../utils/chat';
+import { IntentAnalyzer } from '../services/intent-analyzer';
 
 export class ChatService {
   private chat: Chat;
   private systemPrompt: string;
+  private analyzer?: IntentAnalyzer;
 
   constructor(
     private storage: ChatRepository,
@@ -19,6 +21,16 @@ export class ChatService {
   ) {
     this.chat = {} as Chat;
     this.systemPrompt = '';
+
+    // Initialize intent analyzer for smart routing (unless this is the analyzer bot itself)
+    if (botConfig.name !== 'analyzer') {
+      // Use a fast, cheap model for intent analysis
+      const analyzerModel = 'google/gemini-2.5-flash';
+      const baseUrl = botConfig.base_url || 'https://openrouter.ai/api/v1';
+      const apiKey = botConfig.api_key || '';
+
+      this.analyzer = new IntentAnalyzer(baseUrl, apiKey, analyzerModel);
+    }
   }
 
   async initializeChat(writer?: WritableStreamDefaultWriter) {
@@ -86,7 +98,7 @@ export class ChatService {
     const encoder = new TextEncoder();
     try {
       let messagesToUse: Message[];
-      
+
       if (userMessageId) {
         messagesToUse = buildMessagePath(this.chat.messages, userMessageId);
       } else {
@@ -94,23 +106,60 @@ export class ChatService {
         if (this.chat.selected_message_id) {
           userMessage.parent_id = this.chat.selected_message_id;
         }
-        
+
         // Add the user message to the chat
         this.chat.messages.push(userMessage);
         messagesToUse = [...this.chat.messages];
       }
-      
-      const providerResponseGenerator = await this.provider.callChatCompletions(messagesToUse, this.systemPrompt);
+
+      // Analyze intent for smart routing
+      let decision: RoutingDecision | undefined;
+      if (this.analyzer) {
+        const userContent = extractContentText(userMessage.content);
+        decision = await this.analyzer.analyze(userContent);
+        console.log('Intent analysis - Think:', decision.use_think_model, 'Search:', decision.use_web_search, 'Effort:', decision.reasoning_effort);
+      }
+
+      const providerResponseGenerator = this.provider.callChatCompletions(messagesToUse, this.systemPrompt, decision);
       let accumulatedContent = '';
       let model = '';
       let provider = '';
-      
+      let reasoningContent = '';
+      let reasoningEffort: string | undefined;
+      const links: string[] = [];
+
       for await (const chunk of providerResponseGenerator) {
-        accumulatedContent += chunk.content;
+        if (chunk.content) {
+          accumulatedContent += chunk.content;
+        }
+        if (chunk.reasoningContent) {
+          reasoningContent += chunk.reasoningContent;
+        }
+        // Accumulate links from chunks, avoiding duplicates
+        if (chunk.links) {
+          for (const link of chunk.links) {
+            if (!links.includes(link)) {
+              links.push(link);
+            }
+          }
+        }
         const responseChunk = {
           choices: [{
             delta: {
               content: chunk.content,
+              reasoning_content: chunk.reasoningContent,
+              annotations: chunk.links ? chunk.links.map(link => {
+                const parts = link.split('|');
+                const title = parts[0];
+                const url = parts[1] || link;
+                return {
+                  type: 'url_citation',
+                  url_citation: {
+                    url,
+                    title: parts.length > 1 ? title : undefined
+                  }
+                };
+              }) : undefined
             }
           }],
           model: chunk.model,
@@ -125,6 +174,11 @@ export class ChatService {
         await writer.write(encoder.encode(`data: ${JSON.stringify(responseChunk)}\n\n`));
       }
 
+      // Store reasoning effort if this was a think model decision
+      if (decision?.use_think_model) {
+        reasoningEffort = decision.reasoning_effort;
+      }
+
       // Check if any content was received before proceeding
       if (!accumulatedContent.trim()) {
         await this.handleError(
@@ -136,11 +190,14 @@ export class ChatService {
         return;
       }
 
-      const assistantMessage: Message = createMessage('assistant', accumulatedContent, { 
-        model, 
+      const assistantMessage: Message = createMessage('assistant', accumulatedContent, {
+        model,
         provider,
         id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
-        parent_id: userMessage.id
+        parent_id: userMessage.id,
+        reasoningContent: reasoningContent || undefined,
+        reasoningEffort: reasoningEffort,
+        links: links.length > 0 ? links : undefined
       });
       await this.processAssistantMessage(assistantMessage, writer);
       await this.storage.saveChat(this.chat);

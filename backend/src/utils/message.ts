@@ -50,10 +50,11 @@ export function createMessage(
     model?: string;
     id?: string;
     parent_id?: string;
-    reasoningEffort?: number;
+    reasoningEffort?: string;
     tool?: string;
     server?: string;
     arguments?: any;
+    links?: string[];
   }
 ): Message {
   const messageData: Message = {
@@ -84,6 +85,10 @@ export function createMessage(
       messageData.parent_id = options.parent_id;
     }
 
+    if (options.reasoningEffort !== undefined) {
+      messageData.reasoning_effort = options.reasoningEffort;
+    }
+
     if (options.tool !== undefined) {
       messageData.tool = options.tool;
     }
@@ -94,6 +99,10 @@ export function createMessage(
 
     if (options.arguments !== undefined) {
       messageData.arguments = options.arguments;
+    }
+
+    if (options.links !== undefined) {
+      messageData.links = options.links;
     }
   }
 
