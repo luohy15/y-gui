@@ -70,6 +70,7 @@ export const markdownComponents: Components = {
   h6: ({ children }) => <h6 className="text-xs font-bold mt-1">###### {children}</h6>,
 	ul: ({ children }) => <ul className="list-disc pl-5">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal pl-5">{children}</ol>,
+  a: ({ href, children }) => <a href={href} className="text-blue-500 hover:text-blue-600 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
   // Add custom code component to handle empty code blocks
   code: ({ className, children, ...props }: any) => {
     // Check if code block is empty
