@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev --test-scheduled",
+    "dev": "wrangler dev --test-scheduled --remote",
     "build": "tsc",
     "deploy": "wrangler deploy",
     "test": "vitest"

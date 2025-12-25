@@ -99,18 +99,29 @@ export async function handleBotRequest(request: Request, env: Env, userPrefix?: 
     
     // Delete a bot
     if (botName && path === `/api/bot/${botName}` && request.method === 'DELETE') {
-      // Check if bot exists
-      const existingBots = await botRepo.getBots();
-      if (!existingBots.some(bot => bot.name === botName)) {
-        return new Response(JSON.stringify({ error: 'Bot not found' }), {
-          status: 404,
-          headers: { 
+      // Prevent deleting the default bot
+      if (botName === 'default') {
+        return new Response(JSON.stringify({ error: 'Cannot delete the default bot' }), {
+          status: 400,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
           }
         });
       }
-      
+
+      // Check if bot exists
+      const existingBots = await botRepo.getBots();
+      if (!existingBots.some(bot => bot.name === botName)) {
+        return new Response(JSON.stringify({ error: 'Bot not found' }), {
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+
       // Delete the bot
       await botRepo.deleteBot(botName);
       

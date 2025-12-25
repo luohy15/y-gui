@@ -123,8 +123,8 @@ export class BotD1Repository implements BotRepository {
   private getDefaultBots(): BotConfig[] {
     return [
       {
-        name: "gemini",
-        model: "google/gemini-2.5-flash"
+        name: "default",
+        model: "google/gemini-3-flash-preview"
       },
     ];
   }
