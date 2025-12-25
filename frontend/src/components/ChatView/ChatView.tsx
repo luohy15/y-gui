@@ -871,7 +871,7 @@ export default function ChatView() {
 
   // Main component render
   return (
-    <div className={`flex flex-col relative ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+    <div className={`flex flex-col relative ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`} style={{ scrollbarGutter: 'stable', scrollBehavior: 'smooth' }}>
       {/* Table of Contents Drawer (Mobile) */}
       <TableOfContentsDrawer
         isOpen={isTocOpen}

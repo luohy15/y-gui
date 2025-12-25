@@ -25,7 +25,7 @@ export class ChatService {
     // Initialize intent analyzer for smart routing (unless this is the analyzer bot itself)
     if (botConfig.name !== 'analyzer') {
       // Use a fast, cheap model for intent analysis
-      const analyzerModel = 'google/gemini-2.5-flash';
+      const analyzerModel = 'google/gemini-3-flash-preview';
       const baseUrl = botConfig.base_url || 'https://openrouter.ai/api/v1';
       const apiKey = botConfig.api_key || '';
 
