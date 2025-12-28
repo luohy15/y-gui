@@ -126,7 +126,7 @@ export default function MessageItem({
 				<div className="mt-3">
 					<button
 						onClick={handleToggleLinks}
-						className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+						className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-full transition-colors ${
 							isUserMessage
 								? 'bg-blue-500 hover:bg-blue-600 text-white'
 								: isDarkMode
