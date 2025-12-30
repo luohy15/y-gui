@@ -1,8 +1,11 @@
 import React, { useState, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeKatex from 'rehype-katex';
 import 'highlight.js/styles/github-dark.css';
+import 'katex/dist/katex.min.css';
 import { Components } from 'react-markdown';
 
 // LinkWithTooltip component for showing link preview on hover
@@ -177,8 +180,8 @@ export const MarkdownByReactMarkdown: React.FC<MarkdownByReactMarkdownProps> = (
             return (
               <ReactMarkdown
                 key={index}
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeHighlight, rehypeKatex]}
                 components={markdownComponents}
               >
                 {preprocessMarkdown(part)}
@@ -195,8 +198,8 @@ export const MarkdownByReactMarkdown: React.FC<MarkdownByReactMarkdownProps> = (
   return (
     <div className={`prose prose-sm overflow-hidden max-w-full sm:leading-relaxed tracking-tight sm:tracking-wide ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeHighlight, rehypeKatex]}
         components={markdownComponents}
       >
         {preprocessMarkdown(content)}
