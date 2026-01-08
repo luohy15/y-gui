@@ -50,12 +50,20 @@ export default function MessageItem({
 	const messageId = message.unix_timestamp.toString();
 	const isUserMessage = message.role === 'user' && !message.server;
 
-	// Parse links in format "Title|URL"
+	// Parse links in format "Title|URL" or as objects {title, url}
 	const parsedLinks = message.links?.map((link) => {
-		const parts = link.split('|');
+		if (typeof link === 'string') {
+			const parts = link.split('|');
+			return {
+				title: parts[0] || 'Link',
+				url: parts[1] || link
+			};
+		}
+		// Handle object format (legacy data)
+		const linkObj = link as { name?: string; title?: string; url?: string };
 		return {
-			title: parts[0] || 'Link',
-			url: parts[1] || link
+			title: linkObj.name || linkObj.title || 'Link',
+			url: linkObj.url || ''
 		};
 	}) || [];
 

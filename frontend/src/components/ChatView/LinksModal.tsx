@@ -15,12 +15,20 @@ export default function LinksModal({
 }: LinksModalProps) {
 	if (!isOpen || links.length === 0) return null;
 
-	// Parse links in format "Title|URL"
+	// Parse links in format "Title|URL" or as objects {title, url}
 	const parsedLinks = links.map((link) => {
-		const parts = link.split('|');
+		if (typeof link === 'string') {
+			const parts = link.split('|');
+			return {
+				title: parts[0] || 'Link',
+				url: parts[1] || link
+			};
+		}
+		// Handle object format (legacy data)
+		const linkObj = link as unknown as { name?: string; title?: string; url?: string };
 		return {
-			title: parts[0] || 'Link',
-			url: parts[1] || link
+			title: linkObj.name || linkObj.title || 'Link',
+			url: linkObj.url || ''
 		};
 	});
 
